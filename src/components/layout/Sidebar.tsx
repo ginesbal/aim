@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/contexts";
+import { usePreferences } from "@/lib/contexts";
 
 const NAV_ITEMS = [
   {
@@ -38,6 +38,16 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: "/journal",
+    label: "Journal",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 2h12a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" />
+        <path d="M7 6h6M7 10h6M7 14h3" />
+      </svg>
+    ),
+  },
+  {
     href: "/settings",
     label: "Settings",
     icon: (
@@ -52,7 +62,7 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { name } = usePreferences();
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[220px] bg-white dark:bg-lavender-950 border-r border-lavender-100 dark:border-lavender-800 flex flex-col z-40">
@@ -100,26 +110,20 @@ export default function Sidebar() {
       </nav>
 
       {/* User section */}
-      <div className="px-3 pb-4 mt-auto">
-        <div className="border-t border-lavender-100 dark:border-lavender-800 pt-4">
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-lavender-100 dark:bg-lavender-800 flex items-center justify-center text-sm font-semibold text-baltic-600 dark:text-baltic-300">
-              {user?.name?.charAt(0)?.toUpperCase() || "U"}
-            </div>
-            <div className="flex-1 min-w-0">
+      {name && (
+        <div className="px-3 pb-4 mt-auto">
+          <div className="border-t border-lavender-100 dark:border-lavender-800 pt-4">
+            <div className="flex items-center gap-3 px-3 py-2">
+              <div className="w-8 h-8 rounded-full bg-lavender-100 dark:bg-lavender-800 flex items-center justify-center text-sm font-semibold text-baltic-600 dark:text-baltic-300">
+                {name.charAt(0).toUpperCase()}
+              </div>
               <p className="text-sm font-medium text-baltic-800 dark:text-baltic-200 truncate">
-                {user?.name || "User"}
+                {name}
               </p>
-              <button
-                onClick={logout}
-                className="text-xs text-steel-400 hover:text-baltic-500 transition-smooth"
-              >
-                Sign out
-              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </aside>
   );
 }

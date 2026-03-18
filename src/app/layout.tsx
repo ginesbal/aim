@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { AuthProvider, TasksProvider, FocusProvider, ThemeProvider } from "@/lib/contexts";
+import { PreferencesProvider, TasksProvider, FocusProvider, ThemeProvider } from "@/lib/contexts";
 import AppShell from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
@@ -13,13 +13,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <AuthProvider>
+          <PreferencesProvider>
             <TasksProvider>
               <FocusProvider>
                 <AppShell>{children}</AppShell>
               </FocusProvider>
             </TasksProvider>
-          </AuthProvider>
+          </PreferencesProvider>
         </ThemeProvider>
       </body>
     </html>

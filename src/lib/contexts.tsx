@@ -8,7 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { Task, FocusSession, UserProfile } from "./types";
+import { Task, FocusSession, Reflection } from "./types";
 import { generateId } from "./utils";
 
 // ─── Storage helpers ───
@@ -27,68 +27,41 @@ function save(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-// ─── Auth Context ───
-interface AuthState {
-  user: UserProfile | null;
-  isAuthenticated: boolean;
-  login: (email: string, name: string) => void;
-  signup: (email: string, name: string) => void;
-  logout: () => void;
-  updateProfile: (profile: Partial<UserProfile>) => void;
+// ─── Preferences Context (replaces Auth) ───
+interface PreferencesState {
+  name: string;
+  isFirstVisit: boolean;
+  setName: (name: string) => void;
 }
 
-const AuthContext = createContext<AuthState | null>(null);
+const PreferencesContext = createContext<PreferencesState | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null);
+export function PreferencesProvider({ children }: { children: ReactNode }) {
+  const [name, setNameState] = useState("");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setUser(load<UserProfile | null>("meridian_user", null));
+    setNameState(load<string>("meridian_name", ""));
     setMounted(true);
   }, []);
 
-  const login = useCallback((email: string, name: string) => {
-    const u = { email, name };
-    setUser(u);
-    save("meridian_user", u);
+  const setName = useCallback((n: string) => {
+    setNameState(n);
+    save("meridian_name", n);
   }, []);
-
-  const signup = useCallback((email: string, name: string) => {
-    const u = { email, name };
-    setUser(u);
-    save("meridian_user", u);
-  }, []);
-
-  const logout = useCallback(() => {
-    setUser(null);
-    localStorage.removeItem("meridian_user");
-  }, []);
-
-  const updateProfile = useCallback(
-    (partial: Partial<UserProfile>) => {
-      if (!user) return;
-      const updated = { ...user, ...partial };
-      setUser(updated);
-      save("meridian_user", updated);
-    },
-    [user]
-  );
 
   if (!mounted) return null;
 
   return (
-    <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user, login, signup, logout, updateProfile }}
-    >
+    <PreferencesContext.Provider value={{ name, isFirstVisit: !name, setName }}>
       {children}
-    </AuthContext.Provider>
+    </PreferencesContext.Provider>
   );
 }
 
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be inside AuthProvider");
+export function usePreferences() {
+  const ctx = useContext(PreferencesContext);
+  if (!ctx) throw new Error("usePreferences must be inside PreferencesProvider");
   return ctx;
 }
 
@@ -103,7 +76,6 @@ interface TasksState {
 
 const TasksContext = createContext<TasksState | null>(null);
 
-// Sample tasks for demo
 const SAMPLE_TASKS: Task[] = [
   {
     id: "demo1",
@@ -223,7 +195,7 @@ export function useTasks() {
 // ─── Focus Sessions Context ───
 interface FocusState {
   sessions: FocusSession[];
-  addSession: (subject: string, duration: number) => void;
+  addSession: (subject: string, duration: number, reflection?: Reflection) => void;
   todayMinutes: number;
   weekMinutes: number;
   streak: number;
@@ -240,17 +212,31 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     if (stored.length > 0) {
       setSessions(stored);
     } else {
-      // Sample data
       const now = new Date();
       const sampleSessions: FocusSession[] = [];
+      const subjects = ["mathematics", "science", "literature", "economics", "history"];
+      const durations = [45, 30, 25, 50, 25];
+      const qualities = [4, 3, 3, 4, 2] as const;
+      const notes = [
+        "Eigenvalue decomposition finally clicked",
+        "Spectroscopy results were clearer than expected",
+        "Romanticism chapter was dense but interesting",
+        "Market failure essay outline is solid now",
+        "",
+      ];
       for (let i = 0; i < 5; i++) {
         const d = new Date(now);
         d.setDate(d.getDate() - i);
+        d.setHours(10 + i, 30, 0, 0);
         sampleSessions.push({
           id: generateId(),
-          subject: ["mathematics", "science", "literature", "economics", "history"][i],
-          duration: [45, 30, 25, 50, 25][i],
+          subject: subjects[i],
+          duration: durations[i],
           completedAt: d.toISOString(),
+          reflection: {
+            quality: qualities[i],
+            ...(notes[i] ? { note: notes[i] } : {}),
+          },
         });
       }
       setSessions(sampleSessions);
@@ -262,10 +248,16 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     if (mounted) save("meridian_sessions", sessions);
   }, [sessions, mounted]);
 
-  const addSession = useCallback((subject: string, duration: number) => {
+  const addSession = useCallback((subject: string, duration: number, reflection?: Reflection) => {
     setSessions((prev) => [
       ...prev,
-      { id: generateId(), subject, duration, completedAt: new Date().toISOString() },
+      {
+        id: generateId(),
+        subject,
+        duration,
+        completedAt: new Date().toISOString(),
+        ...(reflection ? { reflection } : {}),
+      },
     ]);
   }, []);
 
@@ -281,13 +273,11 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     .filter((s) => new Date(s.completedAt) >= weekStart)
     .reduce((sum, s) => sum + s.duration, 0);
 
-  // Calculate streak
   let streak = 0;
   const dateSet = new Set(
     sessions.map((s) => new Date(s.completedAt).toDateString())
   );
   const check = new Date();
-  // If no session today, start checking from yesterday
   if (!dateSet.has(check.toDateString())) {
     check.setDate(check.getDate() - 1);
   }

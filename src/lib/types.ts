@@ -9,17 +9,27 @@ export interface Task {
   createdAt: string;
 }
 
+export type FocusQuality = 1 | 2 | 3 | 4;
+
+export interface Reflection {
+  quality: FocusQuality;
+  note?: string;
+}
+
 export interface FocusSession {
   id: string;
   subject: string;
   duration: number; // minutes
   completedAt: string;
+  reflection?: Reflection;
 }
 
-export interface UserProfile {
-  name: string;
-  email: string;
-}
+export const QUALITY_LEVELS: Record<FocusQuality, { label: string; description: string }> = {
+  1: { label: "Scattered", description: "Mind was elsewhere" },
+  2: { label: "Distracted", description: "Some focus, some drift" },
+  3: { label: "Focused", description: "Solid concentration" },
+  4: { label: "Deep focus", description: "Fully immersed" },
+};
 
 export type SubjectKey =
   | "mathematics"

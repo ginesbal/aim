@@ -1,31 +1,20 @@
 "use client";
 
-import { useAuth } from "@/lib/contexts";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Sidebar from "./Sidebar";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
-  const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/";
-
   useEffect(() => {
-    if (!isAuthenticated && !isAuthPage) {
-      router.replace("/login");
-    }
-    if (isAuthenticated && isAuthPage) {
+    if (pathname === "/") {
       router.replace("/dashboard");
     }
-  }, [isAuthenticated, isAuthPage, router]);
+  }, [pathname, router]);
 
-  if (isAuthPage) {
-    return <>{children}</>;
-  }
-
-  if (!isAuthenticated) return null;
+  if (pathname === "/") return null;
 
   return (
     <div className="min-h-screen bg-baltic-50 dark:bg-baltic-950">

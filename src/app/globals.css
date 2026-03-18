@@ -129,6 +129,22 @@
   .nav-active-indicator {
     @apply absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-baltic-500;
   }
+
+  /* Reflection panel entrance — gentle fade up from timer completion */
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .reflection-enter {
+    animation: fade-up 0.4s ease-out;
+  }
 }
 
 @layer utilities {

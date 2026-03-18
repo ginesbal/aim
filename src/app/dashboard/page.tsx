@@ -1,21 +1,29 @@
 "use client";
 
-import { useMemo } from "react";
-import { useAuth, useTasks, useFocus } from "@/lib/contexts";
+import { useMemo, useState } from "react";
+import { usePreferences, useTasks, useFocus } from "@/lib/contexts";
 import { getGreeting, getWeekday, getFormattedDate, formatTime, formatDate, isOverdue } from "@/lib/utils";
-import { SUBJECTS, PRIORITIES } from "@/lib/types";
+import { SUBJECTS, PRIORITIES, type SubjectKey } from "@/lib/types";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import Modal from "@/components/ui/Modal";
 import ProgressRing from "@/components/ui/ProgressRing";
+import QualityIndicator from "@/components/ui/QualityIndicator";
 import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { name, isFirstVisit, setName } = usePreferences();
   const { tasks, toggleComplete } = useTasks();
   const { todayMinutes, weekMinutes, streak, sessions } = useFocus();
   const router = useRouter();
 
-  const firstName = user?.name?.split(" ")[0] || "there";
+  // Welcome overlay state
+  const [showWelcome, setShowWelcome] = useState(isFirstVisit);
+  const [welcomeName, setWelcomeName] = useState("");
+
+  const firstName = name ? name.split(" ")[0] : "there";
 
   const pendingTasks = useMemo(
     () => tasks.filter((t) => !t.completed).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()),
@@ -29,7 +37,6 @@ export default function DashboardPage() {
 
   const upcomingTasks = pendingTasks.slice(0, 4);
 
-  // Daily goal: 2 hours
   const dailyGoal = 120;
   const dailyProgress = Math.min((todayMinutes / dailyGoal) * 100, 100);
 
@@ -58,8 +65,56 @@ export default function DashboardPage() {
 
   const totalWeekMinutes = subjectBreakdown.reduce((s, b) => s + b.minutes, 0) || 1;
 
+  // Recent reflections (sessions with reflection data, newest first)
+  const recentReflections = useMemo(
+    () => [...sessions]
+      .filter((s) => s.reflection)
+      .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+      .slice(0, 3),
+    [sessions]
+  );
+
+  function handleWelcomeSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (welcomeName.trim()) {
+      setName(welcomeName.trim());
+    }
+    setShowWelcome(false);
+  }
+
   return (
     <div className="space-y-8">
+      {/* Welcome overlay for first-time visitors */}
+      <Modal open={showWelcome} onClose={() => setShowWelcome(false)} width="sm">
+        <div className="text-center py-4">
+          <div className="w-12 h-12 rounded-xl bg-baltic-500 flex items-center justify-center mx-auto mb-5">
+            <svg width="24" height="24" viewBox="0 0 16 16" fill="none">
+              <path d="M8 1L14 5v6l-6 4-6-4V5l6-4z" stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
+              <circle cx="8" cy="8" r="2" fill="white" />
+            </svg>
+          </div>
+          <h2 className="text-display text-baltic-800 dark:text-baltic-100 mb-2">
+            Welcome to Meridian
+          </h2>
+          <p className="text-body text-steel-500 dark:text-steel-400 mb-6">
+            A calm space to plan your studies and build focus habits.
+          </p>
+          <form onSubmit={handleWelcomeSubmit} className="space-y-4">
+            <Input
+              id="welcome-name"
+              placeholder="What should we call you?"
+              value={welcomeName}
+              onChange={(e) => setWelcomeName(e.target.value)}
+              autoFocus
+              className="text-center"
+            />
+            <Button type="submit" className="w-full" size="lg">
+              Get started
+            </Button>
+          </form>
+        </div>
+      </Modal>
+
       {/* Header */}
       <div>
         <h1 className="text-display text-baltic-800 dark:text-baltic-100">
@@ -114,7 +169,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-6">
-        {/* Focus progress — left 2 cols */}
+        {/* Left 2 columns */}
         <div className="col-span-2 space-y-6">
           {/* Daily Focus Card */}
           <Card>
@@ -149,7 +204,6 @@ export default function DashboardPage() {
                 </div>
               </ProgressRing>
 
-              {/* Subject breakdown bars */}
               <div className="flex-1 space-y-3">
                 {subjectBreakdown.length > 0 ? (
                   subjectBreakdown.slice(0, 4).map((item) => (
@@ -200,26 +254,21 @@ export default function DashboardPage() {
                       key={task.id}
                       className="flex items-center gap-3 py-3 border-b border-lavender-50 dark:border-lavender-800 last:border-0 group"
                     >
-                      {/* Checkbox */}
                       <button
                         onClick={() => toggleComplete(task.id)}
                         className="w-[18px] h-[18px] rounded-full border-2 border-lavender-300 dark:border-lavender-600 flex-shrink-0 hover:border-baltic-400 transition-smooth flex items-center justify-center"
                       >
                         <span className="w-2 h-2 rounded-full bg-transparent group-hover:bg-baltic-400/30 transition-smooth" />
                       </button>
-
-                      {/* Subject color dot */}
                       <div
                         className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: subject?.color || "#60729f" }}
                       />
-
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-baltic-800 dark:text-baltic-100 truncate">
                           {task.title}
                         </p>
                       </div>
-
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <Badge color={PRIORITIES[task.priority].color}>
                           {PRIORITIES[task.priority].label}
@@ -240,38 +289,62 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Right column — weekly rhythm */}
+        {/* Right column */}
         <div className="space-y-6">
-          {/* Week rhythm visualization */}
+          {/* Week rhythm */}
           <Card>
             <h3 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">This week</h3>
             <WeekRhythm sessions={sessions} />
           </Card>
 
-          {/* Quick actions */}
+          {/* Recent reflections */}
           <Card>
-            <h3 className="text-title text-baltic-800 dark:text-baltic-100 mb-3">Quick actions</h3>
-            <div className="space-y-2">
-              <button
-                onClick={() => router.push("/tasks")}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-baltic-700 dark:text-baltic-300 hover:bg-lavender-50 dark:hover:bg-lavender-900 transition-smooth text-left"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                  <circle cx="8" cy="8" r="6" />
-                  <path d="M8 5v6M5 8h6" />
-                </svg>
-                Add new task
-              </button>
-              <button
-                onClick={() => router.push("/focus")}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-baltic-700 dark:text-baltic-300 hover:bg-lavender-50 dark:hover:bg-lavender-900 transition-smooth text-left"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                  <polygon points="5,3 13,8 5,13" />
-                </svg>
-                Start focus session
-              </button>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-title text-baltic-800 dark:text-baltic-100">Recent reflections</h3>
+              {recentReflections.length > 0 && (
+                <button
+                  onClick={() => router.push("/journal")}
+                  className="text-xs text-baltic-500 hover:text-baltic-700 dark:hover:text-baltic-300 font-medium transition-smooth"
+                >
+                  View all →
+                </button>
+              )}
             </div>
+
+            {recentReflections.length > 0 ? (
+              <div className="space-y-3">
+                {recentReflections.map((session) => {
+                  const sub = SUBJECTS[session.subject as SubjectKey];
+                  return (
+                    <div key={session.id} className="flex items-start gap-2.5">
+                      <div
+                        className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5"
+                        style={{ backgroundColor: sub?.color || "#60729f" }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-baltic-700 dark:text-baltic-300">
+                            {sub?.label || session.subject}
+                          </span>
+                          {session.reflection && (
+                            <QualityIndicator quality={session.reflection.quality} size={12} />
+                          )}
+                        </div>
+                        {session.reflection?.note && (
+                          <p className="text-xs text-steel-400 mt-0.5 italic truncate">
+                            &ldquo;{session.reflection.note}&rdquo;
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-steel-400 leading-relaxed">
+                Complete a focus session and reflect on it to see your reflections here.
+              </p>
+            )}
           </Card>
         </div>
       </div>
@@ -279,7 +352,6 @@ export default function DashboardPage() {
   );
 }
 
-/* Week rhythm — shows study activity per day as a heatmap row */
 function WeekRhythm({ sessions }: { sessions: { completedAt: string; duration: number }[] }) {
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const now = new Date();
