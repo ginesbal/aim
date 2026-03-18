@@ -1,46 +1,40 @@
-import React from 'react';
-import {StyleSheet, TextInput, TextInputProps} from 'react-native';
+"use client";
 
-// Extend TextInputProps to include all props that TextInput supports
-type InputProps = TextInputProps & {
-  placeholder: string;
-  value: string;
-  onChangeText?: (text: string) => void; // Make onChangeText optional
-  multiline?: boolean;
-  editable?: boolean;
-};
+import { cn } from "@/lib/utils";
+import { InputHTMLAttributes, forwardRef } from "react";
 
-const Input: React.FC<InputProps> = ({
-  placeholder,
-  value,
-  onChangeText,
-  multiline = false,
-  editable = true,
-  ...rest // Spread any additional props to pass to TextInput
-}) => {
-  return (
-    <TextInput
-      style={styles.input}
-      placeholder={placeholder}
-      value={value}
-      onChangeText={onChangeText}
-      multiline={multiline}
-      editable={editable}
-      placeholderTextColor="#B7B7A4"
-      {...rest} // Include additional props
-    />
-  );
-};
+interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  error?: string;
+}
 
-const styles = StyleSheet.create({
-  input: {
-    borderWidth: 1,
-    borderColor: '#B7B7A4',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 20,
-    color: '#283618',
-  },
-});
+const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ className, label, error, id, ...props }, ref) => {
+    return (
+      <div className="space-y-1.5">
+        {label && (
+          <label htmlFor={id} className="text-label text-baltic-600 dark:text-baltic-300">
+            {label}
+          </label>
+        )}
+        <input
+          ref={ref}
+          id={id}
+          className={cn(
+            "w-full px-3.5 py-2.5 text-sm rounded-lg border bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-400 dark:placeholder:text-steel-600 transition-smooth",
+            error
+              ? "border-red-300 focus:ring-red-300 focus:border-red-300"
+              : "border-lavender-200 dark:border-lavender-700 focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400",
+            "outline-none",
+            className
+          )}
+          {...props}
+        />
+        {error && <p className="text-xs text-red-500">{error}</p>}
+      </div>
+    );
+  }
+);
 
+Input.displayName = "Input";
 export default Input;
