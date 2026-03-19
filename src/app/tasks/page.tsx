@@ -10,18 +10,14 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 
-type FilterSubject = "all" | SubjectKey;
-type FilterPriority = "all" | "low" | "medium" | "high";
 type FilterStatus = "all" | "pending" | "completed";
-type SortKey = "dueDate" | "priority" | "subject";
+type FilterSubject = "all" | SubjectKey;
 
 export default function TasksPage() {
   const { tasks, addTask, toggleComplete, deleteTask } = useTasks();
 
-  const [filterSubject, setFilterSubject] = useState<FilterSubject>("all");
-  const [filterPriority, setFilterPriority] = useState<FilterPriority>("all");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
-  const [sortBy, setSortBy] = useState<SortKey>("dueDate");
+  const [filterSubject, setFilterSubject] = useState<FilterSubject>("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
@@ -31,27 +27,18 @@ export default function TasksPage() {
     if (filterSubject !== "all") {
       result = result.filter((t) => t.subject === filterSubject);
     }
-    if (filterPriority !== "all") {
-      result = result.filter((t) => t.priority === filterPriority);
-    }
     if (filterStatus === "pending") {
       result = result.filter((t) => !t.completed);
     } else if (filterStatus === "completed") {
       result = result.filter((t) => t.completed);
     }
 
-    const priorityWeight = { high: 3, medium: 2, low: 1 };
-    result.sort((a, b) => {
-      if (sortBy === "dueDate") return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-      if (sortBy === "priority") return priorityWeight[b.priority] - priorityWeight[a.priority];
-      return a.subject.localeCompare(b.subject);
-    });
-
-    // Completed tasks always go to the bottom
+    // Always sort by due date, completed at bottom
+    result.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
     result.sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1));
 
     return result;
-  }, [tasks, filterSubject, filterPriority, filterStatus, sortBy]);
+  }, [tasks, filterSubject, filterStatus]);
 
   const pendingCount = tasks.filter((t) => !t.completed).length;
 
@@ -62,7 +49,7 @@ export default function TasksPage() {
         <div>
           <h1 className="text-display text-baltic-800 dark:text-baltic-100">Tasks</h1>
           <p className="text-body text-steel-500 dark:text-steel-400 mt-1">
-            {pendingCount} pending{pendingCount !== 1 ? "" : ""} · {tasks.filter((t) => t.completed).length} completed
+            {pendingCount} pending · {tasks.filter((t) => t.completed).length} completed
           </p>
         </div>
         <Button onClick={() => setShowAddModal(true)}>
@@ -73,69 +60,69 @@ export default function TasksPage() {
         </Button>
       </div>
 
-      {/* Filters — pill-based, scannable */}
-      <Card padding="sm">
-        <div className="flex flex-wrap items-center gap-6">
-          {/* Status filter */}
-          <FilterGroup
-            label="Status"
-            value={filterStatus}
-            onChange={(v) => setFilterStatus(v as FilterStatus)}
-            options={[
-              { value: "all", label: "All" },
-              { value: "pending", label: "Pending" },
-              { value: "completed", label: "Done" },
-            ]}
-          />
-
-          {/* Subject filter */}
-          <FilterGroup
-            label="Subject"
-            value={filterSubject}
-            onChange={(v) => setFilterSubject(v as FilterSubject)}
-            options={[
-              { value: "all", label: "All" },
-              ...Object.entries(SUBJECTS).map(([key, { label }]) => ({
-                value: key,
-                label,
-              })),
-            ]}
-          />
-
-          {/* Priority filter */}
-          <FilterGroup
-            label="Priority"
-            value={filterPriority}
-            onChange={(v) => setFilterPriority(v as FilterPriority)}
-            options={[
-              { value: "all", label: "All" },
-              { value: "high", label: "High" },
-              { value: "medium", label: "Medium" },
-              { value: "low", label: "Low" },
-            ]}
-          />
-
-          {/* Sort */}
-          <div className="flex items-center gap-2 ml-auto">
-            <span className="text-label">Sort</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortKey)}
-              className="text-xs font-medium text-baltic-600 dark:text-baltic-300 bg-transparent border border-lavender-200 dark:border-lavender-700 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-baltic-400/30"
+      {/* Simplified filters — 2 groups only, pill-style */}
+      <div className="flex flex-wrap items-center gap-4">
+        {/* Status pills */}
+        <div className="flex items-center gap-1.5 bg-white/60 dark:bg-lavender-900/40 rounded-full p-1">
+          {([
+            { value: "all", label: "All" },
+            { value: "pending", label: "Pending" },
+            { value: "completed", label: "Done" },
+          ] as const).map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setFilterStatus(opt.value)}
+              className={cn(
+                "px-4 py-1.5 rounded-full text-xs font-semibold transition-smooth",
+                filterStatus === opt.value
+                  ? "bg-white dark:bg-lavender-800 text-baltic-700 dark:text-baltic-200 shadow-sm"
+                  : "text-steel-500 hover:text-baltic-600 dark:hover:text-baltic-300"
+              )}
             >
-              <option value="dueDate">Due date</option>
-              <option value="priority">Priority</option>
-              <option value="subject">Subject</option>
-            </select>
-          </div>
+              {opt.label}
+            </button>
+          ))}
         </div>
-      </Card>
 
-      {/* Task list */}
+        {/* Subject pills */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            onClick={() => setFilterSubject("all")}
+            className={cn(
+              "px-3 py-1.5 rounded-full text-xs font-semibold transition-smooth",
+              filterSubject === "all"
+                ? "bg-baltic-100 text-baltic-700 dark:bg-baltic-800 dark:text-baltic-200"
+                : "text-steel-400 hover:text-baltic-600"
+            )}
+          >
+            All subjects
+          </button>
+          {Object.entries(SUBJECTS).map(([key, { label, color }]) => (
+            <button
+              key={key}
+              onClick={() => setFilterSubject(key as SubjectKey)}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-semibold transition-smooth flex items-center gap-1.5",
+                filterSubject === key
+                  ? "text-white"
+                  : "text-steel-400 hover:text-baltic-600"
+              )}
+              style={filterSubject === key ? { backgroundColor: color } : undefined}
+            >
+              {filterSubject !== key && (
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+              )}
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Task list — spacious cards */}
       {filteredTasks.length > 0 ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {filteredTasks.map((task) => (
-            <TaskRow
+            <TaskCard
               key={task.id}
               task={task}
               onToggle={() => toggleComplete(task.id)}
@@ -144,8 +131,13 @@ export default function TasksPage() {
           ))}
         </div>
       ) : (
-        <Card>
+        <Card padding="lg">
           <div className="py-12 text-center">
+            <div className="flex justify-center gap-2 mb-4">
+              <div className="w-4 h-4 rounded-full bg-lavender-200/60 animate-float" />
+              <div className="w-4 h-4 rounded-full bg-baltic-200/60 animate-float-delay" />
+              <div className="w-4 h-4 rounded-full bg-cream-200/60 animate-float-slow" />
+            </div>
             <p className="text-sm text-steel-400">No tasks match your filters.</p>
             <Button
               variant="ghost"
@@ -153,7 +145,6 @@ export default function TasksPage() {
               className="mt-3"
               onClick={() => {
                 setFilterSubject("all");
-                setFilterPriority("all");
                 setFilterStatus("all");
               }}
             >
@@ -185,43 +176,8 @@ export default function TasksPage() {
   );
 }
 
-/* ─── Filter group component ─── */
-function FilterGroup({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-label">{label}</span>
-      <div className="flex gap-1">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className={cn(
-              "px-2.5 py-1 rounded-md text-xs font-medium transition-smooth",
-              value === opt.value
-                ? "bg-baltic-600 text-white dark:bg-baltic-500"
-                : "text-steel-500 hover:text-baltic-600 hover:bg-lavender-50 dark:hover:bg-lavender-900"
-            )}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Task row ─── */
-function TaskRow({
+/* ─── Task card — spacious, colored left accent ─── */
+function TaskCard({
   task,
   onToggle,
   onSelect,
@@ -235,13 +191,19 @@ function TaskRow({
 
   return (
     <Card
-      padding="sm"
+      padding="md"
       className={cn(
-        "group cursor-pointer hover:border-lavender-200 dark:hover:border-lavender-700 transition-smooth",
-        task.completed && "opacity-60"
+        "group cursor-pointer hover:shadow-md transition-smooth",
+        task.completed && "opacity-50"
       )}
     >
       <div className="flex items-center gap-4" onClick={onSelect}>
+        {/* Subject color bar — thicker, rounded */}
+        <div
+          className="w-1.5 h-12 rounded-full flex-shrink-0"
+          style={{ backgroundColor: subject?.color || "#60729f" }}
+        />
+
         {/* Checkbox */}
         <button
           onClick={(e) => {
@@ -262,33 +224,29 @@ function TaskRow({
           )}
         </button>
 
-        {/* Subject color bar */}
-        <div
-          className="w-1 h-8 rounded-full flex-shrink-0"
-          style={{ backgroundColor: subject?.color || "#60729f" }}
-        />
-
         {/* Content */}
         <div className="flex-1 min-w-0">
           <p className={cn(
-            "text-sm font-medium truncate",
+            "text-sm font-semibold truncate",
             task.completed
               ? "text-steel-400 line-through"
               : "text-baltic-800 dark:text-baltic-100"
           )}>
             {task.title}
           </p>
-          <p className="text-xs text-steel-400 truncate mt-0.5">{task.description}</p>
+          {task.description && (
+            <p className="text-xs text-steel-400 truncate mt-0.5">{task.description}</p>
+          )}
         </div>
 
-        {/* Meta */}
+        {/* Meta — simplified */}
         <div className="flex items-center gap-3 flex-shrink-0">
-          <Badge color={subject?.color}>{subject?.label || task.subject}</Badge>
-          <Badge color={PRIORITIES[task.priority].color}>
-            {PRIORITIES[task.priority].label}
-          </Badge>
+          <div
+            className="w-2.5 h-2.5 rounded-full"
+            style={{ backgroundColor: PRIORITIES[task.priority].color }}
+          />
           <span className={cn(
-            "text-xs font-medium min-w-[60px] text-right",
+            "text-xs font-semibold",
             overdue ? "text-red-500" : "text-steel-400"
           )}>
             {overdue ? "Overdue" : formatDate(task.dueDate)}
@@ -345,7 +303,7 @@ function AddTaskModal({
         <div className="space-y-1.5">
           <label className="text-label text-baltic-600 dark:text-baltic-300">Description</label>
           <textarea
-            className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-400 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth resize-none"
+            className="w-full px-4 py-3 text-sm rounded-xl border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-400 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth resize-none"
             rows={2}
             placeholder="Additional details..."
             value={description}
@@ -359,7 +317,7 @@ function AddTaskModal({
             <select
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 outline-none focus:ring-2 focus:ring-baltic-400/30"
+              className="w-full px-4 py-3 text-sm rounded-xl border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 outline-none focus:ring-2 focus:ring-baltic-400/30"
             >
               {Object.entries(SUBJECTS).map(([key, { label }]) => (
                 <option key={key} value={key}>{label}</option>
@@ -373,7 +331,7 @@ function AddTaskModal({
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 outline-none focus:ring-2 focus:ring-baltic-400/30"
+              className="w-full px-4 py-3 text-sm rounded-xl border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 outline-none focus:ring-2 focus:ring-baltic-400/30"
             />
           </div>
         </div>
@@ -388,7 +346,7 @@ function AddTaskModal({
                 type="button"
                 onClick={() => setPriority(p)}
                 className={cn(
-                  "flex-1 py-2 rounded-lg text-xs font-medium transition-smooth border",
+                  "flex-1 py-2.5 rounded-xl text-xs font-semibold transition-smooth border",
                   priority === p
                     ? "border-baltic-400 bg-baltic-50 text-baltic-700 dark:bg-baltic-900/50 dark:text-baltic-300 dark:border-baltic-600"
                     : "border-lavender-200 dark:border-lavender-700 text-steel-500 hover:border-lavender-300"
@@ -427,7 +385,13 @@ function TaskDetailModal({
     <Modal open={true} onClose={onClose} title={task.title} width="sm">
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <Badge color={subject?.color}>{subject?.label || task.subject}</Badge>
+          <div
+            className="w-3 h-3 rounded-full"
+            style={{ backgroundColor: subject?.color || "#60729f" }}
+          />
+          <span className="text-sm font-semibold text-baltic-700 dark:text-baltic-300">
+            {subject?.label || task.subject}
+          </span>
           <Badge color={PRIORITIES[task.priority].color}>{PRIORITIES[task.priority].label}</Badge>
           {task.completed && <Badge color="#76946b">Completed</Badge>}
         </div>
@@ -439,7 +403,7 @@ function TaskDetailModal({
         <div className="flex items-center gap-4 text-xs text-steel-400">
           <span>Due: {formatDate(task.dueDate)}</span>
           {!task.completed && isOverdue(task.dueDate) && (
-            <span className="text-red-500 font-medium">Overdue</span>
+            <span className="text-red-500 font-semibold">Overdue</span>
           )}
         </div>
 

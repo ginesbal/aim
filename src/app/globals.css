@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -39,7 +39,6 @@
     color: #dfe3ec;
   }
 
-  /* Scrollbar — subtle, functional */
   ::-webkit-scrollbar {
     width: 6px;
   }
@@ -67,7 +66,7 @@
 }
 
 @layer components {
-  /* Focus ring — accessible, on-brand */
+  /* Focus ring */
   .focus-ring {
     @apply outline-none ring-2 ring-baltic-400 ring-offset-2 ring-offset-baltic-50;
   }
@@ -76,20 +75,82 @@
     @apply ring-baltic-500 ring-offset-baltic-950;
   }
 
-  /* Transition preset — consistent feel across interactions */
   .transition-smooth {
     @apply transition-all duration-200 ease-out;
   }
 
-  /* Card elevation — depth through subtle shadow, not heavy borders */
+  /* Card — softer, larger radius, shadow-only depth */
   .card-base {
-    @apply bg-white rounded-xl border border-lavender-100;
-    box-shadow: 0 1px 3px rgba(19, 23, 32, 0.04), 0 1px 2px rgba(19, 23, 32, 0.02);
+    @apply bg-white rounded-2xl;
+    box-shadow: 0 2px 8px rgba(19, 23, 32, 0.05), 0 0 1px rgba(19, 23, 32, 0.08);
   }
 
   .dark .card-base {
-    @apply bg-lavender-900 border-lavender-800;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    @apply bg-lavender-900;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Colored card variants */
+  .card-baltic {
+    @apply bg-baltic-50 dark:bg-baltic-900/40 rounded-2xl;
+    box-shadow: 0 2px 8px rgba(19, 23, 32, 0.04);
+  }
+
+  .card-ash {
+    @apply bg-ash-50 dark:bg-ash-900/40 rounded-2xl;
+    box-shadow: 0 2px 8px rgba(19, 23, 32, 0.04);
+  }
+
+  .card-cream {
+    @apply bg-cream-50 dark:bg-cream-900/40 rounded-2xl;
+    box-shadow: 0 2px 8px rgba(19, 23, 32, 0.04);
+  }
+
+  .card-lavender {
+    @apply bg-lavender-50 dark:bg-lavender-900/40 rounded-2xl;
+    box-shadow: 0 2px 8px rgba(19, 23, 32, 0.04);
+  }
+
+  /* Organic blob shapes — positioned absolute as background decorations */
+  .blob-1 {
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  }
+
+  .blob-2 {
+    border-radius: 58% 42% 36% 64% / 53% 68% 32% 47%;
+  }
+
+  .blob-3 {
+    border-radius: 42% 58% 70% 30% / 40% 32% 68% 60%;
+  }
+
+  /* Dot pattern background — subtle texture */
+  .dot-pattern {
+    background-image: radial-gradient(circle, #bfc6d9 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .dark .dot-pattern {
+    background-image: radial-gradient(circle, #394460 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* Float animation for decorative elements */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-float-slow {
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .animate-float-delay {
+    animation: float 6s ease-in-out 2s infinite;
   }
 
   /* Progress ring animation */
@@ -125,12 +186,7 @@
     border-radius: 6px;
   }
 
-  /* Sidebar active indicator — a thin vertical bar, not a full background fill */
-  .nav-active-indicator {
-    @apply absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-baltic-500;
-  }
-
-  /* Reflection panel entrance — gentle fade up from timer completion */
+  /* Reflection panel entrance */
   @keyframes fade-up {
     from {
       opacity: 0;
@@ -145,16 +201,21 @@
   .reflection-enter {
     animation: fade-up 0.4s ease-out;
   }
+
+  /* Top nav active pill */
+  .nav-pill-active {
+    @apply bg-baltic-100 text-baltic-700 dark:bg-baltic-800 dark:text-baltic-200;
+  }
 }
 
 @layer utilities {
-  /* Type scale — intentional sizing for hierarchy */
+  /* Type scale — bolder, more playful hierarchy */
   .text-display {
-    @apply text-2xl font-semibold tracking-tight;
+    @apply text-3xl font-bold tracking-tight;
   }
 
   .text-title {
-    @apply text-lg font-semibold tracking-tight;
+    @apply text-lg font-bold tracking-tight;
   }
 
   .text-body {
@@ -167,5 +228,10 @@
 
   .text-label {
     @apply text-xs font-semibold uppercase tracking-wider text-steel-400;
+  }
+
+  /* Large display for hero stats */
+  .text-stat {
+    @apply text-4xl font-extrabold tracking-tight;
   }
 }
