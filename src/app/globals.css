@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -21,7 +21,7 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background-color: #eff1f5;
     color: #262d40;
-    line-height: 1.6;
+    line-height: 1.5;
   }
 
   .dark body {
@@ -66,91 +66,34 @@
 }
 
 @layer components {
-  /* Focus ring */
-  .focus-ring {
-    @apply outline-none ring-2 ring-baltic-400 ring-offset-2 ring-offset-baltic-50;
-  }
-
-  .dark .focus-ring {
-    @apply ring-baltic-500 ring-offset-baltic-950;
-  }
-
   .transition-smooth {
-    @apply transition-all duration-200 ease-out;
+    @apply transition-all duration-150 ease-out;
   }
 
-  /* Card — softer, larger radius, shadow-only depth */
+  /* Card — clean, sharp */
   .card-base {
-    @apply bg-white rounded-2xl;
-    box-shadow: 0 2px 8px rgba(19, 23, 32, 0.05), 0 0 1px rgba(19, 23, 32, 0.08);
+    @apply bg-white rounded-lg border border-lavender-100;
   }
 
   .dark .card-base {
-    @apply bg-lavender-900;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 0, 0, 0.3);
+    @apply bg-lavender-900 border-lavender-800;
   }
 
-  /* Colored card variants */
+  /* Tinted card variants — subtle background only, no shadow */
   .card-baltic {
-    @apply bg-baltic-50 dark:bg-baltic-900/40 rounded-2xl;
-    box-shadow: 0 2px 8px rgba(19, 23, 32, 0.04);
+    @apply bg-baltic-50 dark:bg-baltic-900/30 rounded-lg border border-baltic-100 dark:border-baltic-800/40;
   }
 
   .card-ash {
-    @apply bg-ash-50 dark:bg-ash-900/40 rounded-2xl;
-    box-shadow: 0 2px 8px rgba(19, 23, 32, 0.04);
+    @apply bg-ash-50 dark:bg-ash-900/30 rounded-lg border border-ash-100 dark:border-ash-800/40;
   }
 
   .card-cream {
-    @apply bg-cream-50 dark:bg-cream-900/40 rounded-2xl;
-    box-shadow: 0 2px 8px rgba(19, 23, 32, 0.04);
+    @apply bg-cream-50 dark:bg-cream-900/30 rounded-lg border border-cream-100 dark:border-cream-800/40;
   }
 
   .card-lavender {
-    @apply bg-lavender-50 dark:bg-lavender-900/40 rounded-2xl;
-    box-shadow: 0 2px 8px rgba(19, 23, 32, 0.04);
-  }
-
-  /* Organic blob shapes — positioned absolute as background decorations */
-  .blob-1 {
-    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
-  }
-
-  .blob-2 {
-    border-radius: 58% 42% 36% 64% / 53% 68% 32% 47%;
-  }
-
-  .blob-3 {
-    border-radius: 42% 58% 70% 30% / 40% 32% 68% 60%;
-  }
-
-  /* Dot pattern background — subtle texture */
-  .dot-pattern {
-    background-image: radial-gradient(circle, #bfc6d9 1px, transparent 1px);
-    background-size: 20px 20px;
-  }
-
-  .dark .dot-pattern {
-    background-image: radial-gradient(circle, #394460 1px, transparent 1px);
-    background-size: 20px 20px;
-  }
-
-  /* Float animation for decorative elements */
-  @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-8px); }
-  }
-
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
-
-  .animate-float-slow {
-    animation: float 8s ease-in-out infinite;
-  }
-
-  .animate-float-delay {
-    animation: float 6s ease-in-out 2s infinite;
+    @apply bg-lavender-50 dark:bg-lavender-900/30 rounded-lg border border-lavender-100 dark:border-lavender-800/40;
   }
 
   /* Progress ring animation */
@@ -173,24 +116,11 @@
     animation: gentle-pulse 2s ease-in-out infinite;
   }
 
-  /* Skeleton loading */
-  @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-
-  .skeleton {
-    background: linear-gradient(90deg, #e2e4e9 25%, #f0f1f4 50%, #e2e4e9 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s ease-in-out infinite;
-    border-radius: 6px;
-  }
-
   /* Reflection panel entrance */
   @keyframes fade-up {
     from {
       opacity: 0;
-      transform: translateY(12px);
+      transform: translateY(8px);
     }
     to {
       opacity: 1;
@@ -199,23 +129,18 @@
   }
 
   .reflection-enter {
-    animation: fade-up 0.4s ease-out;
-  }
-
-  /* Top nav active pill */
-  .nav-pill-active {
-    @apply bg-baltic-100 text-baltic-700 dark:bg-baltic-800 dark:text-baltic-200;
+    animation: fade-up 0.3s ease-out;
   }
 }
 
 @layer utilities {
-  /* Type scale — bolder, more playful hierarchy */
+  /* Type scale — tighter, sharper */
   .text-display {
-    @apply text-3xl font-bold tracking-tight;
+    @apply text-2xl font-semibold tracking-tight;
   }
 
   .text-title {
-    @apply text-lg font-bold tracking-tight;
+    @apply text-base font-semibold tracking-tight;
   }
 
   .text-body {
@@ -227,11 +152,11 @@
   }
 
   .text-label {
-    @apply text-xs font-semibold uppercase tracking-wider text-steel-400;
+    @apply text-[11px] font-semibold uppercase tracking-wider text-steel-400;
   }
 
-  /* Large display for hero stats */
+  /* Stats — large but not extra-bold */
   .text-stat {
-    @apply text-4xl font-extrabold tracking-tight;
+    @apply text-3xl font-semibold tracking-tight;
   }
 }

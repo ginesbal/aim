@@ -18,26 +18,34 @@ export default function TopNav() {
   const { name } = usePreferences();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 h-16 bg-white/80 dark:bg-lavender-950/80 backdrop-blur-md border-b border-lavender-100/60 dark:border-lavender-800/60">
+    <header className="fixed top-0 left-0 right-0 z-40 h-14 bg-white dark:bg-lavender-950 border-b border-lavender-100 dark:border-lavender-800">
       <div className="max-w-5xl mx-auto h-full px-6 flex items-center justify-between">
-        {/* Logo */}
+        {/* Logo — meridian mark: vertical line crossing an arc */}
         <button
           onClick={() => router.push("/dashboard")}
-          className="flex items-center gap-2.5 group"
+          className="flex items-center gap-2 group"
         >
-          <div className="w-9 h-9 rounded-xl bg-baltic-500 flex items-center justify-center group-hover:scale-105 transition-smooth">
-            <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-              <path d="M8 1L14 5v6l-6 4-6-4V5l6-4z" stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
-              <circle cx="8" cy="8" r="2" fill="white" />
-            </svg>
-          </div>
-          <span className="text-lg font-bold text-baltic-800 dark:text-baltic-100 tracking-tight">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-baltic-600 dark:text-baltic-400">
+            {/* Arc — half ellipse representing a globe meridian */}
+            <path
+              d="M6 18c0-6.627 2.686-12 6-12s6 5.373 6 12"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              fill="none"
+            />
+            {/* Vertical meridian line */}
+            <line x1="12" y1="3" x2="12" y2="21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            {/* Top dot — north point / compass accent */}
+            <circle cx="12" cy="3" r="2" fill="currentColor" />
+          </svg>
+          <span className="text-base font-semibold text-baltic-800 dark:text-baltic-100 tracking-tight">
             Meridian
           </span>
         </button>
 
-        {/* Navigation pills */}
-        <nav className="flex items-center gap-1 bg-lavender-50/80 dark:bg-lavender-900/50 rounded-full px-1.5 py-1.5">
+        {/* Navigation */}
+        <nav className="flex items-center gap-1">
           {NAV_ITEMS.map((item) => {
             const active = pathname === item.href;
             return (
@@ -45,10 +53,10 @@ export default function TopNav() {
                 key={item.href}
                 onClick={() => router.push(item.href)}
                 className={cn(
-                  "px-4 py-1.5 rounded-full text-sm font-medium transition-smooth",
+                  "px-3 py-1.5 text-sm font-medium transition-smooth",
                   active
-                    ? "bg-white dark:bg-lavender-800 text-baltic-700 dark:text-baltic-200 shadow-sm"
-                    : "text-steel-500 dark:text-steel-400 hover:text-baltic-600 dark:hover:text-baltic-300"
+                    ? "text-baltic-700 dark:text-baltic-200 border-b-2 border-baltic-500"
+                    : "text-steel-400 hover:text-baltic-600 dark:hover:text-baltic-300"
                 )}
               >
                 {item.label}
@@ -57,9 +65,9 @@ export default function TopNav() {
           })}
         </nav>
 
-        {/* User avatar */}
-        <div className="w-9 h-9 rounded-full bg-cream-100 dark:bg-cream-900/50 flex items-center justify-center">
-          <span className="text-sm font-bold text-baltic-600 dark:text-baltic-300">
+        {/* User initial */}
+        <div className="w-8 h-8 rounded-md bg-lavender-100 dark:bg-lavender-800 flex items-center justify-center">
+          <span className="text-xs font-semibold text-baltic-600 dark:text-baltic-300">
             {name?.charAt(0)?.toUpperCase() || "U"}
           </span>
         </div>

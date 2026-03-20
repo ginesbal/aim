@@ -23,60 +23,50 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto">
-      <div className="text-center">
+    <div className="space-y-6 max-w-2xl mx-auto">
+      <div>
         <h1 className="text-display text-baltic-800 dark:text-baltic-100">Settings</h1>
-        <p className="text-body text-steel-500 dark:text-steel-400 mt-1">Manage your preferences</p>
+        <p className="text-sm text-steel-400 mt-1">Manage your preferences</p>
       </div>
 
       {/* Profile */}
-      <Card padding="lg">
+      <Card padding="md">
         <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">Profile</h2>
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="w-14 h-14 rounded-2xl bg-cream-100 dark:bg-cream-900/40 flex items-center justify-center">
-              <span className="text-xl font-bold text-baltic-600 dark:text-baltic-300">
-                {name?.charAt(0)?.toUpperCase() || "U"}
-              </span>
-            </div>
-            <p className="text-sm font-semibold text-baltic-800 dark:text-baltic-100">{name || "Not set"}</p>
-          </div>
-
+        <form onSubmit={handleSave} className="space-y-3">
           <Input
             id="settings-name"
             label="Name"
             value={localName}
             onChange={(e) => setLocalName(e.target.value)}
           />
-
           <div className="flex items-center gap-3">
             <Button type="submit" size="sm">Save</Button>
             {saved && (
-              <span className="text-xs text-ash-600 font-semibold">Saved</span>
+              <span className="text-xs text-ash-600 font-medium">Saved</span>
             )}
           </div>
         </form>
       </Card>
 
       {/* Appearance */}
-      <Card padding="lg">
+      <Card padding="md">
         <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">Appearance</h2>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-baltic-800 dark:text-baltic-100">Dark mode</p>
-            <p className="text-xs text-steel-400 mt-0.5">Reduce eye strain during evening study sessions</p>
+            <p className="text-sm text-baltic-800 dark:text-baltic-100">Dark mode</p>
+            <p className="text-xs text-steel-400 mt-0.5">Reduce eye strain during evening sessions</p>
           </div>
           <button
             onClick={toggle}
             className={cn(
-              "w-12 h-7 rounded-full transition-smooth relative",
+              "w-10 h-6 rounded-full transition-smooth relative",
               dark ? "bg-baltic-500" : "bg-lavender-300"
             )}
           >
             <span
               className={cn(
-                "absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-sm transition-smooth",
-                dark ? "left-[22px]" : "left-0.5"
+                "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-smooth",
+                dark ? "left-[18px]" : "left-0.5"
               )}
             />
           </button>
@@ -84,11 +74,10 @@ export default function SettingsPage() {
       </Card>
 
       {/* Data */}
-      <Card padding="lg">
+      <Card padding="md">
         <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">Data</h2>
-        <p className="text-sm text-steel-500 dark:text-steel-400 mb-4">
-          Your data is stored locally in your browser. Clearing browser data will remove all tasks,
-          sessions, and reflections.
+        <p className="text-sm text-steel-400 mb-3">
+          All data is stored locally in your browser.
         </p>
         <Button
           variant="danger"

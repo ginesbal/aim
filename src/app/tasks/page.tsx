@@ -33,7 +33,6 @@ export default function TasksPage() {
       result = result.filter((t) => t.completed);
     }
 
-    // Always sort by due date, completed at bottom
     result.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
     result.sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1));
 
@@ -43,27 +42,27 @@ export default function TasksPage() {
   const pendingCount = tasks.filter((t) => !t.completed).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-display text-baltic-800 dark:text-baltic-100">Tasks</h1>
-          <p className="text-body text-steel-500 dark:text-steel-400 mt-1">
+          <p className="text-sm text-steel-400 mt-1">
             {pendingCount} pending · {tasks.filter((t) => t.completed).length} completed
           </p>
         </div>
         <Button onClick={() => setShowAddModal(true)}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-            <path d="M8 3v10M3 8h10" />
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <path d="M7 2v10M2 7h10" />
           </svg>
           Add task
         </Button>
       </div>
 
-      {/* Simplified filters — 2 groups only, pill-style */}
-      <div className="flex flex-wrap items-center gap-4">
-        {/* Status pills */}
-        <div className="flex items-center gap-1.5 bg-white/60 dark:bg-lavender-900/40 rounded-full p-1">
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Status */}
+        <div className="flex items-center gap-1 border border-lavender-100 dark:border-lavender-800 rounded-md p-0.5">
           {([
             { value: "all", label: "All" },
             { value: "pending", label: "Pending" },
@@ -73,10 +72,10 @@ export default function TasksPage() {
               key={opt.value}
               onClick={() => setFilterStatus(opt.value)}
               className={cn(
-                "px-4 py-1.5 rounded-full text-xs font-semibold transition-smooth",
+                "px-3 py-1 rounded text-xs font-medium transition-smooth",
                 filterStatus === opt.value
-                  ? "bg-white dark:bg-lavender-800 text-baltic-700 dark:text-baltic-200 shadow-sm"
-                  : "text-steel-500 hover:text-baltic-600 dark:hover:text-baltic-300"
+                  ? "bg-baltic-600 text-white dark:bg-baltic-500"
+                  : "text-steel-400 hover:text-baltic-600"
               )}
             >
               {opt.label}
@@ -84,25 +83,25 @@ export default function TasksPage() {
           ))}
         </div>
 
-        {/* Subject pills */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+        {/* Subject */}
+        <div className="flex items-center gap-1 flex-wrap">
           <button
             onClick={() => setFilterSubject("all")}
             className={cn(
-              "px-3 py-1.5 rounded-full text-xs font-semibold transition-smooth",
+              "px-2.5 py-1 rounded text-xs font-medium transition-smooth",
               filterSubject === "all"
                 ? "bg-baltic-100 text-baltic-700 dark:bg-baltic-800 dark:text-baltic-200"
                 : "text-steel-400 hover:text-baltic-600"
             )}
           >
-            All subjects
+            All
           </button>
           {Object.entries(SUBJECTS).map(([key, { label, color }]) => (
             <button
               key={key}
               onClick={() => setFilterSubject(key as SubjectKey)}
               className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-semibold transition-smooth flex items-center gap-1.5",
+                "px-2.5 py-1 rounded text-xs font-medium transition-smooth flex items-center gap-1.5",
                 filterSubject === key
                   ? "text-white"
                   : "text-steel-400 hover:text-baltic-600"
@@ -110,7 +109,7 @@ export default function TasksPage() {
               style={filterSubject === key ? { backgroundColor: color } : undefined}
             >
               {filterSubject !== key && (
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
               )}
               {label}
             </button>
@@ -118,11 +117,11 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Task list — spacious cards */}
+      {/* Task list */}
       {filteredTasks.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {filteredTasks.map((task) => (
-            <TaskCard
+            <TaskRow
               key={task.id}
               task={task}
               onToggle={() => toggleComplete(task.id)}
@@ -131,18 +130,13 @@ export default function TasksPage() {
           ))}
         </div>
       ) : (
-        <Card padding="lg">
-          <div className="py-12 text-center">
-            <div className="flex justify-center gap-2 mb-4">
-              <div className="w-4 h-4 rounded-full bg-lavender-200/60 animate-float" />
-              <div className="w-4 h-4 rounded-full bg-baltic-200/60 animate-float-delay" />
-              <div className="w-4 h-4 rounded-full bg-cream-200/60 animate-float-slow" />
-            </div>
+        <Card padding="md">
+          <div className="py-8 text-center">
             <p className="text-sm text-steel-400">No tasks match your filters.</p>
             <Button
               variant="ghost"
               size="sm"
-              className="mt-3"
+              className="mt-2"
               onClick={() => {
                 setFilterSubject("all");
                 setFilterStatus("all");
@@ -154,10 +148,8 @@ export default function TasksPage() {
         </Card>
       )}
 
-      {/* Add Task Modal */}
       <AddTaskModal open={showAddModal} onClose={() => setShowAddModal(false)} onAdd={addTask} />
 
-      {/* Task Detail Modal */}
       {selectedTask && (
         <TaskDetailModal
           task={selectedTask}
@@ -176,8 +168,8 @@ export default function TasksPage() {
   );
 }
 
-/* ─── Task card — spacious, colored left accent ─── */
-function TaskCard({
+/* ─── Task row ─── */
+function TaskRow({
   task,
   onToggle,
   onSelect,
@@ -191,16 +183,16 @@ function TaskCard({
 
   return (
     <Card
-      padding="md"
+      padding="sm"
       className={cn(
-        "group cursor-pointer hover:shadow-md transition-smooth",
+        "group cursor-pointer hover:border-lavender-200 dark:hover:border-lavender-600 transition-smooth",
         task.completed && "opacity-50"
       )}
     >
-      <div className="flex items-center gap-4" onClick={onSelect}>
-        {/* Subject color bar — thicker, rounded */}
+      <div className="flex items-center gap-3" onClick={onSelect}>
+        {/* Color bar */}
         <div
-          className="w-1.5 h-12 rounded-full flex-shrink-0"
+          className="w-1 h-10 rounded-sm flex-shrink-0"
           style={{ backgroundColor: subject?.color || "#60729f" }}
         />
 
@@ -211,14 +203,14 @@ function TaskCard({
             onToggle();
           }}
           className={cn(
-            "w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-smooth",
+            "w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-smooth",
             task.completed
               ? "bg-ash-500 border-ash-500"
               : "border-lavender-300 dark:border-lavender-600 hover:border-baltic-400"
           )}
         >
           {task.completed && (
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2 5l2.5 2.5L8 3" />
             </svg>
           )}
@@ -227,7 +219,7 @@ function TaskCard({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <p className={cn(
-            "text-sm font-semibold truncate",
+            "text-sm truncate",
             task.completed
               ? "text-steel-400 line-through"
               : "text-baltic-800 dark:text-baltic-100"
@@ -239,14 +231,15 @@ function TaskCard({
           )}
         </div>
 
-        {/* Meta — simplified */}
-        <div className="flex items-center gap-3 flex-shrink-0">
+        {/* Meta */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           <div
-            className="w-2.5 h-2.5 rounded-full"
+            className="w-2 h-2 rounded-full"
             style={{ backgroundColor: PRIORITIES[task.priority].color }}
+            title={PRIORITIES[task.priority].label}
           />
           <span className={cn(
-            "text-xs font-semibold",
+            "text-xs font-medium",
             overdue ? "text-red-500" : "text-steel-400"
           )}>
             {overdue ? "Overdue" : formatDate(task.dueDate)}
@@ -303,7 +296,7 @@ function AddTaskModal({
         <div className="space-y-1.5">
           <label className="text-label text-baltic-600 dark:text-baltic-300">Description</label>
           <textarea
-            className="w-full px-4 py-3 text-sm rounded-xl border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-400 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth resize-none"
+            className="w-full px-3 py-2 text-sm rounded-md border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-400 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth resize-none"
             rows={2}
             placeholder="Additional details..."
             value={description}
@@ -317,7 +310,7 @@ function AddTaskModal({
             <select
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="w-full px-4 py-3 text-sm rounded-xl border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 outline-none focus:ring-2 focus:ring-baltic-400/30"
+              className="w-full px-3 py-2 text-sm rounded-md border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 outline-none focus:ring-2 focus:ring-baltic-400/30"
             >
               {Object.entries(SUBJECTS).map(([key, { label }]) => (
                 <option key={key} value={key}>{label}</option>
@@ -331,12 +324,11 @@ function AddTaskModal({
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-4 py-3 text-sm rounded-xl border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 outline-none focus:ring-2 focus:ring-baltic-400/30"
+              className="w-full px-3 py-2 text-sm rounded-md border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 outline-none focus:ring-2 focus:ring-baltic-400/30"
             />
           </div>
         </div>
 
-        {/* Priority selection */}
         <div className="space-y-1.5">
           <label className="text-label text-baltic-600 dark:text-baltic-300">Priority</label>
           <div className="flex gap-2">
@@ -346,7 +338,7 @@ function AddTaskModal({
                 type="button"
                 onClick={() => setPriority(p)}
                 className={cn(
-                  "flex-1 py-2.5 rounded-xl text-xs font-semibold transition-smooth border",
+                  "flex-1 py-2 rounded-md text-xs font-medium transition-smooth border",
                   priority === p
                     ? "border-baltic-400 bg-baltic-50 text-baltic-700 dark:bg-baltic-900/50 dark:text-baltic-300 dark:border-baltic-600"
                     : "border-lavender-200 dark:border-lavender-700 text-steel-500 hover:border-lavender-300"
@@ -386,10 +378,10 @@ function TaskDetailModal({
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <div
-            className="w-3 h-3 rounded-full"
+            className="w-2 h-2 rounded-full"
             style={{ backgroundColor: subject?.color || "#60729f" }}
           />
-          <span className="text-sm font-semibold text-baltic-700 dark:text-baltic-300">
+          <span className="text-sm text-baltic-700 dark:text-baltic-300">
             {subject?.label || task.subject}
           </span>
           <Badge color={PRIORITIES[task.priority].color}>{PRIORITIES[task.priority].label}</Badge>
@@ -397,13 +389,13 @@ function TaskDetailModal({
         </div>
 
         {task.description && (
-          <p className="text-sm text-steel-600 dark:text-steel-400 leading-relaxed">{task.description}</p>
+          <p className="text-sm text-steel-500 dark:text-steel-400 leading-relaxed">{task.description}</p>
         )}
 
-        <div className="flex items-center gap-4 text-xs text-steel-400">
-          <span>Due: {formatDate(task.dueDate)}</span>
+        <div className="text-xs text-steel-400">
+          Due: {formatDate(task.dueDate)}
           {!task.completed && isOverdue(task.dueDate) && (
-            <span className="text-red-500 font-semibold">Overdue</span>
+            <span className="text-red-500 ml-2">Overdue</span>
           )}
         </div>
 

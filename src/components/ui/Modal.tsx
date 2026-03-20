@@ -55,7 +55,7 @@ export default function Modal({
       {/* Panel */}
       <div
         className={cn(
-          "relative bg-white dark:bg-lavender-900 rounded-2xl shadow-xl p-6",
+          "relative bg-white dark:bg-lavender-900 rounded-lg border border-lavender-100 dark:border-lavender-800 shadow-lg p-6",
           width === "sm" && "w-full max-w-sm",
           width === "md" && "w-full max-w-lg",
           width === "lg" && "w-full max-w-2xl",
