@@ -47,7 +47,7 @@ export default function FocusPage() {
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
 
-  const showTopology = timerState === "running" || timerState === "paused" || timerState === "done";
+  const isFullscreen = timerState === "running" || timerState === "paused" || timerState === "done" || timerState === "reflecting";
   const topoColors = TOPO_STATES[timerState];
 
   const clearTimer = useCallback(() => {
@@ -78,6 +78,14 @@ export default function FocusPage() {
   }, [clearTimer]);
 
   const resetTimer = useCallback(() => {
+    clearTimer();
+    setTimerState("idle");
+    setSecondsLeft(duration * 60);
+    setReflectionQuality(null);
+    setReflectionNote("");
+  }, [clearTimer, duration]);
+
+  const exitFocus = useCallback(() => {
     clearTimer();
     setTimerState("idle");
     setSecondsLeft(duration * 60);
@@ -120,82 +128,225 @@ export default function FocusPage() {
   );
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="text-center">
-        <h1 className="text-display text-baltic-800 dark:text-baltic-100">Focus</h1>
-        <p className="text-sm text-steel-400 mt-1">
-          {todayMinutes > 0 ? `${formatTime(todayMinutes)} studied today` : "Ready to begin a session"}
-          {streak > 0 && ` · ${streak} day streak`}
-        </p>
-      </div>
-
-      {/* Timer card — with topology background */}
-      <div className="relative overflow-hidden rounded-lg">
-        {/* Topology background — visible during active states */}
-        <div
-          className="absolute inset-0 z-0 transition-opacity duration-700 ease-in-out"
-          style={{ opacity: showTopology ? 0.4 : 0 }}
-        >
-          {showTopology && (
+    <>
+      {/* Fullscreen focus overlay */}
+      {isFullscreen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Vanta topology — fills entire screen */}
+          <div className="absolute inset-0">
             <TopologyBg
               color={topoColors.color}
               backgroundColor={topoColors.bg}
             />
-          )}
+          </div>
+
+          {/* Exit button — top right */}
+          <button
+            onClick={exitFocus}
+            className="absolute top-6 right-6 z-10 flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-baltic-600 dark:text-baltic-300 bg-white/80 dark:bg-lavender-900/80 backdrop-blur-sm border border-lavender-200 dark:border-lavender-700 hover:bg-white dark:hover:bg-lavender-900 transition-smooth"
+          >
+            <svg width={14} height={14} viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+              <path d="M10.5 3.5L3.5 10.5M3.5 3.5l7 7" />
+            </svg>
+            Exit
+          </button>
+
+          {/* Timer + controls — centered */}
+          <div className="relative z-10 flex flex-col items-center">
+            {timerState === "reflecting" ? (
+              <div className="flex flex-col items-center reflection-enter bg-white/80 dark:bg-lavender-900/80 backdrop-blur-sm rounded-lg p-8 border border-lavender-200 dark:border-lavender-700">
+                <div className="flex items-center gap-2 mb-6">
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: SUBJECTS[subject]?.color || "#60729f" }}
+                  />
+                  <span className="text-sm text-baltic-700 dark:text-baltic-300">
+                    {formatTime(elapsedMinutes)} · {SUBJECTS[subject]?.label || subject}
+                  </span>
+                </div>
+
+                <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-5">
+                  How focused were you?
+                </h2>
+
+                <QualitySelector
+                  value={reflectionQuality}
+                  onChange={setReflectionQuality}
+                  size={36}
+                />
+
+                <div className="w-full max-w-sm mt-6">
+                  <input
+                    type="text"
+                    value={reflectionNote}
+                    onChange={(e) => setReflectionNote(e.target.value)}
+                    maxLength={80}
+                    placeholder="What clicked? (optional)"
+                    className="w-full px-3 py-2 text-sm text-center rounded-md border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-400 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3 mt-6">
+                  <Button onClick={saveWithReflection} disabled={!reflectionQuality}>
+                    Save reflection
+                  </Button>
+                  <Button variant="ghost" onClick={skipReflection}>
+                    Skip
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Timer face with tick marks + sweep */}
+                <div className="relative" style={{ width: 264, height: 264 }}>
+                  {/* Tick marks */}
+                  <svg
+                    width={264}
+                    height={264}
+                    viewBox="0 0 264 264"
+                    className="absolute inset-0"
+                  >
+                    {Array.from({ length: 60 }).map((_, i) => {
+                      const angle = (i * 6 - 90) * (Math.PI / 180);
+                      const isMajor = i % 5 === 0;
+                      const outerR = 130;
+                      const innerR = isMajor ? 121 : 124;
+                      const x1 = 132 + innerR * Math.cos(angle);
+                      const y1 = 132 + innerR * Math.sin(angle);
+                      const x2 = 132 + outerR * Math.cos(angle);
+                      const y2 = 132 + outerR * Math.sin(angle);
+                      const isActive = timerState === "running" || timerState === "paused";
+                      return (
+                        <line
+                          key={i}
+                          x1={x1}
+                          y1={y1}
+                          x2={x2}
+                          y2={y2}
+                          stroke="currentColor"
+                          strokeWidth={isMajor ? 1.5 : 0.75}
+                          strokeLinecap="round"
+                          className={cn(
+                            isMajor
+                              ? "text-baltic-300 dark:text-baltic-600"
+                              : "text-lavender-200 dark:text-lavender-700",
+                            isActive && "tick-enter"
+                          )}
+                          style={isActive ? { animationDelay: `${i * 10}ms` } : undefined}
+                        />
+                      );
+                    })}
+                  </svg>
+
+                  {/* Sweep hand */}
+                  <div
+                    className={cn(
+                      "absolute inset-0 pointer-events-none",
+                      timerState === "running" && "sweep-active",
+                    )}
+                    style={{
+                      opacity: timerState === "running" ? 1 : 0,
+                      transition: "opacity 0.3s ease",
+                    }}
+                  >
+                    <svg width={264} height={264} viewBox="0 0 264 264">
+                      <line
+                        x1={132}
+                        y1={132}
+                        x2={132}
+                        y2={16}
+                        stroke="#60729f"
+                        strokeWidth={1}
+                        strokeLinecap="round"
+                        opacity={0.5}
+                      />
+                      <circle cx={132} cy={132} r={2} fill="#60729f" opacity={0.5} />
+                    </svg>
+                  </div>
+
+                  {/* Progress ring */}
+                  <div className="absolute inset-[12px]">
+                    <ProgressRing
+                      progress={progress}
+                      size={240}
+                      strokeWidth={10}
+                      color={timerState === "done" ? "#76946b" : "#60729f"}
+                      trackColor={timerState === "done" ? "#c8d4c4" : "#e2e4e9"}
+                    >
+                      <div className="text-center">
+                        <p className={cn(
+                          "text-5xl font-light tracking-tight tabular-nums",
+                          timerState === "done"
+                            ? "text-ash-600 dark:text-ash-400"
+                            : "text-baltic-800 dark:text-baltic-100",
+                        )}>
+                          {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+                        </p>
+                        {timerState === "done" ? (
+                          <p className="text-xs text-ash-500 font-medium mt-1">Complete</p>
+                        ) : (
+                          <p className="text-xs text-steel-400 mt-1">
+                            {timerState === "paused" ? "Paused" : "Focusing"}
+                          </p>
+                        )}
+                      </div>
+                    </ProgressRing>
+                  </div>
+                </div>
+
+                {/* Controls */}
+                <div className="flex items-center gap-3 mt-6">
+                  {timerState === "running" && (
+                    <>
+                      <Button variant="secondary" onClick={pauseTimer}>Pause</Button>
+                      <Button variant="ghost" onClick={resetTimer}>Reset</Button>
+                    </>
+                  )}
+                  {timerState === "paused" && (
+                    <>
+                      <Button onClick={startTimer}>Resume</Button>
+                      <Button variant="ghost" onClick={resetTimer}>Reset</Button>
+                    </>
+                  )}
+                  {timerState === "done" && (
+                    <Button onClick={beginReflection}>Reflect on session</Button>
+                  )}
+                </div>
+
+                {/* Subject label */}
+                <div className="flex items-center gap-2 mt-4">
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: SUBJECTS[subject]?.color || "#60729f" }}
+                  />
+                  <span className="text-xs text-steel-400">
+                    {SUBJECTS[subject]?.label || subject}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Normal page content — visible when idle */}
+      <div className={cn("space-y-8 max-w-2xl mx-auto", isFullscreen && "hidden")}>
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-display text-baltic-800 dark:text-baltic-100">Focus</h1>
+          <p className="text-sm text-steel-400 mt-1">
+            {todayMinutes > 0 ? `${formatTime(todayMinutes)} studied today` : "Ready to begin a session"}
+            {streak > 0 && ` · ${streak} day streak`}
+          </p>
         </div>
 
-        {/* Card content */}
-        <div className={cn(
-          "relative z-10 border border-lavender-100 dark:border-lavender-800 p-6",
-          !showTopology && "bg-white dark:bg-lavender-900",
-          showTopology && "bg-white/70 dark:bg-lavender-900/70"
-        )}>
-          {timerState === "reflecting" ? (
-            <div className="flex flex-col items-center py-6 reflection-enter">
-              <div className="flex items-center gap-2 mb-6">
-                <div
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: SUBJECTS[subject]?.color || "#60729f" }}
-                />
-                <span className="text-sm text-baltic-700 dark:text-baltic-300">
-                  {formatTime(elapsedMinutes)} · {SUBJECTS[subject]?.label || subject}
-                </span>
-              </div>
-
-              <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-5">
-                How focused were you?
-              </h2>
-
-              <QualitySelector
-                value={reflectionQuality}
-                onChange={setReflectionQuality}
-                size={36}
-              />
-
-              <div className="w-full max-w-sm mt-6">
-                <input
-                  type="text"
-                  value={reflectionNote}
-                  onChange={(e) => setReflectionNote(e.target.value)}
-                  maxLength={80}
-                  placeholder="What clicked? (optional)"
-                  className="w-full px-3 py-2 text-sm text-center rounded-md border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-400 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth"
-                />
-              </div>
-
-              <div className="flex items-center gap-3 mt-6">
-                <Button onClick={saveWithReflection} disabled={!reflectionQuality}>
-                  Save reflection
-                </Button>
-                <Button variant="ghost" onClick={skipReflection}>
-                  Skip
-                </Button>
-              </div>
-            </div>
-          ) : (
+        {/* Timer card — idle state */}
+        <div className="relative overflow-hidden rounded-lg">
+          <div className={cn(
+            "border border-lavender-100 dark:border-lavender-800 p-6 bg-white dark:bg-lavender-900",
+          )}>
             <div className="flex flex-col items-center py-6">
-              {/* Timer face with tick marks + sweep */}
+              {/* Timer face */}
               <div className="relative" style={{ width: 264, height: 264 }}>
                 {/* Tick marks */}
                 <svg
@@ -213,7 +364,6 @@ export default function FocusPage() {
                     const y1 = 132 + innerR * Math.sin(angle);
                     const x2 = 132 + outerR * Math.cos(angle);
                     const y2 = 132 + outerR * Math.sin(angle);
-                    const isActive = timerState === "running" || timerState === "paused";
                     return (
                       <line
                         key={i}
@@ -224,180 +374,119 @@ export default function FocusPage() {
                         stroke="currentColor"
                         strokeWidth={isMajor ? 1.5 : 0.75}
                         strokeLinecap="round"
-                        className={cn(
+                        className={
                           isMajor
                             ? "text-baltic-300 dark:text-baltic-600"
-                            : "text-lavender-200 dark:text-lavender-700",
-                          isActive && "tick-enter"
-                        )}
-                        style={isActive ? { animationDelay: `${i * 10}ms` } : undefined}
+                            : "text-lavender-200 dark:text-lavender-700"
+                        }
                       />
                     );
                   })}
                 </svg>
 
-                {/* Sweep hand */}
-                <div
-                  className={cn(
-                    "absolute inset-0 pointer-events-none",
-                    timerState === "running" && "sweep-active",
-                  )}
-                  style={{
-                    opacity: timerState === "running" ? 1 : 0,
-                    transition: "opacity 0.3s ease",
-                  }}
-                >
-                  <svg width={264} height={264} viewBox="0 0 264 264">
-                    <line
-                      x1={132}
-                      y1={132}
-                      x2={132}
-                      y2={16}
-                      stroke="#60729f"
-                      strokeWidth={1}
-                      strokeLinecap="round"
-                      opacity={0.5}
-                    />
-                    <circle cx={132} cy={132} r={2} fill="#60729f" opacity={0.5} />
-                  </svg>
-                </div>
-
                 {/* Progress ring */}
                 <div className="absolute inset-[12px]">
                   <ProgressRing
-                    progress={timerState === "idle" ? 0 : progress}
+                    progress={0}
                     size={240}
                     strokeWidth={10}
-                    color={timerState === "done" ? "#76946b" : "#60729f"}
-                    trackColor={timerState === "done" ? "#c8d4c4" : "#e2e4e9"}
+                    color="#60729f"
+                    trackColor="#e2e4e9"
                   >
                     <div className="text-center">
-                      <p className={cn(
-                        "text-5xl font-light tracking-tight tabular-nums",
-                        timerState === "done"
-                          ? "text-ash-600 dark:text-ash-400"
-                          : "text-baltic-800 dark:text-baltic-100",
-                      )}>
+                      <p className="text-5xl font-light tracking-tight tabular-nums text-baltic-800 dark:text-baltic-100">
                         {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
                       </p>
-                      {timerState === "done" ? (
-                        <p className="text-xs text-ash-500 font-medium mt-1">Complete</p>
-                      ) : timerState !== "idle" ? (
-                        <p className="text-xs text-steel-400 mt-1">
-                          {timerState === "paused" ? "Paused" : "Focusing"}
-                        </p>
-                      ) : null}
                     </div>
                   </ProgressRing>
                 </div>
               </div>
 
-              {/* Controls */}
+              {/* Start button */}
               <div className="flex items-center gap-3 mt-6">
-                {timerState === "idle" && (
-                  <Button onClick={startTimer}>Start focusing</Button>
-                )}
-                {timerState === "running" && (
-                  <>
-                    <Button variant="secondary" onClick={pauseTimer}>Pause</Button>
-                    <Button variant="ghost" onClick={resetTimer}>Reset</Button>
-                  </>
-                )}
-                {timerState === "paused" && (
-                  <>
-                    <Button onClick={startTimer}>Resume</Button>
-                    <Button variant="ghost" onClick={resetTimer}>Reset</Button>
-                  </>
-                )}
-                {timerState === "done" && (
-                  <Button onClick={beginReflection}>Reflect on session</Button>
-                )}
+                <Button onClick={startTimer}>Start focusing</Button>
               </div>
 
               {/* Duration presets */}
-              {timerState === "idle" && (
-                <div className="flex items-center gap-1 mt-5">
-                  {PRESETS.map((p) => (
+              <div className="flex items-center gap-1 mt-5">
+                {PRESETS.map((p) => (
+                  <button
+                    key={p.minutes}
+                    onClick={() => setDuration(p.minutes)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-sm font-medium transition-smooth",
+                      duration === p.minutes
+                        ? "bg-baltic-100 text-baltic-700 dark:bg-baltic-800 dark:text-baltic-300"
+                        : "text-steel-400 hover:text-baltic-600 hover:bg-lavender-50 dark:hover:bg-lavender-900"
+                    )}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Subject selector */}
+              <div className="mt-5 w-full max-w-md">
+                <p className="text-label text-center mb-2">Subject</p>
+                <div className="flex flex-wrap justify-center gap-1.5">
+                  {Object.entries(SUBJECTS).map(([key, { label, color }]) => (
                     <button
-                      key={p.minutes}
-                      onClick={() => setDuration(p.minutes)}
+                      key={key}
+                      onClick={() => setSubject(key as SubjectKey)}
                       className={cn(
-                        "px-3 py-1.5 rounded-md text-sm font-medium transition-smooth",
-                        duration === p.minutes
-                          ? "bg-baltic-100 text-baltic-700 dark:bg-baltic-800 dark:text-baltic-300"
-                          : "text-steel-400 hover:text-baltic-600 hover:bg-lavender-50 dark:hover:bg-lavender-900"
+                        "px-2.5 py-1 rounded-md text-xs font-medium transition-smooth",
+                        subject === key
+                          ? "text-white"
+                          : "text-steel-500 bg-lavender-50 dark:bg-lavender-800 dark:text-lavender-400 hover:bg-lavender-100"
                       )}
+                      style={subject === key ? { backgroundColor: color } : undefined}
                     >
-                      {p.label}
+                      {label}
                     </button>
                   ))}
                 </div>
-              )}
-
-              {/* Subject selector */}
-              {timerState === "idle" && (
-                <div className="mt-5 w-full max-w-md">
-                  <p className="text-label text-center mb-2">Subject</p>
-                  <div className="flex flex-wrap justify-center gap-1.5">
-                    {Object.entries(SUBJECTS).map(([key, { label, color }]) => (
-                      <button
-                        key={key}
-                        onClick={() => setSubject(key as SubjectKey)}
-                        className={cn(
-                          "px-2.5 py-1 rounded-md text-xs font-medium transition-smooth",
-                          subject === key
-                            ? "text-white"
-                            : "text-steel-500 bg-lavender-50 dark:bg-lavender-800 dark:text-lavender-400 hover:bg-lavender-100"
-                        )}
-                        style={subject === key ? { backgroundColor: color } : undefined}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Today's sessions */}
-      {todaySessions.length > 0 && (
-        <Card padding="md">
-          <h3 className="text-title text-baltic-800 dark:text-baltic-100 mb-3">
-            Today&apos;s sessions
-          </h3>
-          <div className="space-y-2">
-            {todaySessions.map((session) => {
-              const sub = SUBJECTS[session.subject as SubjectKey];
-              return (
-                <div key={session.id} className="flex items-center gap-3 py-1.5">
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: sub?.color || "#60729f" }}
-                  />
-                  <span className="text-sm text-baltic-700 dark:text-baltic-300 flex-1">
-                    {sub?.label || session.subject}
-                  </span>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {session.reflection && (
-                      <QualityIndicator quality={session.reflection.quality} size={14} />
-                    )}
-                    <span className="text-xs text-steel-400">{formatTime(session.duration)}</span>
-                  </div>
-                </div>
-              );
-            })}
-            <div className="pt-2 border-t border-lavender-100 dark:border-lavender-800 flex items-center justify-between">
-              <span className="text-xs font-medium text-steel-400">Total</span>
-              <span className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
-                {formatTime(todayMinutes)}
-              </span>
+              </div>
             </div>
           </div>
-        </Card>
-      )}
-    </div>
+        </div>
+
+        {/* Today's sessions */}
+        {todaySessions.length > 0 && (
+          <Card padding="md">
+            <h3 className="text-title text-baltic-800 dark:text-baltic-100 mb-3">
+              Today&apos;s sessions
+            </h3>
+            <div className="space-y-2">
+              {todaySessions.map((session) => {
+                const sub = SUBJECTS[session.subject as SubjectKey];
+                return (
+                  <div key={session.id} className="flex items-center gap-3 py-1.5">
+                    <div
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: sub?.color || "#60729f" }}
+                    />
+                    <span className="text-sm text-baltic-700 dark:text-baltic-300 flex-1">
+                      {sub?.label || session.subject}
+                    </span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {session.reflection && (
+                        <QualityIndicator quality={session.reflection.quality} size={14} />
+                      )}
+                      <span className="text-xs text-steel-400">{formatTime(session.duration)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="pt-2 border-t border-lavender-100 dark:border-lavender-800 flex items-center justify-between">
+                <span className="text-xs font-medium text-steel-400">Total</span>
+                <span className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
+                  {formatTime(todayMinutes)}
+                </span>
+              </div>
+            </div>
+          </Card>
+        )}
+      </div>
+    </>
   );
 }
