@@ -10,7 +10,7 @@ import Button from "@/components/ui/Button";
 import ProgressRing from "@/components/ui/ProgressRing";
 import QualityIndicator, { QualitySelector } from "@/components/ui/QualityIndicator";
 
-const Aurora = dynamic(() => import("@/components/ui/Aurora"), { ssr: false });
+const TopologyBg = dynamic(() => import("@/components/ui/TopologyBg"), { ssr: false });
 
 const PRESETS = [
   { label: "25 min", minutes: 25 },
@@ -18,13 +18,13 @@ const PRESETS = [
   { label: "60 min", minutes: 60 },
 ];
 
-// Aurora configurations per state — muted, calming palette
-const AURORA_STATES = {
-  idle: { opacity: 0, colorStops: ["#60729f", "#8b97b8", "#60729f"], speed: 0.3, amplitude: 0.6 },
-  running: { opacity: 0.35, colorStops: ["#394460", "#60729f", "#8b97b8"], speed: 0.3, amplitude: 0.8 },
-  paused: { opacity: 0.15, colorStops: ["#394460", "#60729f", "#8b97b8"], speed: 0.1, amplitude: 0.4 },
-  done: { opacity: 0.3, colorStops: ["#4a6348", "#76946b", "#c8d4c4"], speed: 0.2, amplitude: 0.6 },
-  reflecting: { opacity: 0, colorStops: ["#60729f", "#8b97b8", "#60729f"], speed: 0.1, amplitude: 0.3 },
+// Topology color configs per state (0x hex format)
+const TOPO_STATES = {
+  idle:       { color: 0x808eb3, bg: 0xeff1f5 },
+  running:    { color: 0x808eb3, bg: 0xeff1f5 },
+  paused:     { color: 0xa8aebd, bg: 0xeff1f5 },
+  done:       { color: 0x76946b, bg: 0xf1f4f0 },
+  reflecting: { color: 0x808eb3, bg: 0xeff1f5 },
 } as const;
 
 type TimerState = "idle" | "running" | "paused" | "done" | "reflecting";
@@ -47,8 +47,8 @@ export default function FocusPage() {
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
 
-  const aurora = AURORA_STATES[timerState];
-  const showAurora = timerState === "running" || timerState === "paused" || timerState === "done";
+  const showTopology = timerState === "running" || timerState === "paused" || timerState === "done";
+  const topoColors = TOPO_STATES[timerState];
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current) {
@@ -130,28 +130,26 @@ export default function FocusPage() {
         </p>
       </div>
 
-      {/* Timer card — with aurora background layer */}
+      {/* Timer card — with topology background */}
       <div className="relative overflow-hidden rounded-lg">
-        {/* Aurora background — fades in/out based on timer state */}
+        {/* Topology background — visible during active states */}
         <div
-          className="absolute inset-0 z-0 transition-opacity duration-1000 ease-in-out"
-          style={{ opacity: aurora.opacity }}
+          className="absolute inset-0 z-0 transition-opacity duration-700 ease-in-out"
+          style={{ opacity: showTopology ? 0.4 : 0 }}
         >
-          {showAurora && (
-            <Aurora
-              colorStops={[...aurora.colorStops]}
-              speed={aurora.speed}
-              amplitude={aurora.amplitude}
-              blend={0.6}
+          {showTopology && (
+            <TopologyBg
+              color={topoColors.color}
+              backgroundColor={topoColors.bg}
             />
           )}
         </div>
 
-        {/* Card content — layered above aurora */}
+        {/* Card content */}
         <div className={cn(
           "relative z-10 border border-lavender-100 dark:border-lavender-800 p-6",
-          !showAurora && "bg-white dark:bg-lavender-900",
-          showAurora && "bg-white/80 dark:bg-lavender-900/80 backdrop-blur-sm"
+          !showTopology && "bg-white dark:bg-lavender-900",
+          showTopology && "bg-white/70 dark:bg-lavender-900/70"
         )}>
           {timerState === "reflecting" ? (
             <div className="flex flex-col items-center py-6 reflection-enter">
@@ -199,7 +197,7 @@ export default function FocusPage() {
             <div className="flex flex-col items-center py-6">
               {/* Timer face with tick marks + sweep */}
               <div className="relative" style={{ width: 264, height: 264 }}>
-                {/* Tick marks — 60 minute markers around the ring */}
+                {/* Tick marks */}
                 <svg
                   width={264}
                   height={264}
@@ -238,7 +236,7 @@ export default function FocusPage() {
                   })}
                 </svg>
 
-                {/* Sweep hand — thin line, rotates when running */}
+                {/* Sweep hand */}
                 <div
                   className={cn(
                     "absolute inset-0 pointer-events-none",
@@ -264,7 +262,7 @@ export default function FocusPage() {
                   </svg>
                 </div>
 
-                {/* Progress ring — centered inside tick marks */}
+                {/* Progress ring */}
                 <div className="absolute inset-[12px]">
                   <ProgressRing
                     progress={timerState === "idle" ? 0 : progress}
