@@ -116,6 +116,33 @@
     animation: gentle-pulse 2s ease-in-out infinite;
   }
 
+  /* Tick marks — staggered entrance when timer starts */
+  @keyframes tick-enter {
+    from {
+      opacity: 0;
+      transform: translateY(3px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .tick-enter {
+    animation: tick-enter 50ms ease-out forwards;
+    opacity: 0;
+  }
+
+  /* Sweep hand — one full rotation synced to seconds */
+  @keyframes sweep {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .sweep-active {
+    animation: sweep 60s linear infinite;
+  }
+
   /* Reflection panel entrance */
   @keyframes fade-up {
     from {

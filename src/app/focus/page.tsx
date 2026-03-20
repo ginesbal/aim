@@ -161,32 +161,102 @@ export default function FocusPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center py-6">
-            <ProgressRing
-              progress={timerState === "idle" ? 0 : progress}
-              size={240}
-              strokeWidth={10}
-              color={timerState === "done" ? "#76946b" : "#60729f"}
-              trackColor={timerState === "done" ? "#c8d4c4" : "#e2e4e9"}
-            >
-              <div className="text-center">
-                <p className={cn(
-                  "text-5xl font-light tracking-tight tabular-nums",
-                  timerState === "done"
-                    ? "text-ash-600 dark:text-ash-400"
-                    : "text-baltic-800 dark:text-baltic-100",
-                  timerState === "running" && "timer-pulse"
-                )}>
-                  {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
-                </p>
-                {timerState === "done" ? (
-                  <p className="text-xs text-ash-500 font-medium mt-1">Complete</p>
-                ) : timerState !== "idle" ? (
-                  <p className="text-xs text-steel-400 mt-1">
-                    {timerState === "paused" ? "Paused" : "Focusing"}
-                  </p>
-                ) : null}
+            {/* Timer face with tick marks + sweep */}
+            <div className="relative" style={{ width: 264, height: 264 }}>
+              {/* Tick marks — 60 minute markers around the ring */}
+              <svg
+                width={264}
+                height={264}
+                viewBox="0 0 264 264"
+                className="absolute inset-0"
+              >
+                {Array.from({ length: 60 }).map((_, i) => {
+                  const angle = (i * 6 - 90) * (Math.PI / 180);
+                  const isMajor = i % 5 === 0;
+                  const outerR = 130;
+                  const innerR = isMajor ? 121 : 124;
+                  const x1 = 132 + innerR * Math.cos(angle);
+                  const y1 = 132 + innerR * Math.sin(angle);
+                  const x2 = 132 + outerR * Math.cos(angle);
+                  const y2 = 132 + outerR * Math.sin(angle);
+                  const isActive = timerState === "running" || timerState === "paused";
+                  return (
+                    <line
+                      key={i}
+                      x1={x1}
+                      y1={y1}
+                      x2={x2}
+                      y2={y2}
+                      stroke="currentColor"
+                      strokeWidth={isMajor ? 1.5 : 0.75}
+                      strokeLinecap="round"
+                      className={cn(
+                        isMajor
+                          ? "text-baltic-300 dark:text-baltic-600"
+                          : "text-lavender-200 dark:text-lavender-700",
+                        isActive && "tick-enter"
+                      )}
+                      style={isActive ? { animationDelay: `${i * 10}ms` } : undefined}
+                    />
+                  );
+                })}
+              </svg>
+
+              {/* Sweep hand — thin line, rotates when running */}
+              <div
+                className={cn(
+                  "absolute inset-0 pointer-events-none",
+                  timerState === "running" && "sweep-active",
+                )}
+                style={{
+                  opacity: timerState === "running" ? 1 : 0,
+                  transition: "opacity 0.3s ease",
+                }}
+              >
+                <svg width={264} height={264} viewBox="0 0 264 264">
+                  <line
+                    x1={132}
+                    y1={132}
+                    x2={132}
+                    y2={16}
+                    stroke="#60729f"
+                    strokeWidth={1}
+                    strokeLinecap="round"
+                    opacity={0.5}
+                  />
+                  <circle cx={132} cy={132} r={2} fill="#60729f" opacity={0.5} />
+                </svg>
               </div>
-            </ProgressRing>
+
+              {/* Progress ring — centered inside tick marks */}
+              <div className="absolute inset-[12px]">
+                <ProgressRing
+                  progress={timerState === "idle" ? 0 : progress}
+                  size={240}
+                  strokeWidth={10}
+                  color={timerState === "done" ? "#76946b" : "#60729f"}
+                  trackColor={timerState === "done" ? "#c8d4c4" : "#e2e4e9"}
+                >
+                  <div className="text-center">
+                    <p className={cn(
+                      "text-5xl font-light tracking-tight tabular-nums",
+                      timerState === "done"
+                        ? "text-ash-600 dark:text-ash-400"
+                        : "text-baltic-800 dark:text-baltic-100",
+                    )}>
+                      {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+                    </p>
+                    {timerState === "done" ? (
+                      <p className="text-xs text-ash-500 font-medium mt-1">Complete</p>
+                    ) : timerState !== "idle" ? (
+                      <p className="text-xs text-steel-400 mt-1">
+                        {timerState === "paused" ? "Paused" : "Focusing"}
+                      </p>
+                    ) : null}
+                  </div>
+                </ProgressRing>
+              </div>
+            </div>
 
             {/* Controls */}
             <div className="flex items-center gap-3 mt-6">
