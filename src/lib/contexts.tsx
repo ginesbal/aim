@@ -41,13 +41,13 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setNameState(load<string>("meridian_name", ""));
+    setNameState(load<string>("aim_name", ""));
     setMounted(true);
   }, []);
 
   const setName = useCallback((n: string) => {
     setNameState(n);
-    save("meridian_name", n);
+    save("aim_name", n);
   }, []);
 
   if (!mounted) return null;
@@ -144,13 +144,13 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = load<Task[]>("meridian_tasks", []);
+    const stored = load<Task[]>("aim_tasks", []);
     setTasks(stored.length > 0 ? stored : SAMPLE_TASKS);
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (mounted) save("meridian_tasks", tasks);
+    if (mounted) save("aim_tasks", tasks);
   }, [tasks, mounted]);
 
   const addTask = useCallback(
@@ -208,7 +208,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = load<FocusSession[]>("meridian_sessions", []);
+    const stored = load<FocusSession[]>("aim_sessions", []);
     if (stored.length > 0) {
       setSessions(stored);
     } else {
@@ -245,7 +245,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (mounted) save("meridian_sessions", sessions);
+    if (mounted) save("aim_sessions", sessions);
   }, [sessions, mounted]);
 
   const addSession = useCallback((subject: string, duration: number, reflection?: Reflection) => {
@@ -316,13 +316,13 @@ export function SubjectsProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = load<UserSubject[]>("meridian_user_subjects", []);
+    const stored = load<UserSubject[]>("aim_user_subjects", []);
     setSubjects(stored.length > 0 ? stored : DEFAULT_USER_SUBJECTS);
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (mounted) save("meridian_user_subjects", subjects);
+    if (mounted) save("aim_user_subjects", subjects);
   }, [subjects, mounted]);
 
   const addSubject = useCallback((label: string, color: string) => {
@@ -367,13 +367,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setDark(load<boolean>("meridian_dark", false));
+    setDark(load<boolean>("aim_dark", false));
     setMounted(true);
   }, []);
 
   useEffect(() => {
     if (mounted) {
-      save("meridian_dark", dark);
+      save("aim_dark", dark);
       document.documentElement.classList.toggle("dark", dark);
     }
   }, [dark, mounted]);

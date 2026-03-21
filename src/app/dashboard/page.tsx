@@ -9,6 +9,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 import QualityIndicator from "@/components/ui/QualityIndicator";
+import AimLogo from "@/components/layout/AimLogo";
 import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
@@ -51,11 +52,9 @@ export default function DashboardPage() {
       {/* Welcome modal */}
       <Modal open={showWelcome} onClose={() => setShowWelcome(false)} width="sm">
         <div className="text-center py-2">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="text-baltic-600 mx-auto mb-4">
-            <path d="M6 18c0-6.627 2.686-12 6-12s6 5.373 6 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-            <line x1="12" y1="3" x2="12" y2="21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            <circle cx="12" cy="3" r="2" fill="currentColor" />
-          </svg>
+          <div className="flex justify-center mb-4">
+            <AimLogo size="md" />
+          </div>
           <h2 className="text-display text-baltic-800 dark:text-baltic-100 mb-1">
             Welcome to aim
           </h2>

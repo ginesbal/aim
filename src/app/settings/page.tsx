@@ -84,9 +84,9 @@ export default function SettingsPage() {
           size="sm"
           onClick={() => {
             if (confirm("This will clear all your data. Are you sure?")) {
-              localStorage.removeItem("meridian_tasks");
-              localStorage.removeItem("meridian_sessions");
-              localStorage.removeItem("meridian_name");
+              localStorage.removeItem("aim_tasks");
+              localStorage.removeItem("aim_sessions");
+              localStorage.removeItem("aim_name");
               window.location.reload();
             }
           }}
