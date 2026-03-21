@@ -242,10 +242,11 @@ export default function FocusPage() {
                   <div
                     className={cn(
                       "absolute inset-0 pointer-events-none",
-                      timerState === "running" && "sweep-active",
+                      (timerState === "running" || timerState === "paused") && "sweep-active",
                     )}
                     style={{
-                      opacity: timerState === "running" ? 1 : 0,
+                      opacity: timerState === "running" || timerState === "paused" ? 1 : 0,
+                      animationPlayState: timerState === "paused" ? "paused" : "running",
                       transition: "opacity 0.3s ease",
                     }}
                   >
