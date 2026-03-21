@@ -8,7 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { Task, FocusSession, Reflection } from "./types";
+import { Task, FocusSession, Reflection, UserSubject, DEFAULT_USER_SUBJECTS } from "./types";
 import { generateId } from "./utils";
 
 // ─── Storage helpers ───
@@ -298,6 +298,59 @@ export function FocusProvider({ children }: { children: ReactNode }) {
 export function useFocus() {
   const ctx = useContext(FocusContext);
   if (!ctx) throw new Error("useFocus must be inside FocusProvider");
+  return ctx;
+}
+
+// ─── User Subjects Context ───
+interface SubjectsState {
+  subjects: UserSubject[];
+  addSubject: (label: string, color: string) => void;
+  deleteSubject: (id: string) => void;
+  getSubject: (idOrLabel: string) => UserSubject | undefined;
+}
+
+const SubjectsContext = createContext<SubjectsState | null>(null);
+
+export function SubjectsProvider({ children }: { children: ReactNode }) {
+  const [subjects, setSubjects] = useState<UserSubject[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const stored = load<UserSubject[]>("meridian_user_subjects", []);
+    setSubjects(stored.length > 0 ? stored : DEFAULT_USER_SUBJECTS);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) save("meridian_user_subjects", subjects);
+  }, [subjects, mounted]);
+
+  const addSubject = useCallback((label: string, color: string) => {
+    setSubjects((prev) => [...prev, { id: generateId(), label, color }]);
+  }, []);
+
+  const deleteSubject = useCallback((id: string) => {
+    setSubjects((prev) => prev.filter((s) => s.id !== id));
+  }, []);
+
+  const getSubject = useCallback(
+    (idOrLabel: string) =>
+      subjects.find((s) => s.id === idOrLabel || s.label === idOrLabel),
+    [subjects]
+  );
+
+  if (!mounted) return null;
+
+  return (
+    <SubjectsContext.Provider value={{ subjects, addSubject, deleteSubject, getSubject }}>
+      {children}
+    </SubjectsContext.Provider>
+  );
+}
+
+export function useSubjects() {
+  const ctx = useContext(SubjectsContext);
+  if (!ctx) throw new Error("useSubjects must be inside SubjectsProvider");
   return ctx;
 }
 

@@ -1,0 +1,148 @@
+"use client";
+
+import { useRef, useCallback } from "react";
+import { cn } from "@/lib/utils";
+
+const PRESETS = [5, 15, 25, 45, 60, 90, 120];
+const MIN = 5;
+const MAX = 120;
+const STEP = 5;
+
+interface DurationPickerProps {
+  value: number;
+  onChange: (v: number) => void;
+  disabled?: boolean;
+}
+
+function clamp(v: number) {
+  return Math.max(MIN, Math.min(MAX, v));
+}
+
+function snapToStep(v: number) {
+  return Math.round(v / STEP) * STEP;
+}
+
+export default function DurationPicker({ value, onChange, disabled }: DurationPickerProps) {
+  const dragRef = useRef<{ startY: number; startVal: number } | null>(null);
+
+  const increment = useCallback(() => {
+    onChange(clamp(value + STEP));
+  }, [value, onChange]);
+
+  const decrement = useCallback(() => {
+    onChange(clamp(value - STEP));
+  }, [value, onChange]);
+
+  // Mouse wheel on the number
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? STEP : -STEP;
+      onChange(clamp(value + delta));
+    },
+    [value, onChange]
+  );
+
+  // Touch/mouse drag on the number
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (disabled) return;
+      dragRef.current = { startY: e.clientY, startVal: value };
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    },
+    [value, disabled]
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!dragRef.current) return;
+      const dy = dragRef.current.startY - e.clientY;
+      const delta = Math.round(dy / 8) * STEP;
+      onChange(clamp(snapToStep(dragRef.current.startVal + delta)));
+    },
+    [onChange]
+  );
+
+  const handlePointerUp = useCallback(() => {
+    dragRef.current = null;
+  }, []);
+
+  const formatDisplay = (mins: number) => {
+    if (mins >= 60) {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return m === 0 ? `${h}h` : `${h}h ${m}m`;
+    }
+    return `${mins}`;
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-4">
+      {/* Stepper row */}
+      <div className="flex items-center gap-6">
+        {/* Minus button */}
+        <button
+          onClick={decrement}
+          disabled={disabled || value <= MIN}
+          className="w-10 h-10 rounded-full flex items-center justify-center border border-lavender-200 dark:border-lavender-700 text-baltic-500 dark:text-baltic-400 hover:bg-lavender-50 dark:hover:bg-lavender-800 disabled:opacity-30 disabled:cursor-not-allowed transition-smooth"
+          aria-label="Decrease duration"
+        >
+          <svg width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+            <path d="M4 8h8" />
+          </svg>
+        </button>
+
+        {/* Draggable number display */}
+        <div
+          onWheel={handleWheel}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          className={cn(
+            "select-none touch-none cursor-ns-resize flex flex-col items-center",
+            disabled && "pointer-events-none opacity-50"
+          )}
+        >
+          <span className="text-5xl font-light tracking-tight tabular-nums text-baltic-800 dark:text-baltic-100 leading-none">
+            {formatDisplay(value)}
+          </span>
+          {value < 60 && (
+            <span className="text-xs text-steel-400 mt-1">min</span>
+          )}
+        </div>
+
+        {/* Plus button */}
+        <button
+          onClick={increment}
+          disabled={disabled || value >= MAX}
+          className="w-10 h-10 rounded-full flex items-center justify-center border border-lavender-200 dark:border-lavender-700 text-baltic-500 dark:text-baltic-400 hover:bg-lavender-50 dark:hover:bg-lavender-800 disabled:opacity-30 disabled:cursor-not-allowed transition-smooth"
+          aria-label="Increase duration"
+        >
+          <svg width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+            <path d="M8 4v8M4 8h8" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Preset chips */}
+      <div className="flex items-center gap-1.5 flex-wrap justify-center">
+        {PRESETS.map((p) => (
+          <button
+            key={p}
+            onClick={() => onChange(p)}
+            disabled={disabled}
+            className={cn(
+              "px-2.5 py-1 rounded-md text-xs font-medium transition-smooth",
+              value === p
+                ? "bg-baltic-100 text-baltic-700 dark:bg-baltic-800 dark:text-baltic-300"
+                : "text-steel-400 hover:text-baltic-600 hover:bg-lavender-50 dark:hover:bg-lavender-800 dark:hover:text-baltic-300"
+            )}
+          >
+            {p >= 60 ? `${p / 60}h` : `${p}m`}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

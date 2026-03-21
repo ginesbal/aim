@@ -52,6 +52,28 @@ export const SUBJECTS: Record<SubjectKey, { label: string; color: string }> = {
   philosophy: { label: "Philosophy", color: "#949b31" },
 };
 
+// ─── User-managed subjects ───
+export interface UserSubject {
+  id: string;
+  label: string;
+  color: string;
+}
+
+export const SUBJECT_COLORS = [
+  "#60729f", "#76946b", "#6e7891", "#b9a23d",
+  "#4d5b80", "#91a989", "#586074", "#9b7b6b",
+  "#7b6b9b", "#6b8f9b",
+] as const;
+
+export const DEFAULT_USER_SUBJECTS: UserSubject[] = [
+  { id: "math", label: "Mathematics", color: "#60729f" },
+  { id: "sci", label: "Science", color: "#76946b" },
+  { id: "lit", label: "Literature", color: "#6e7891" },
+  { id: "hist", label: "History", color: "#b9a23d" },
+  { id: "lang", label: "Languages", color: "#4d5b80" },
+  { id: "design", label: "Design", color: "#91a989" },
+];
+
 export const PRIORITIES = {
   low: { label: "Low", color: "#76946b" },
   medium: { label: "Medium", color: "#b9c23d" },

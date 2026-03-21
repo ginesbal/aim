@@ -2,21 +2,17 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { useFocus } from "@/lib/contexts";
+import { useFocus, useSubjects } from "@/lib/contexts";
 import { SUBJECTS, type SubjectKey, type FocusQuality } from "@/lib/types";
 import { cn, formatTime } from "@/lib/utils";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import ProgressRing from "@/components/ui/ProgressRing";
 import QualityIndicator, { QualitySelector } from "@/components/ui/QualityIndicator";
+import DurationPicker from "@/components/ui/DurationPicker";
+import SubjectSelector from "@/components/ui/SubjectSelector";
 
 const TopologyBg = dynamic(() => import("@/components/ui/TopologyBg"), { ssr: false });
-
-const PRESETS = [
-  { label: "25 min", minutes: 25 },
-  { label: "45 min", minutes: 45 },
-  { label: "60 min", minutes: 60 },
-];
 
 // Topology color configs per state (0x hex format)
 const TOPO_STATES = {
@@ -31,8 +27,9 @@ type TimerState = "idle" | "running" | "paused" | "done" | "reflecting";
 
 export default function FocusPage() {
   const { sessions, addSession, todayMinutes, streak } = useFocus();
+  const { getSubject } = useSubjects();
   const [duration, setDuration] = useState(25);
-  const [subject, setSubject] = useState<SubjectKey>("mathematics");
+  const [subject, setSubject] = useState<string | null>(null);
   const [timerState, setTimerState] = useState<TimerState>("idle");
   const [secondsLeft, setSecondsLeft] = useState(25 * 60);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -49,6 +46,23 @@ export default function FocusPage() {
 
   const isFullscreen = timerState === "running" || timerState === "paused" || timerState === "done" || timerState === "reflecting";
   const topoColors = TOPO_STATES[timerState];
+
+  // Resolve subject color for display
+  const subjectColor = (() => {
+    if (!subject) return "#60729f";
+    const userSub = getSubject(subject);
+    if (userSub) return userSub.color;
+    const legacySub = SUBJECTS[subject as SubjectKey];
+    return legacySub?.color || "#60729f";
+  })();
+
+  const subjectLabel = (() => {
+    if (!subject) return null;
+    const userSub = getSubject(subject);
+    if (userSub) return userSub.label;
+    const legacySub = SUBJECTS[subject as SubjectKey];
+    return legacySub?.label || subject;
+  })();
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current) {
@@ -101,7 +115,7 @@ export default function FocusPage() {
 
   const saveWithReflection = useCallback(() => {
     addSession(
-      subject,
+      subject || "General",
       elapsedMinutes,
       reflectionQuality ? { quality: reflectionQuality, ...(reflectionNote.trim() ? { note: reflectionNote.trim() } : {}) } : undefined
     );
@@ -109,7 +123,7 @@ export default function FocusPage() {
   }, [subject, elapsedMinutes, reflectionQuality, reflectionNote, addSession, resetTimer]);
 
   const skipReflection = useCallback(() => {
-    addSession(subject, elapsedMinutes);
+    addSession(subject || "General", elapsedMinutes);
     resetTimer();
   }, [subject, elapsedMinutes, addSession, resetTimer]);
 
@@ -126,6 +140,15 @@ export default function FocusPage() {
   const todaySessions = sessions.filter(
     (s) => new Date(s.completedAt).toDateString() === new Date().toDateString()
   );
+
+  // Resolve session subject for display in today's list
+  const getSessionSubject = (sessionSubject: string) => {
+    const userSub = getSubject(sessionSubject);
+    if (userSub) return { label: userSub.label, color: userSub.color };
+    const legacySub = SUBJECTS[sessionSubject as SubjectKey];
+    if (legacySub) return legacySub;
+    return { label: sessionSubject, color: "#60729f" };
+  };
 
   return (
     <>
@@ -158,10 +181,10 @@ export default function FocusPage() {
                 <div className="flex items-center gap-2 mb-6">
                   <div
                     className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: SUBJECTS[subject]?.color || "#60729f" }}
+                    style={{ backgroundColor: subjectColor }}
                   />
                   <span className="text-sm text-baltic-700 dark:text-baltic-300">
-                    {formatTime(elapsedMinutes)} · {SUBJECTS[subject]?.label || subject}
+                    {formatTime(elapsedMinutes)}{subjectLabel ? ` · ${subjectLabel}` : ""}
                   </span>
                 </div>
 
@@ -315,15 +338,17 @@ export default function FocusPage() {
                 </div>
 
                 {/* Subject label */}
-                <div className="flex items-center gap-2 mt-4">
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: SUBJECTS[subject]?.color || "#60729f" }}
-                  />
-                  <span className="text-xs text-steel-400">
-                    {SUBJECTS[subject]?.label || subject}
-                  </span>
-                </div>
+                {subjectLabel && (
+                  <div className="flex items-center gap-2 mt-4">
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: subjectColor }}
+                    />
+                    <span className="text-xs text-steel-400">
+                      {subjectLabel}
+                    </span>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -341,111 +366,25 @@ export default function FocusPage() {
           </p>
         </div>
 
-        {/* Timer card — idle state */}
+        {/* Timer setup card — idle state */}
         <div className="relative overflow-hidden rounded-lg">
-          <div className={cn(
-            "border border-lavender-100 dark:border-lavender-800 p-6 bg-white dark:bg-lavender-900",
-          )}>
-            <div className="flex flex-col items-center py-6">
-              {/* Timer face */}
-              <div className="relative" style={{ width: 264, height: 264 }}>
-                {/* Tick marks */}
-                <svg
-                  width={264}
-                  height={264}
-                  viewBox="0 0 264 264"
-                  className="absolute inset-0"
-                >
-                  {Array.from({ length: 60 }).map((_, i) => {
-                    const angle = (i * 6 - 90) * (Math.PI / 180);
-                    const isMajor = i % 5 === 0;
-                    const outerR = 130;
-                    const innerR = isMajor ? 121 : 124;
-                    const x1 = 132 + innerR * Math.cos(angle);
-                    const y1 = 132 + innerR * Math.sin(angle);
-                    const x2 = 132 + outerR * Math.cos(angle);
-                    const y2 = 132 + outerR * Math.sin(angle);
-                    return (
-                      <line
-                        key={i}
-                        x1={x1}
-                        y1={y1}
-                        x2={x2}
-                        y2={y2}
-                        stroke="currentColor"
-                        strokeWidth={isMajor ? 1.5 : 0.75}
-                        strokeLinecap="round"
-                        className={
-                          isMajor
-                            ? "text-baltic-300 dark:text-baltic-600"
-                            : "text-lavender-200 dark:text-lavender-700"
-                        }
-                      />
-                    );
-                  })}
-                </svg>
+          <div className="border border-lavender-100 dark:border-lavender-800 p-6 bg-white dark:bg-lavender-900">
+            <div className="flex flex-col items-center py-4">
+              {/* Duration picker */}
+              <DurationPicker value={duration} onChange={setDuration} />
 
-                {/* Progress ring */}
-                <div className="absolute inset-[12px]">
-                  <ProgressRing
-                    progress={0}
-                    size={240}
-                    strokeWidth={10}
-                    color="#60729f"
-                    trackColor="#e2e4e9"
-                  >
-                    <div className="text-center">
-                      <p className="text-5xl font-light tracking-tight tabular-nums text-baltic-800 dark:text-baltic-100">
-                        {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
-                      </p>
-                    </div>
-                  </ProgressRing>
-                </div>
+              {/* Divider */}
+              <div className="w-24 border-t border-lavender-100 dark:border-lavender-800 my-6" />
+
+              {/* Subject selector */}
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-label">Subject</p>
+                <SubjectSelector value={subject} onChange={setSubject} />
               </div>
 
               {/* Start button */}
-              <div className="flex items-center gap-3 mt-6">
+              <div className="mt-8">
                 <Button onClick={startTimer}>Start focusing</Button>
-              </div>
-
-              {/* Duration presets */}
-              <div className="flex items-center gap-1 mt-5">
-                {PRESETS.map((p) => (
-                  <button
-                    key={p.minutes}
-                    onClick={() => setDuration(p.minutes)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-md text-sm font-medium transition-smooth",
-                      duration === p.minutes
-                        ? "bg-baltic-100 text-baltic-700 dark:bg-baltic-800 dark:text-baltic-300"
-                        : "text-steel-400 hover:text-baltic-600 hover:bg-lavender-50 dark:hover:bg-lavender-900"
-                    )}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Subject selector */}
-              <div className="mt-5 w-full max-w-md">
-                <p className="text-label text-center mb-2">Subject</p>
-                <div className="flex flex-wrap justify-center gap-1.5">
-                  {Object.entries(SUBJECTS).map(([key, { label, color }]) => (
-                    <button
-                      key={key}
-                      onClick={() => setSubject(key as SubjectKey)}
-                      className={cn(
-                        "px-2.5 py-1 rounded-md text-xs font-medium transition-smooth",
-                        subject === key
-                          ? "text-white"
-                          : "text-steel-500 bg-lavender-50 dark:bg-lavender-800 dark:text-lavender-400 hover:bg-lavender-100"
-                      )}
-                      style={subject === key ? { backgroundColor: color } : undefined}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
@@ -459,15 +398,15 @@ export default function FocusPage() {
             </h3>
             <div className="space-y-2">
               {todaySessions.map((session) => {
-                const sub = SUBJECTS[session.subject as SubjectKey];
+                const sub = getSessionSubject(session.subject);
                 return (
                   <div key={session.id} className="flex items-center gap-3 py-1.5">
                     <div
                       className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: sub?.color || "#60729f" }}
+                      style={{ backgroundColor: sub.color }}
                     />
                     <span className="text-sm text-baltic-700 dark:text-baltic-300 flex-1">
-                      {sub?.label || session.subject}
+                      {sub.label}
                     </span>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {session.reflection && (

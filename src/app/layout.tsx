@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { PreferencesProvider, TasksProvider, FocusProvider, ThemeProvider } from "@/lib/contexts";
+import { PreferencesProvider, TasksProvider, FocusProvider, SubjectsProvider, ThemeProvider } from "@/lib/contexts";
 import AppShell from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
@@ -16,7 +16,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <PreferencesProvider>
             <TasksProvider>
               <FocusProvider>
-                <AppShell>{children}</AppShell>
+                <SubjectsProvider>
+                  <AppShell>{children}</AppShell>
+                </SubjectsProvider>
               </FocusProvider>
             </TasksProvider>
           </PreferencesProvider>
