@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { usePreferences } from "@/lib/contexts";
+import AimLogo from "./AimLogo";
 
 const NAV_ITEMS = [
   {
@@ -68,17 +69,7 @@ export default function Sidebar() {
     <aside className="fixed left-0 top-0 bottom-0 w-[220px] bg-white dark:bg-lavender-950 border-r border-lavender-100 dark:border-lavender-800 flex flex-col z-40">
       {/* Brand */}
       <div className="px-5 pt-6 pb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-baltic-500 flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M8 1L14 5v6l-6 4-6-4V5l6-4z" stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
-              <circle cx="8" cy="8" r="2" fill="white" />
-            </svg>
-          </div>
-          <span className="text-base font-semibold text-baltic-800 dark:text-baltic-100 tracking-tight">
-            Meridian
-          </span>
-        </div>
+        <AimLogo size="md" />
       </div>
 
       {/* Navigation */}

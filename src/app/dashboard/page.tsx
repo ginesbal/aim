@@ -57,7 +57,7 @@ export default function DashboardPage() {
             <circle cx="12" cy="3" r="2" fill="currentColor" />
           </svg>
           <h2 className="text-display text-baltic-800 dark:text-baltic-100 mb-1">
-            Welcome to Meridian
+            Welcome to aim
           </h2>
           <p className="text-body text-steel-500 dark:text-steel-400 mb-5">
             A calm space to plan your studies and build focus habits.

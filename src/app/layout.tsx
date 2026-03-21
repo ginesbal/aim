@@ -4,7 +4,7 @@ import { PreferencesProvider, TasksProvider, FocusProvider, SubjectsProvider, Th
 import AppShell from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
-  title: "Meridian — Find your focus",
+  title: "aim — Find your focus",
   description: "A calm, purposeful study planner for students who want to stay on track.",
 };
 
