@@ -367,7 +367,7 @@ export default function FocusPage() {
         </div>
 
         {/* Timer setup card — idle state */}
-        <div className="relative overflow-hidden rounded-lg">
+        <div className="relative rounded-lg">
           <div className="border border-lavender-100 dark:border-lavender-800 p-6 bg-white dark:bg-lavender-900">
             <div className="flex flex-col items-center py-4">
               {/* Duration picker */}
