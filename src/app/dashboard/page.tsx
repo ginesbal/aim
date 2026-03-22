@@ -89,6 +89,7 @@ export default function DashboardPage() {
 
   const [showWelcome, setShowWelcome] = useState(isFirstVisit);
   const [welcomeName, setWelcomeName] = useState("");
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const firstName = name ? name.split(" ")[0] : "there";
   const dailyGoal = 120;
@@ -104,7 +105,13 @@ export default function DashboardPage() {
     [tasks]
   );
 
-  const upcomingTasks = pendingTasks.slice(0, 4);
+  // When a date is selected in the calendar, filter to that date; otherwise show all upcoming
+  const upcomingTasks = useMemo(() => {
+    if (selectedDate) {
+      return pendingTasks.filter((t) => t.dueDate === selectedDate);
+    }
+    return pendingTasks.slice(0, 4);
+  }, [pendingTasks, selectedDate]);
 
   const completedCount = useMemo(
     () => tasks.filter((t) => t.completed).length,
@@ -311,7 +318,7 @@ export default function DashboardPage() {
         <div className="py-6 grid grid-cols-2 gap-5">
           {/* Up next */}
           <Section
-            title="Up next"
+            title={selectedDate ? `Tasks for ${formatDate(selectedDate)}` : "Up next"}
             action={
               <button
                 onClick={() => router.push("/tasks")}
@@ -357,7 +364,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <p className="text-sm text-steel-400 py-6 text-center">
-                All caught up.
+                {selectedDate ? "No tasks for this date." : "All caught up."}
               </p>
             )}
           </Section>
@@ -434,7 +441,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Calendar sidebar — full height */}
-      <CalendarSidebar />
+      <CalendarSidebar
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
+      />
     </div>
   );
 }
