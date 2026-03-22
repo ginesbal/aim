@@ -2,7 +2,7 @@
  * aim logo — converted directly from src/lib/aim_logo.svg brand asset.
  */
 export default function AimLogo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-  const w = size === "sm" ? 56 : size === "lg" ? 140 : 90;
+  const w = size === "sm" ? 40 : size === "lg" ? 100 : 64;
   const h = w * 0.49;
 
   return (
