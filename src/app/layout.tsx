@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { AuthProvider, TasksProvider, FocusProvider, ThemeProvider } from "@/lib/contexts";
+import { PreferencesProvider, TasksProvider, FocusProvider, SubjectsProvider, ThemeProvider } from "@/lib/contexts";
 import AppShell from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
-  title: "Meridian — Find your focus",
+  title: "aim — Find your focus",
   description: "A calm, purposeful study planner for students who want to stay on track.",
 };
 
@@ -13,13 +13,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <AuthProvider>
+          <PreferencesProvider>
             <TasksProvider>
               <FocusProvider>
-                <AppShell>{children}</AppShell>
+                <SubjectsProvider>
+                  <AppShell>{children}</AppShell>
+                </SubjectsProvider>
               </FocusProvider>
             </TasksProvider>
-          </AuthProvider>
+          </PreferencesProvider>
         </ThemeProvider>
       </body>
     </html>
