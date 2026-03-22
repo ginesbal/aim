@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>aim Logo</title>
+<style>
+  @font-face {
+    font-family: "Qurova";
+    src: url("https://db.onlinewebfonts.com/t/2cf31cbaf98b296b692adb4ed0483799.woff2") format("woff2"),
+         url("https://db.onlinewebfonts.com/t/2cf31cbaf98b296b692adb4ed0483799.woff") format("woff"),
+         url("https://db.onlinewebfonts.com/t/2cf31cbaf98b296b692adb4ed0483799.ttf") format("truetype");
+    font-weight: bold;
+    font-style: normal;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #eff1f5;
+  }
+
+  .logo {
+    font-family: "Qurova", sans-serif;
+    font-weight: bold;
+    font-size: 260px;
+    color: #394460;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    user-select: none;
+    display: flex;
+    align-items: baseline;
+  }
+
+  .i-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .i-wrapper .hidden-i {
+    visibility: hidden;
+  }
+
+  .i-wrapper .i-stem {
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: #394460;
+  }
+
+  .i-wrapper .i-dot {
+    position: absolute;
+    width: 0.19em;
+    height: 0.19em;
+    background: #949e9e;
+    border-radius: 50%;
+    top: 0.12em;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+</style>
+</head>
+<body>
+  <div class="logo">
+    a<span class="i-wrapper">
+      <span class="hidden-i">i</span>
+      <span class="i-stem" aria-hidden="true">ı</span>
+      <span class="i-dot" aria-hidden="true"></span>
+    </span>m
+  </div>
+</body>
+</html>
