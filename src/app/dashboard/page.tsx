@@ -216,7 +216,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Divider */}
-        <div className="border-t border-lavender-100 dark:border-lavender-800" />
+        <div className="border-t border-lavender-200 dark:border-lavender-700" />
 
         {/* Stats row */}
         <div className="py-6">
@@ -260,7 +260,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Divider */}
-        <div className="border-t border-lavender-100 dark:border-lavender-800" />
+        <div className="border-t border-lavender-200 dark:border-lavender-700" />
 
         {/* Subject progress — collapsible */}
         {subjectCards.length > 0 && (
@@ -270,7 +270,7 @@ export default function DashboardPage() {
                 {subjectCards.map((subject) => (
                   <div
                     key={subject.key}
-                    className="rounded-xl p-4 bg-white dark:bg-lavender-900 border border-lavender-100 dark:border-lavender-800"
+                    className="rounded-xl p-4 bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm"
                   >
                     <div className="flex items-center gap-2 mb-3">
                       <div
@@ -307,7 +307,7 @@ export default function DashboardPage() {
         )}
 
         {/* Divider */}
-        <div className="border-t border-lavender-100 dark:border-lavender-800" />
+        <div className="border-t border-lavender-200 dark:border-lavender-700" />
 
         {/* Two columns: Tasks + Recent sessions */}
         <div className="py-6 grid grid-cols-2 gap-5">
@@ -444,21 +444,10 @@ export default function DashboardPage() {
       {/* Floating focus button */}
       <button
         onClick={() => router.push("/focus")}
-        className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-baltic-600 hover:bg-baltic-700 dark:bg-baltic-500 dark:hover:bg-baltic-400 text-white shadow-lg hover:shadow-xl transition-smooth flex items-center justify-center z-50"
+        className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-baltic-600 hover:bg-baltic-700 dark:bg-baltic-500 dark:hover:bg-baltic-400 text-white shadow-[0_4px_20px_rgba(38,45,64,0.35)] hover:shadow-[0_6px_28px_rgba(38,45,64,0.45)] transition-smooth flex items-center justify-center z-50"
         title="Start Focus Session"
       >
-        <svg
-          width="22"
-          height="22"
-          viewBox="0 0 22 22"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polygon points="6,3 20,11 6,19" fill="currentColor" stroke="none" />
-        </svg>
+        <span className="text-[11px] font-bold uppercase tracking-wider">Focus</span>
       </button>
     </div>
   );

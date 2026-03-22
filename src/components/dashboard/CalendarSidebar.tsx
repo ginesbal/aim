@@ -152,7 +152,7 @@ export default function CalendarSidebar({
     selectedDateTasks.length > 0 || selectedDateSessions.length > 0;
 
   return (
-    <aside className="w-[280px] flex-shrink-0 bg-white dark:bg-lavender-900 rounded-2xl p-6 border border-lavender-100 dark:border-lavender-800 self-stretch">
+    <aside className="w-[280px] flex-shrink-0 bg-white dark:bg-lavender-900 rounded-2xl p-6 border border-lavender-200 dark:border-lavender-700 shadow-sm self-stretch">
       {/* Calendar header with collapse toggle */}
       <div className="flex items-center justify-between mb-4">
         <button
@@ -305,7 +305,7 @@ export default function CalendarSidebar({
       )}
 
       {/* Divider */}
-      <div className="border-t border-lavender-100 dark:border-lavender-800 mt-4 mb-4" />
+      <div className="border-t border-lavender-200 dark:border-lavender-700 mt-4 mb-4" />
 
       {/* Selected date detail */}
       {selectedDate ? (
@@ -340,7 +340,7 @@ export default function CalendarSidebar({
 
               {selectedDateSessions.length > 0 &&
                 selectedDateTasks.length > 0 && (
-                  <div className="border-t border-lavender-100 dark:border-lavender-800 my-2" />
+                  <div className="border-t border-lavender-200 dark:border-lavender-700 my-2" />
                 )}
               {selectedDateSessions.map((session) => {
                 const sub = SUBJECTS[session.subject as SubjectKey];
