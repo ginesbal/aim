@@ -37,10 +37,9 @@ export default function CalendarSidebar() {
       groups[key].push(task);
     }
 
-    // Show at most 3 date groups
     const sortedKeys = Object.keys(groups).sort();
     const limited: typeof groups = {};
-    for (const key of sortedKeys.slice(0, 3)) {
+    for (const key of sortedKeys.slice(0, 5)) {
       limited[key] = groups[key];
     }
     return limited;
@@ -49,54 +48,34 @@ export default function CalendarSidebar() {
   const dateKeys = Object.keys(groupedTasks).sort();
 
   return (
-    <aside className="w-[280px] flex-shrink-0 bg-white dark:bg-lavender-900 rounded-2xl p-6 h-fit sticky top-8 border border-lavender-100 dark:border-lavender-800">
+    <aside className="w-[280px] flex-shrink-0 bg-white dark:bg-lavender-900 rounded-2xl p-6 border border-lavender-100 dark:border-lavender-800 self-stretch">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-baltic-800 dark:text-baltic-100">
-          Calendar
-        </h2>
-        <button className="w-8 h-8 rounded-lg bg-baltic-50 dark:bg-baltic-800 flex items-center justify-center hover:bg-baltic-100 dark:hover:bg-baltic-700 transition-smooth">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="text-baltic-600 dark:text-baltic-300"
-          >
-            <path d="M12.5 4.5v-2a1 1 0 00-1-1h-7a1 1 0 00-1 1v11a1 1 0 001 1h7a1 1 0 001-1v-2" />
-            <path d="M5 5.5h5M5 8h3" />
-          </svg>
-        </button>
-      </div>
+      <h2 className="text-lg font-semibold text-baltic-800 dark:text-baltic-100 mb-6">
+        Calendar
+      </h2>
+
+      {/* Divider */}
+      <div className="border-t border-lavender-100 dark:border-lavender-800 mb-6" />
 
       {/* Date groups */}
-      <div className="space-y-6">
+      <div className="space-y-0">
         {dateKeys.length > 0 ? (
-          dateKeys.map((dateKey) => (
+          dateKeys.map((dateKey, groupIndex) => (
             <div key={dateKey}>
+              {/* Divider between groups */}
+              {groupIndex > 0 && (
+                <div className="border-t border-lavender-100 dark:border-lavender-800 my-5" />
+              )}
+
               {/* Date header */}
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold text-baltic-700 dark:text-baltic-200">
-                  {formatCalendarDate(dateKey)}
-                </p>
-                <button className="text-steel-400 hover:text-steel-600 dark:hover:text-steel-300">
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-                    <circle cx="3" cy="7" r="1.2" />
-                    <circle cx="7" cy="7" r="1.2" />
-                    <circle cx="11" cy="7" r="1.2" />
-                  </svg>
-                </button>
-              </div>
+              <p className="text-sm font-semibold text-baltic-700 dark:text-baltic-200 mb-3">
+                {formatCalendarDate(dateKey)}
+              </p>
 
               {/* Tasks in this date */}
               <div className="space-y-3">
                 {groupedTasks[dateKey].map((task, i) => {
-                  const subject =
-                    SUBJECTS[task.subject as SubjectKey];
+                  const subject = SUBJECTS[task.subject as SubjectKey];
                   return (
                     <div key={task.id} className="flex items-start gap-3">
                       <span className="text-xs font-semibold text-steel-400 w-10 pt-0.5 flex-shrink-0">
@@ -105,8 +84,7 @@ export default function CalendarSidebar() {
                       <div
                         className="w-0.5 rounded-full self-stretch flex-shrink-0"
                         style={{
-                          backgroundColor:
-                            subject?.color || "#60729f",
+                          backgroundColor: subject?.color || "#60729f",
                         }}
                       />
                       <div className="min-w-0">

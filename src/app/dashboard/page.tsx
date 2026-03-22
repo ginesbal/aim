@@ -26,13 +26,59 @@ import AimLogo from "@/components/layout/AimLogo";
 import CalendarSidebar from "@/components/dashboard/CalendarSidebar";
 import { useRouter } from "next/navigation";
 
-// Theme-based card styles mapped to tailwind palette
-const SUBJECT_CARD_STYLES = [
-  { bg: "baltic", bgClass: "bg-baltic-50 dark:bg-baltic-900/60", accent: "baltic" },
-  { bg: "ash", bgClass: "bg-ash-50 dark:bg-ash-900/60", accent: "ash" },
-  { bg: "cream", bgClass: "bg-cream-50 dark:bg-cream-900/60", accent: "cream" },
-  { bg: "lavender", bgClass: "bg-lavender-50 dark:bg-lavender-900/60", accent: "lavender" },
-] as const;
+// Collapsible section wrapper
+function Section({
+  title,
+  action,
+  collapsible = false,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  action?: React.ReactNode;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          {collapsible && (
+            <button
+              onClick={() => setOpen(!open)}
+              className="text-steel-400 hover:text-baltic-600 dark:hover:text-baltic-300 transition-smooth"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={cn(
+                  "transition-transform duration-200",
+                  open ? "rotate-90" : "rotate-0"
+                )}
+              >
+                <path d="M5 3l4 4-4 4" />
+              </svg>
+            </button>
+          )}
+          <h2 className="text-title text-baltic-800 dark:text-baltic-100">
+            {title}
+          </h2>
+        </div>
+        {action}
+      </div>
+      {open && children}
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { name, isFirstVisit, setName } = usePreferences();
@@ -78,7 +124,6 @@ export default function DashboardPage() {
     [sessions]
   );
 
-  // Subject progress: show subjects that have tasks
   const subjectCards = useMemo(() => {
     const subjectMap: Record<
       string,
@@ -107,10 +152,9 @@ export default function DashboardPage() {
       .filter(([, v]) => v.total > 0)
       .sort((a, b) => b[1].total - a[1].total)
       .slice(0, 4)
-      .map(([key, val], i) => ({
+      .map(([key, val]) => ({
         key,
         ...val,
-        style: SUBJECT_CARD_STYLES[i % SUBJECT_CARD_STYLES.length],
         progress: Math.round((val.completed / val.total) * 100),
       }));
   }, [tasks, userSubjects]);
@@ -126,7 +170,7 @@ export default function DashboardPage() {
   return (
     <div className="flex gap-6">
       {/* Main content */}
-      <div className="flex-1 min-w-0 space-y-8">
+      <div className="flex-1 min-w-0">
         {/* Welcome modal */}
         <Modal
           open={showWelcome}
@@ -160,7 +204,7 @@ export default function DashboardPage() {
         </Modal>
 
         {/* Header */}
-        <div>
+        <div className="pb-6">
           <h1 className="text-display text-baltic-800 dark:text-baltic-100">
             {getGreeting()}, {firstName}
           </h1>
@@ -169,117 +213,114 @@ export default function DashboardPage() {
           </p>
         </div>
 
+        {/* Divider */}
+        <div className="border-t border-lavender-100 dark:border-lavender-800" />
+
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-4">
-          <Card color="baltic" padding="md">
-            <p className="text-label text-baltic-500 dark:text-baltic-400">
-              Today&apos;s focus
-            </p>
-            <p className="text-stat text-baltic-700 dark:text-baltic-200 mt-1">
-              {formatTime(todayMinutes)}
-            </p>
-            <p className="text-xs text-steel-400 mt-1">
-              of {formatTime(dailyGoal)} goal
-            </p>
-          </Card>
+        <div className="py-6">
+          <div className="grid grid-cols-3 gap-4">
+            <Card color="baltic" padding="md">
+              <p className="text-label text-baltic-500 dark:text-baltic-400">
+                Today&apos;s focus
+              </p>
+              <p className="text-stat text-baltic-700 dark:text-baltic-200 mt-1">
+                {formatTime(todayMinutes)}
+              </p>
+              <p className="text-xs text-steel-400 mt-1">
+                of {formatTime(dailyGoal)} goal
+              </p>
+            </Card>
 
-          <Card color="cream" padding="md">
-            <p className="text-label text-cream-600 dark:text-cream-400">
-              Study streak
-            </p>
-            <p className="text-stat text-cream-800 dark:text-cream-200 mt-1">
-              {streak} day{streak !== 1 ? "s" : ""}
-            </p>
-            <p className="text-xs text-steel-400 mt-1">
-              {streak > 0 ? "Keep it going" : "Start today"}
-            </p>
-          </Card>
+            <Card color="cream" padding="md">
+              <p className="text-label text-cream-600 dark:text-cream-400">
+                Study streak
+              </p>
+              <p className="text-stat text-cream-800 dark:text-cream-200 mt-1">
+                {streak} day{streak !== 1 ? "s" : ""}
+              </p>
+              <p className="text-xs text-steel-400 mt-1">
+                {streak > 0 ? "Keep it going" : "Start today"}
+              </p>
+            </Card>
 
-          <Card color="ash" padding="md">
-            <p className="text-label text-ash-500 dark:text-ash-400">
-              Tasks remaining
-            </p>
-            <p className="text-stat text-ash-700 dark:text-ash-200 mt-1">
-              {pendingTasks.length}
-            </p>
-            <p className="text-xs text-steel-400 mt-1">
-              of {tasks.length} total
-            </p>
-          </Card>
+            <Card color="ash" padding="md">
+              <p className="text-label text-ash-500 dark:text-ash-400">
+                Tasks remaining
+              </p>
+              <p className="text-stat text-ash-700 dark:text-ash-200 mt-1">
+                {pendingTasks.length}
+              </p>
+              <p className="text-xs text-steel-400 mt-1">
+                of {tasks.length} total
+              </p>
+            </Card>
+          </div>
         </div>
 
-        {/* Subject progress */}
+        {/* Divider */}
+        <div className="border-t border-lavender-100 dark:border-lavender-800" />
+
+        {/* Subject progress — collapsible */}
         {subjectCards.length > 0 && (
-          <div>
-            <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">
-              Subject progress
-            </h2>
-            <div className="grid grid-cols-4 gap-3">
-              {subjectCards.map((subject) => (
-                <div
-                  key={subject.key}
-                  className={cn(
-                    "rounded-xl p-4 border transition-smooth",
-                    subject.style.bgClass,
-                    subject.style.bg === "baltic" &&
-                      "border-baltic-100 dark:border-baltic-800",
-                    subject.style.bg === "ash" &&
-                      "border-ash-100 dark:border-ash-800",
-                    subject.style.bg === "cream" &&
-                      "border-cream-100 dark:border-cream-800",
-                    subject.style.bg === "lavender" &&
-                      "border-lavender-100 dark:border-lavender-800"
-                  )}
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <div
-                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: subject.color }}
-                    />
-                    <p className="text-sm font-semibold text-baltic-800 dark:text-baltic-100 truncate">
-                      {subject.label}
-                    </p>
+          <div className="py-6">
+            <Section title="Subject progress" collapsible defaultOpen>
+              <div className="grid grid-cols-4 gap-3">
+                {subjectCards.map((subject) => (
+                  <div
+                    key={subject.key}
+                    className="rounded-xl p-4 bg-white dark:bg-lavender-900 border border-lavender-100 dark:border-lavender-800"
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <div
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: subject.color }}
+                      />
+                      <p className="text-sm font-semibold text-baltic-800 dark:text-baltic-100 truncate">
+                        {subject.label}
+                      </p>
+                    </div>
+                    <div className="flex items-baseline gap-1.5 mb-2">
+                      <span className="text-lg font-bold text-baltic-700 dark:text-baltic-200">
+                        {subject.progress}%
+                      </span>
+                      <span className="text-xs text-steel-400">
+                        {subject.completed}/{subject.total}
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-baltic-100 dark:bg-baltic-800">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${subject.progress}%`,
+                          backgroundColor: subject.color,
+                          opacity: 0.7,
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-baseline gap-1.5 mb-2">
-                    <span className="text-lg font-bold text-baltic-700 dark:text-baltic-200">
-                      {subject.progress}%
-                    </span>
-                    <span className="text-xs text-steel-400">
-                      {subject.completed}/{subject.total}
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-baltic-100 dark:bg-baltic-800">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${subject.progress}%`,
-                        backgroundColor: subject.color,
-                        opacity: 0.7,
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </Section>
           </div>
         )}
 
+        {/* Divider */}
+        <div className="border-t border-lavender-100 dark:border-lavender-800" />
+
         {/* Two columns: Tasks + Recent sessions */}
-        <div className="grid grid-cols-2 gap-5">
+        <div className="py-6 grid grid-cols-2 gap-5">
           {/* Up next */}
-          <Card padding="md">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-title text-baltic-800 dark:text-baltic-100">
-                Up next
-              </h2>
+          <Section
+            title="Up next"
+            action={
               <button
                 onClick={() => router.push("/tasks")}
                 className="text-xs text-baltic-500 hover:text-baltic-700 dark:hover:text-baltic-300 font-medium transition-smooth"
               >
                 View all
               </button>
-            </div>
-
+            }
+          >
             {upcomingTasks.length > 0 ? (
               <div className="space-y-1">
                 {upcomingTasks.map((task) => {
@@ -319,24 +360,23 @@ export default function DashboardPage() {
                 All caught up.
               </p>
             )}
-          </Card>
+          </Section>
 
-          {/* Recent sessions */}
-          <Card padding="md">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-title text-baltic-800 dark:text-baltic-100">
-                Recent sessions
-              </h2>
-              {recentReflections.length > 0 && (
+          {/* Recent sessions — collapsible */}
+          <Section
+            title="Recent sessions"
+            collapsible
+            action={
+              recentReflections.length > 0 ? (
                 <button
                   onClick={() => router.push("/journal")}
                   className="text-xs text-baltic-500 hover:text-baltic-700 dark:hover:text-baltic-300 font-medium transition-smooth"
                 >
                   View all
                 </button>
-              )}
-            </div>
-
+              ) : undefined
+            }
+          >
             {recentReflections.length > 0 ? (
               <div className="space-y-1">
                 {recentReflections.map((session) => {
@@ -389,11 +429,11 @@ export default function DashboardPage() {
                 </Button>
               </div>
             )}
-          </Card>
+          </Section>
         </div>
       </div>
 
-      {/* Calendar sidebar */}
+      {/* Calendar sidebar — full height */}
       <CalendarSidebar />
     </div>
   );
