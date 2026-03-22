@@ -74,7 +74,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
-          "Inter",
+          "Funnel Display",
           "system-ui",
           "-apple-system",
           "BlinkMacSystemFont",
