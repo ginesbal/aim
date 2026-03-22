@@ -74,7 +74,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
-          "Funnel Display",
+          "Plus Jakarta Sans",
           "system-ui",
           "-apple-system",
           "BlinkMacSystemFont",
