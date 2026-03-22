@@ -184,7 +184,7 @@
   }
 
   .text-title {
-    @apply text-base font-semibold tracking-tight;
+    @apply text-base font-bold tracking-tight;
   }
 
   .text-body {

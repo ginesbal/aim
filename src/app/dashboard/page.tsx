@@ -113,11 +113,6 @@ export default function DashboardPage() {
     return pendingTasks.slice(0, 4);
   }, [pendingTasks, selectedDate]);
 
-  const completedCount = useMemo(
-    () => tasks.filter((t) => t.completed).length,
-    [tasks]
-  );
-
   const recentReflections = useMemo(
     () =>
       [...sessions]
@@ -226,8 +221,8 @@ export default function DashboardPage() {
         {/* Stats row */}
         <div className="py-6">
           <div className="grid grid-cols-3 gap-4">
-            <Card color="baltic" padding="md">
-              <p className="text-label text-baltic-500 dark:text-baltic-400">
+            <Card color="lavender" padding="md">
+              <p className="text-label text-lavender-500 dark:text-lavender-400">
                 Today&apos;s focus
               </p>
               <p className="text-stat text-baltic-700 dark:text-baltic-200 mt-1">
@@ -445,6 +440,26 @@ export default function DashboardPage() {
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
       />
+
+      {/* Floating focus button */}
+      <button
+        onClick={() => router.push("/focus")}
+        className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-baltic-600 hover:bg-baltic-700 dark:bg-baltic-500 dark:hover:bg-baltic-400 text-white shadow-lg hover:shadow-xl transition-smooth flex items-center justify-center z-50"
+        title="Start Focus Session"
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 22 22"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <polygon points="6,3 20,11 6,19" fill="currentColor" stroke="none" />
+        </svg>
+      </button>
     </div>
   );
 }

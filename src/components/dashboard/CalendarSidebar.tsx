@@ -7,8 +7,12 @@ import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
+// Timezone-safe date key: always uses local date, never UTC
 function toDateKey(date: Date) {
-  return date.toISOString().split("T")[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function formatMonthYear(date: Date) {
@@ -39,7 +43,6 @@ function getCalendarDays(year: number, month: number) {
 
   const days: (Date | null)[] = [];
 
-  // Pad with nulls for the offset
   for (let i = 0; i < startOffset; i++) {
     days.push(null);
   }
@@ -68,6 +71,7 @@ export default function CalendarSidebar({
 
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [calendarOpen, setCalendarOpen] = useState(true);
 
   // Dates that have pending tasks
   const taskDateSet = useMemo(() => {
@@ -78,11 +82,11 @@ export default function CalendarSidebar({
     return set;
   }, [tasks]);
 
-  // Dates that have focus sessions
+  // Dates that have focus sessions (timezone-safe)
   const sessionDateSet = useMemo(() => {
     const set = new Set<string>();
     for (const s of sessions) {
-      set.add(new Date(s.completedAt).toISOString().split("T")[0]);
+      set.add(toDateKey(new Date(s.completedAt)));
     }
     return set;
   }, [sessions]);
@@ -98,12 +102,11 @@ export default function CalendarSidebar({
       );
   }, [tasks, selectedDate]);
 
-  // Sessions for the selected date
+  // Sessions for the selected date (timezone-safe)
   const selectedDateSessions = useMemo(() => {
     if (!selectedDate) return [];
     return sessions.filter(
-      (s) =>
-        new Date(s.completedAt).toISOString().split("T")[0] === selectedDate
+      (s) => toDateKey(new Date(s.completedAt)) === selectedDate
     );
   }, [sessions, selectedDate]);
 
@@ -145,109 +148,161 @@ export default function CalendarSidebar({
     }
   }
 
-  const hasDetail = selectedDateTasks.length > 0 || selectedDateSessions.length > 0;
+  const hasDetail =
+    selectedDateTasks.length > 0 || selectedDateSessions.length > 0;
 
   return (
     <aside className="w-[280px] flex-shrink-0 bg-white dark:bg-lavender-900 rounded-2xl p-6 border border-lavender-100 dark:border-lavender-800 self-stretch">
-      {/* Month navigation */}
+      {/* Calendar header with collapse toggle */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-baltic-800 dark:text-baltic-100">
-          {formatMonthYear(new Date(viewYear, viewMonth))}
-        </h2>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={prevMonth}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-steel-400 hover:text-baltic-600 hover:bg-baltic-50 dark:hover:bg-baltic-800 dark:hover:text-baltic-300 transition-smooth"
+        <button
+          onClick={() => setCalendarOpen(!calendarOpen)}
+          className="flex items-center gap-2 group"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={cn(
+              "text-steel-400 group-hover:text-baltic-600 dark:group-hover:text-baltic-300 transition-transform duration-200",
+              calendarOpen ? "rotate-90" : "rotate-0"
+            )}
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M7 2L3 6l4 4" />
-            </svg>
-          </button>
-          <button
-            onClick={goToToday}
-            className="px-2 h-7 rounded-lg text-[10px] font-semibold text-steel-400 hover:text-baltic-600 hover:bg-baltic-50 dark:hover:bg-baltic-800 dark:hover:text-baltic-300 transition-smooth"
-          >
-            Today
-          </button>
-          <button
-            onClick={nextMonth}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-steel-400 hover:text-baltic-600 hover:bg-baltic-50 dark:hover:bg-baltic-800 dark:hover:text-baltic-300 transition-smooth"
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 2l4 4-4 4" />
-            </svg>
-          </button>
-        </div>
-      </div>
+            <path d="M5 3l4 4-4 4" />
+          </svg>
+          <h2 className="text-title text-baltic-800 dark:text-baltic-100">
+            Calendar
+          </h2>
+        </button>
 
-      {/* Weekday headers */}
-      <div className="grid grid-cols-7 mb-1">
-        {WEEKDAYS.map((d) => (
-          <div
-            key={d}
-            className="text-[10px] font-semibold text-steel-400 text-center py-1"
-          >
-            {d}
-          </div>
-        ))}
-      </div>
-
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-y-0.5">
-        {calendarDays.map((day, i) => {
-          if (!day) {
-            return <div key={`empty-${i}`} />;
-          }
-
-          const key = toDateKey(day);
-          const isToday = key === todayKey;
-          const isSelected = key === selectedDate;
-          const hasTasks = taskDateSet.has(key);
-          const hasSessions = sessionDateSet.has(key);
-
-          return (
+        {calendarOpen && (
+          <div className="flex items-center gap-1">
             <button
-              key={key}
-              onClick={() => handleDayClick(day)}
-              className={cn(
-                "relative w-full aspect-square flex flex-col items-center justify-center rounded-lg text-xs transition-smooth",
-                isSelected
-                  ? "bg-baltic-600 text-white dark:bg-baltic-500"
-                  : isToday
-                    ? "bg-baltic-100 text-baltic-700 dark:bg-baltic-800 dark:text-baltic-200 font-semibold"
-                    : "text-baltic-700 dark:text-baltic-300 hover:bg-baltic-50 dark:hover:bg-baltic-800/50"
-              )}
+              onClick={prevMonth}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-steel-400 hover:text-baltic-600 hover:bg-baltic-50 dark:hover:bg-baltic-800 dark:hover:text-baltic-300 transition-smooth"
             >
-              <span>{day.getDate()}</span>
-              {/* Indicator dots */}
-              {(hasTasks || hasSessions) && (
-                <div className="flex gap-0.5 mt-0.5">
-                  {hasTasks && (
-                    <div
-                      className={cn(
-                        "w-1 h-1 rounded-full",
-                        isSelected
-                          ? "bg-white/70"
-                          : "bg-baltic-400 dark:bg-baltic-500"
-                      )}
-                    />
-                  )}
-                  {hasSessions && (
-                    <div
-                      className={cn(
-                        "w-1 h-1 rounded-full",
-                        isSelected
-                          ? "bg-white/70"
-                          : "bg-ash-400 dark:bg-ash-500"
-                      )}
-                    />
-                  )}
-                </div>
-              )}
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M7 2L3 6l4 4" />
+              </svg>
             </button>
-          );
-        })}
+            <button
+              onClick={goToToday}
+              className="px-2 h-7 rounded-lg text-[10px] font-semibold text-steel-400 hover:text-baltic-600 hover:bg-baltic-50 dark:hover:bg-baltic-800 dark:hover:text-baltic-300 transition-smooth"
+            >
+              Today
+            </button>
+            <button
+              onClick={nextMonth}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-steel-400 hover:text-baltic-600 hover:bg-baltic-50 dark:hover:bg-baltic-800 dark:hover:text-baltic-300 transition-smooth"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M5 2l4 4-4 4" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Collapsible calendar grid */}
+      {calendarOpen && (
+        <>
+          {/* Month label */}
+          <p className="text-xs font-semibold text-steel-400 mb-2">
+            {formatMonthYear(new Date(viewYear, viewMonth))}
+          </p>
+
+          {/* Weekday headers */}
+          <div className="grid grid-cols-7 mb-1">
+            {WEEKDAYS.map((d) => (
+              <div
+                key={d}
+                className="text-[10px] font-semibold text-steel-400 text-center py-1"
+              >
+                {d}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar grid */}
+          <div className="grid grid-cols-7 gap-y-0.5">
+            {calendarDays.map((day, i) => {
+              if (!day) {
+                return <div key={`empty-${i}`} />;
+              }
+
+              const key = toDateKey(day);
+              const isToday = key === todayKey;
+              const isSelected = key === selectedDate;
+              const hasTasks = taskDateSet.has(key);
+              const hasSessions = sessionDateSet.has(key);
+
+              return (
+                <button
+                  key={key}
+                  onClick={() => handleDayClick(day)}
+                  className={cn(
+                    "relative w-full aspect-square flex flex-col items-center justify-center rounded-lg text-xs transition-smooth",
+                    isSelected
+                      ? "bg-baltic-600 text-white dark:bg-baltic-500"
+                      : isToday
+                        ? "bg-baltic-100 text-baltic-700 dark:bg-baltic-800 dark:text-baltic-200 font-semibold"
+                        : "text-baltic-700 dark:text-baltic-300 hover:bg-baltic-50 dark:hover:bg-baltic-800/50"
+                  )}
+                >
+                  <span>{day.getDate()}</span>
+                  {(hasTasks || hasSessions) && (
+                    <div className="flex gap-0.5 mt-0.5">
+                      {hasTasks && (
+                        <div
+                          className={cn(
+                            "w-1 h-1 rounded-full",
+                            isSelected
+                              ? "bg-white/70"
+                              : "bg-baltic-400 dark:bg-baltic-500"
+                          )}
+                        />
+                      )}
+                      {hasSessions && (
+                        <div
+                          className={cn(
+                            "w-1 h-1 rounded-full",
+                            isSelected
+                              ? "bg-white/70"
+                              : "bg-ash-400 dark:bg-ash-500"
+                          )}
+                        />
+                      )}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* Divider */}
       <div className="border-t border-lavender-100 dark:border-lavender-800 mt-4 mb-4" />
@@ -255,13 +310,12 @@ export default function CalendarSidebar({
       {/* Selected date detail */}
       {selectedDate ? (
         <div>
-          <p className="text-xs font-semibold text-baltic-700 dark:text-baltic-200 mb-3">
+          <p className="text-xs font-bold text-baltic-700 dark:text-baltic-200 mb-3">
             {formatSelectedDate(selectedDate)}
           </p>
 
           {hasDetail ? (
             <div className="space-y-2">
-              {/* Tasks for this date */}
               {selectedDateTasks.map((task) => {
                 const subject = SUBJECTS[task.subject as SubjectKey];
                 return (
@@ -284,10 +338,10 @@ export default function CalendarSidebar({
                 );
               })}
 
-              {/* Sessions for this date */}
-              {selectedDateSessions.length > 0 && selectedDateTasks.length > 0 && (
-                <div className="border-t border-lavender-100 dark:border-lavender-800 my-2" />
-              )}
+              {selectedDateSessions.length > 0 &&
+                selectedDateTasks.length > 0 && (
+                  <div className="border-t border-lavender-100 dark:border-lavender-800 my-2" />
+                )}
               {selectedDateSessions.map((session) => {
                 const sub = SUBJECTS[session.subject as SubjectKey];
                 const mins = session.duration;
@@ -304,7 +358,10 @@ export default function CalendarSidebar({
                         {sub?.label || session.subject}
                       </p>
                       <p className="text-sm font-medium text-baltic-800 dark:text-baltic-100">
-                        {mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`} focus
+                        {mins >= 60
+                          ? `${Math.floor(mins / 60)}h ${mins % 60}m`
+                          : `${mins}m`}{" "}
+                        focus
                       </p>
                     </div>
                   </div>
@@ -312,15 +369,11 @@ export default function CalendarSidebar({
               })}
             </div>
           ) : (
-            <p className="text-xs text-steel-400 py-2">
-              Nothing scheduled
-            </p>
+            <p className="text-xs text-steel-400 py-2">Nothing scheduled</p>
           )}
         </div>
       ) : (
-        <p className="text-xs text-steel-400">
-          Select a date to see details
-        </p>
+        <p className="text-xs text-steel-400">Select a date to see details</p>
       )}
     </aside>
   );
