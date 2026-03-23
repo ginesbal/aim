@@ -33,17 +33,17 @@ function FocusRing({
   minutes: number;
   goal: number;
 }) {
-  const size = 72;
-  const stroke = 5;
+  const size = 96;
+  const stroke = 6;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const progress = Math.min(minutes / goal, 1);
   const offset = circumference * (1 - progress);
+  const pct = Math.min(Math.round(progress * 100), 100);
 
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        {/* Background ring */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -51,9 +51,8 @@ function FocusRing({
           fill="none"
           stroke="currentColor"
           strokeWidth={stroke}
-          className="text-lavender-200 dark:text-lavender-700"
+          className="text-baltic-200 dark:text-baltic-700"
         />
-        {/* Progress ring */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -68,11 +67,11 @@ function FocusRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-sm font-bold text-baltic-700 dark:text-baltic-200 leading-none">
-          {formatTime(minutes)}
+        <span className="text-xl font-bold text-baltic-700 dark:text-baltic-200 leading-none">
+          {pct}%
         </span>
-        <span className="text-[9px] text-steel-400 leading-none mt-0.5">
-          of {formatTime(goal)}
+        <span className="text-[10px] text-steel-400 leading-none mt-1">
+          {formatTime(minutes)}
         </span>
       </div>
     </div>
@@ -257,36 +256,47 @@ export default function DashboardPage() {
           </div>
         </Modal>
 
-        {/* Header with focus ring + inline stats */}
-        <div className="flex items-center justify-between pb-6">
-          <div>
-            <h1 className="text-display text-baltic-800 dark:text-baltic-100">
-              {getGreeting()}, {firstName}
-            </h1>
-            <p className="text-sm text-steel-400 mt-1">
-              {getWeekday()}, {getFormattedDate()}
-            </p>
-            {/* Inline stats */}
-            <div className="flex items-center gap-4 mt-3">
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-cream-500" />
-                <span className="text-xs font-semibold text-baltic-700 dark:text-baltic-300">
-                  {streak} day streak
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-ash-500" />
-                <span className="text-xs font-semibold text-baltic-700 dark:text-baltic-300">
-                  {pendingTasks.length} task{pendingTasks.length !== 1 ? "s" : ""} remaining
-                </span>
+        {/* Header card with focus ring + stats */}
+        <div className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100">
+                {getGreeting()}, {firstName}
+              </h1>
+              <p className="text-sm text-steel-400 mt-1">
+                {getWeekday()}, {getFormattedDate()}
+              </p>
+
+              {/* Stats row */}
+              <div className="flex items-center gap-5 mt-4">
+                <div>
+                  <p className="text-2xl font-bold text-cream-700 dark:text-cream-300 leading-none">
+                    {streak}
+                  </p>
+                  <p className="text-[11px] font-medium text-steel-400 mt-1">
+                    day streak
+                  </p>
+                </div>
+                <div className="w-px h-8 bg-lavender-200 dark:bg-lavender-700" />
+                <div>
+                  <p className="text-2xl font-bold text-ash-600 dark:text-ash-300 leading-none">
+                    {pendingTasks.length}
+                  </p>
+                  <p className="text-[11px] font-medium text-steel-400 mt-1">
+                    task{pendingTasks.length !== 1 ? "s" : ""} remaining
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-          <FocusRing minutes={todayMinutes} goal={dailyGoal} />
-        </div>
 
-        {/* Divider */}
-        <div className="border-t border-lavender-200 dark:border-lavender-700" />
+            <div className="flex flex-col items-center">
+              <FocusRing minutes={todayMinutes} goal={dailyGoal} />
+              <p className="text-[11px] font-medium text-steel-400 mt-1.5">
+                Daily focus
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* Subject progress — slim bars */}
         {subjectCards.length > 0 && (
