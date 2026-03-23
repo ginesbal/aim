@@ -268,23 +268,55 @@ export default function DashboardPage() {
               </p>
 
               {/* Stats row */}
-              <div className="flex items-center gap-5 mt-4">
-                <div>
-                  <p className="text-2xl font-bold text-cream-700 dark:text-cream-300 leading-none">
-                    {streak}
-                  </p>
-                  <p className="text-[11px] font-medium text-steel-400 mt-1">
-                    day streak
-                  </p>
+              <div className="flex items-center gap-6 mt-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-lg bg-cream-100 dark:bg-cream-900/30 flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-cream-600 dark:text-cream-400">
+                      <path d="M10 2v3M10 15v3M4.93 4.93l2.12 2.12M12.95 12.95l2.12 2.12M2 10h3M15 10h3M4.93 15.07l2.12-2.12M12.95 7.05l2.12-2.12" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
+                      {streak}
+                    </p>
+                    <p className="text-xs font-medium text-steel-400 mt-0.5">
+                      day streak
+                    </p>
+                  </div>
                 </div>
-                <div className="w-px h-8 bg-lavender-200 dark:bg-lavender-700" />
-                <div>
-                  <p className="text-2xl font-bold text-ash-600 dark:text-ash-300 leading-none">
-                    {pendingTasks.length}
-                  </p>
-                  <p className="text-[11px] font-medium text-steel-400 mt-1">
-                    task{pendingTasks.length !== 1 ? "s" : ""} remaining
-                  </p>
+                <div className="w-px h-10 bg-lavender-200 dark:bg-lavender-700" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-lg bg-ash-100 dark:bg-ash-900/30 flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-ash-600 dark:text-ash-400">
+                      <rect x="3" y="4" width="14" height="14" rx="2" />
+                      <path d="M7 9h6M7 13h4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
+                      {pendingTasks.length}
+                    </p>
+                    <p className="text-xs font-medium text-steel-400 mt-0.5">
+                      task{pendingTasks.length !== 1 ? "s" : ""} left
+                    </p>
+                  </div>
+                </div>
+                <div className="w-px h-10 bg-lavender-200 dark:bg-lavender-700" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-lg bg-lavender-100 dark:bg-lavender-800/40 flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-lavender-500 dark:text-lavender-400">
+                      <circle cx="10" cy="10" r="8" />
+                      <path d="M10 6v4l2.5 2.5" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
+                      {formatTime(todayMinutes)}
+                    </p>
+                    <p className="text-xs font-medium text-steel-400 mt-0.5">
+                      focused today
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -332,133 +364,177 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Divider */}
-        <div className="border-t border-lavender-200 dark:border-lavender-700" />
+        {/* Up next — timeline-style task cards */}
+        <div className="mt-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-title text-baltic-800 dark:text-baltic-100">
+              {selectedDate ? `Tasks for ${formatDate(selectedDate)}` : "Up next"}
+            </h2>
+            <button
+              onClick={() => router.push("/tasks")}
+              className="text-xs text-baltic-500 hover:text-baltic-700 dark:hover:text-baltic-300 font-medium transition-smooth"
+            >
+              View all
+            </button>
+          </div>
 
-        {/* Two columns: Tasks + Recent sessions */}
-        <div className="py-5 grid grid-cols-2 gap-5">
-          {/* Up next */}
-          <Section
-            title={selectedDate ? `Tasks for ${formatDate(selectedDate)}` : "Up next"}
-            action={
+          {upcomingTasks.length > 0 ? (
+            <div className="relative">
+              {/* Timeline connector line */}
+              <div className="absolute left-[15px] top-4 bottom-4 w-px bg-lavender-200 dark:bg-lavender-700" />
+
+              <div className="space-y-2">
+                {upcomingTasks.map((task, i) => {
+                  const subject = SUBJECTS[task.subject as SubjectKey];
+                  const overdue = isOverdue(task.dueDate);
+                  const color = subject?.color || "#60729f";
+                  return (
+                    <div
+                      key={task.id}
+                      className={cn(
+                        "group relative flex items-start gap-4 rounded-xl p-3.5 pl-10 transition-smooth",
+                        "bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700",
+                        "hover:shadow-sm hover:border-lavender-300 dark:hover:border-lavender-600",
+                        i === 0 && "ring-1 ring-baltic-200 dark:ring-baltic-700"
+                      )}
+                    >
+                      {/* Timeline dot / check circle */}
+                      <button
+                        onClick={() => toggleComplete(task.id)}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center transition-smooth hover:scale-110 bg-white dark:bg-lavender-900"
+                        style={{ borderColor: color }}
+                        title="Mark complete"
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                          stroke={color}
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <path d="M2 6l3 3 5-5" />
+                        </svg>
+                      </button>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className={cn(
+                            "text-sm font-semibold truncate",
+                            i === 0
+                              ? "text-baltic-800 dark:text-baltic-100"
+                              : "text-baltic-700 dark:text-baltic-200"
+                          )}>
+                            {task.title}
+                          </p>
+                          {i === 0 && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-baltic-500 bg-baltic-100 dark:bg-baltic-800 dark:text-baltic-400 px-1.5 py-0.5 rounded flex-shrink-0">
+                              Next
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span
+                            className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: color }}
+                          />
+                          <span className="text-xs text-steel-400 truncate">
+                            {subject?.label || task.subject}
+                          </span>
+                          <span className="text-xs text-steel-300 dark:text-steel-600">
+                            ·
+                          </span>
+                          <span
+                            className={cn(
+                              "text-xs",
+                              overdue
+                                ? "text-red-500 font-medium"
+                                : "text-steel-400"
+                            )}
+                          >
+                            {formatDate(task.dueDate)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-lavender-300 dark:border-lavender-600 py-10 text-center">
+              <div className="flex justify-center mb-3">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-lavender-300 dark:text-lavender-600">
+                  <circle cx="16" cy="16" r="12" />
+                  <path d="M11 16l3 3 7-7" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
+                {selectedDate ? "Nothing scheduled" : "All caught up!"}
+              </p>
+              <p className="text-xs text-steel-400 mt-0.5">
+                {selectedDate
+                  ? "Pick a date or add new tasks."
+                  : "Enjoy the calm. You've earned it."}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Recent sessions — compact strip */}
+        {recentReflections.length > 0 && (
+          <div className="mt-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-title text-baltic-800 dark:text-baltic-100">
+                Recent sessions
+              </h2>
               <button
-                onClick={() => router.push("/tasks")}
+                onClick={() => router.push("/journal")}
                 className="text-xs text-baltic-500 hover:text-baltic-700 dark:hover:text-baltic-300 font-medium transition-smooth"
               >
                 View all
               </button>
-            }
-          >
-            {upcomingTasks.length > 0 ? (
-              <div className="space-y-1">
-                {upcomingTasks.map((task) => {
-                  const subject = SUBJECTS[task.subject as SubjectKey];
-                  const overdue = isOverdue(task.dueDate);
-                  return (
-                    <div
-                      key={task.id}
-                      className="flex items-center gap-3 py-2.5 border-l-2 pl-3 rounded-r-lg hover:bg-baltic-50/50 dark:hover:bg-baltic-900/30 transition-smooth"
-                      style={{
-                        borderLeftColor: subject?.color || "#60729f",
-                      }}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-baltic-800 dark:text-baltic-100 truncate">
-                          {task.title}
-                        </p>
-                        <p className="text-xs text-steel-400 truncate mt-0.5">
-                          {subject?.label || task.subject}
-                          <span
-                            className={cn("ml-2", overdue && "text-red-500")}
-                          >
-                            {formatDate(task.dueDate)}
-                          </span>
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => toggleComplete(task.id)}
-                        className="w-4 h-4 rounded border border-lavender-300 dark:border-lavender-600 flex-shrink-0 hover:border-baltic-400 transition-smooth"
+            </div>
+            <div className="flex gap-3">
+              {recentReflections.map((session) => {
+                const sub = SUBJECTS[session.subject as SubjectKey];
+                return (
+                  <div
+                    key={session.id}
+                    className="flex-1 rounded-lg bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 p-3"
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: sub?.color || "#60729f" }}
                       />
+                      <span className="text-xs font-semibold text-baltic-700 dark:text-baltic-300 truncate">
+                        {sub?.label || session.subject}
+                      </span>
+                      {session.reflection && (
+                        <QualityIndicator
+                          quality={session.reflection.quality}
+                          size={12}
+                        />
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-steel-400 py-6 text-center">
-                {selectedDate ? "No tasks for this date." : "All caught up."}
-              </p>
-            )}
-          </Section>
-
-          {/* Recent sessions — collapsible */}
-          <Section
-            title="Recent sessions"
-            collapsible
-            action={
-              recentReflections.length > 0 ? (
-                <button
-                  onClick={() => router.push("/journal")}
-                  className="text-xs text-baltic-500 hover:text-baltic-700 dark:hover:text-baltic-300 font-medium transition-smooth"
-                >
-                  View all
-                </button>
-              ) : undefined
-            }
-          >
-            {recentReflections.length > 0 ? (
-              <div className="space-y-1">
-                {recentReflections.map((session) => {
-                  const sub = SUBJECTS[session.subject as SubjectKey];
-                  return (
-                    <div
-                      key={session.id}
-                      className="flex items-start gap-3 py-2.5 border-l-2 pl-3 rounded-r-lg hover:bg-baltic-50/50 dark:hover:bg-baltic-900/30 transition-smooth"
-                      style={{
-                        borderLeftColor: sub?.color || "#60729f",
-                      }}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
-                            {sub?.label || session.subject}
-                          </span>
-                          <span className="text-xs text-steel-400">
-                            {formatTime(session.duration)}
-                          </span>
-                          {session.reflection && (
-                            <QualityIndicator
-                              quality={session.reflection.quality}
-                              size={14}
-                            />
-                          )}
-                        </div>
-                        {session.reflection?.note && (
-                          <p className="text-xs text-steel-400 mt-0.5 italic truncate">
-                            &ldquo;{session.reflection.note}&rdquo;
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="py-6 text-center">
-                <p className="text-sm text-steel-400">
-                  Complete a focus session to see reflections here.
-                </p>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => router.push("/focus")}
-                >
-                  Start a session
-                </Button>
-              </div>
-            )}
-          </Section>
-        </div>
+                    <p className="text-lg font-bold text-baltic-800 dark:text-baltic-100 leading-none">
+                      {formatTime(session.duration)}
+                    </p>
+                    {session.reflection?.note && (
+                      <p className="text-[11px] text-steel-400 mt-1 italic truncate">
+                        &ldquo;{session.reflection.note}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Calendar sidebar */}
