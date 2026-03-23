@@ -447,17 +447,7 @@ export default function DashboardPage() {
         className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-baltic-600 hover:bg-baltic-700 dark:bg-baltic-500 dark:hover:bg-baltic-400 text-white shadow-[0_4px_20px_rgba(38,45,64,0.35)] hover:shadow-[0_6px_28px_rgba(38,45,64,0.45)] transition-smooth flex items-center justify-center z-50"
         title="Start Focus Session"
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 20 20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="10" cy="10" r="8" />
           <path d="M10 5v5l3 3" />
         </svg>
