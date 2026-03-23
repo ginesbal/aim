@@ -17,7 +17,6 @@ import {
   cn,
 } from "@/lib/utils";
 import { SUBJECTS, type SubjectKey } from "@/lib/types";
-import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
@@ -25,6 +24,60 @@ import QualityIndicator from "@/components/ui/QualityIndicator";
 import AimLogo from "@/components/layout/AimLogo";
 import CalendarSidebar from "@/components/dashboard/CalendarSidebar";
 import { useRouter } from "next/navigation";
+
+// Circular progress ring
+function FocusRing({
+  minutes,
+  goal,
+}: {
+  minutes: number;
+  goal: number;
+}) {
+  const size = 72;
+  const stroke = 5;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.min(minutes / goal, 1);
+  const offset = circumference * (1 - progress);
+
+  return (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        {/* Background ring */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={stroke}
+          className="text-lavender-200 dark:text-lavender-700"
+        />
+        {/* Progress ring */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className="text-baltic-500 dark:text-baltic-400 transition-all duration-700"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-sm font-bold text-baltic-700 dark:text-baltic-200 leading-none">
+          {formatTime(minutes)}
+        </span>
+        <span className="text-[9px] text-steel-400 leading-none mt-0.5">
+          of {formatTime(goal)}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 // Collapsible section wrapper
 function Section({
@@ -105,7 +158,6 @@ export default function DashboardPage() {
     [tasks]
   );
 
-  // When a date is selected in the calendar, filter to that date; otherwise show all upcoming
   const upcomingTasks = useMemo(() => {
     if (selectedDate) {
       return pendingTasks.filter((t) => t.dueDate === selectedDate);
@@ -205,91 +257,52 @@ export default function DashboardPage() {
           </div>
         </Modal>
 
-        {/* Header */}
-        <div className="pb-6">
-          <h1 className="text-display text-baltic-800 dark:text-baltic-100">
-            {getGreeting()}, {firstName}
-          </h1>
-          <p className="text-sm text-steel-400 mt-1">
-            {getWeekday()}, {getFormattedDate()}
-          </p>
-        </div>
-
-        {/* Divider */}
-        <div className="border-t border-lavender-200 dark:border-lavender-700" />
-
-        {/* Stats row */}
-        <div className="py-6">
-          <div className="grid grid-cols-3 gap-4">
-            <Card color="lavender" padding="md">
-              <p className="text-label text-lavender-500 dark:text-lavender-400">
-                Today&apos;s focus
-              </p>
-              <p className="text-stat text-baltic-700 dark:text-baltic-200 mt-1">
-                {formatTime(todayMinutes)}
-              </p>
-              <p className="text-xs text-steel-400 mt-1">
-                of {formatTime(dailyGoal)} goal
-              </p>
-            </Card>
-
-            <Card color="cream" padding="md">
-              <p className="text-label text-cream-600 dark:text-cream-400">
-                Study streak
-              </p>
-              <p className="text-stat text-cream-800 dark:text-cream-200 mt-1">
-                {streak} day{streak !== 1 ? "s" : ""}
-              </p>
-              <p className="text-xs text-steel-400 mt-1">
-                {streak > 0 ? "Keep it going" : "Start today"}
-              </p>
-            </Card>
-
-            <Card color="ash" padding="md">
-              <p className="text-label text-ash-500 dark:text-ash-400">
-                Tasks remaining
-              </p>
-              <p className="text-stat text-ash-700 dark:text-ash-200 mt-1">
-                {pendingTasks.length}
-              </p>
-              <p className="text-xs text-steel-400 mt-1">
-                of {tasks.length} total
-              </p>
-            </Card>
+        {/* Header with focus ring + inline stats */}
+        <div className="flex items-center justify-between pb-6">
+          <div>
+            <h1 className="text-display text-baltic-800 dark:text-baltic-100">
+              {getGreeting()}, {firstName}
+            </h1>
+            <p className="text-sm text-steel-400 mt-1">
+              {getWeekday()}, {getFormattedDate()}
+            </p>
+            {/* Inline stats */}
+            <div className="flex items-center gap-4 mt-3">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-cream-500" />
+                <span className="text-xs font-semibold text-baltic-700 dark:text-baltic-300">
+                  {streak} day streak
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-ash-500" />
+                <span className="text-xs font-semibold text-baltic-700 dark:text-baltic-300">
+                  {pendingTasks.length} task{pendingTasks.length !== 1 ? "s" : ""} remaining
+                </span>
+              </div>
+            </div>
           </div>
+          <FocusRing minutes={todayMinutes} goal={dailyGoal} />
         </div>
 
         {/* Divider */}
         <div className="border-t border-lavender-200 dark:border-lavender-700" />
 
-        {/* Subject progress — collapsible */}
+        {/* Subject progress — slim bars */}
         {subjectCards.length > 0 && (
-          <div className="py-6">
+          <div className="py-5">
             <Section title="Subject progress" collapsible defaultOpen>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="space-y-3">
                 {subjectCards.map((subject) => (
-                  <div
-                    key={subject.key}
-                    className="rounded-xl p-4 bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm"
-                  >
-                    <div className="flex items-center gap-2 mb-3">
-                      <div
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: subject.color }}
-                      />
-                      <p className="text-sm font-semibold text-baltic-800 dark:text-baltic-100 truncate">
-                        {subject.label}
-                      </p>
-                    </div>
-                    <div className="flex items-baseline gap-1.5 mb-2">
-                      <span className="text-lg font-bold text-baltic-700 dark:text-baltic-200">
-                        {subject.progress}%
-                      </span>
-                      <span className="text-xs text-steel-400">
-                        {subject.completed}/{subject.total}
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 rounded-full bg-baltic-100 dark:bg-baltic-800">
+                  <div key={subject.key} className="flex items-center gap-3">
+                    <div
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: subject.color }}
+                    />
+                    <span className="text-sm font-medium text-baltic-800 dark:text-baltic-100 w-24 truncate">
+                      {subject.label}
+                    </span>
+                    <div className="flex-1 h-1.5 rounded-full bg-baltic-100 dark:bg-baltic-800">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
@@ -299,6 +312,9 @@ export default function DashboardPage() {
                         }}
                       />
                     </div>
+                    <span className="text-xs font-semibold text-steel-400 w-12 text-right">
+                      {subject.completed}/{subject.total}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -310,7 +326,7 @@ export default function DashboardPage() {
         <div className="border-t border-lavender-200 dark:border-lavender-700" />
 
         {/* Two columns: Tasks + Recent sessions */}
-        <div className="py-6 grid grid-cols-2 gap-5">
+        <div className="py-5 grid grid-cols-2 gap-5">
           {/* Up next */}
           <Section
             title={selectedDate ? `Tasks for ${formatDate(selectedDate)}` : "Up next"}
@@ -435,7 +451,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Calendar sidebar — full height */}
+      {/* Calendar sidebar */}
       <CalendarSidebar
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
