@@ -444,13 +444,13 @@ export default function DashboardPage() {
       {/* Floating focus button */}
       <button
         onClick={() => router.push("/focus")}
-        className="fixed bottom-8 right-8 w-16 h-16 rounded-full bg-baltic-600 hover:bg-baltic-700 dark:bg-baltic-500 dark:hover:bg-baltic-400 text-white shadow-[0_4px_20px_rgba(38,45,64,0.35)] hover:shadow-[0_6px_28px_rgba(38,45,64,0.45)] transition-smooth flex flex-col items-center justify-center z-50 gap-0.5"
+        className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-baltic-600 hover:bg-baltic-700 dark:bg-baltic-500 dark:hover:bg-baltic-400 text-white shadow-[0_4px_20px_rgba(38,45,64,0.35)] hover:shadow-[0_6px_28px_rgba(38,45,64,0.45)] transition-smooth flex items-center justify-center z-50"
         title="Start Focus Session"
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <polygon points="4,2 14,8 4,14" />
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="10" cy="10" r="8" />
+          <path d="M10 5v5l3 3" />
         </svg>
-        <span className="text-[8px] font-bold uppercase tracking-wider leading-none">Focus</span>
       </button>
     </div>
   );
