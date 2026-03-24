@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import { useFocus, useSubjects } from "@/lib/contexts";
 import { SUBJECTS, type SubjectKey, type FocusQuality } from "@/lib/types";
 import { cn, formatTime } from "@/lib/utils";
-import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import ProgressRing from "@/components/ui/ProgressRing";
 import QualityIndicator, { QualitySelector } from "@/components/ui/QualityIndicator";
@@ -38,6 +37,7 @@ export default function FocusPage() {
   const [reflectionNote, setReflectionNote] = useState("");
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
 
+  const dailyGoal = 120;
   const totalSeconds = duration * 60;
   const progress = ((totalSeconds - secondsLeft) / totalSeconds) * 100;
 
@@ -356,75 +356,267 @@ export default function FocusPage() {
       )}
 
       {/* Normal page content — visible when idle */}
-      <div className={cn("space-y-8 max-w-2xl mx-auto", isFullscreen && "hidden")}>
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="text-display text-baltic-800 dark:text-baltic-100">Focus</h1>
-          <p className="text-sm text-steel-400 mt-1">
-            {todayMinutes > 0 ? `${formatTime(todayMinutes)} studied today` : "Ready to begin a session"}
-            {streak > 0 && ` · ${streak} day streak`}
-          </p>
-        </div>
+      <div className={cn("max-w-3xl mx-auto", isFullscreen && "hidden")}>
+        {/* ── Hero section: two-column layout ── */}
+        <div className="grid grid-cols-[1fr_auto] gap-6 items-start">
 
-        {/* Timer setup card — idle state */}
-        <div className="relative rounded-lg">
-          <div className="border border-lavender-100 dark:border-lavender-800 p-6 bg-white dark:bg-lavender-900">
-            <div className="flex flex-col items-center py-4">
-              {/* Duration picker */}
-              <DurationPicker value={duration} onChange={setDuration} />
+          {/* Left column: header + stats + sessions */}
+          <div className="space-y-5">
+            {/* Header card */}
+            <div className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm p-6">
+              <h1 className="text-2xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100">
+                Focus
+              </h1>
+              <p className="text-sm text-steel-400 mt-1">
+                {todayMinutes > 0
+                  ? "Keep the momentum going."
+                  : "Ready when you are."}
+              </p>
 
-              {/* Divider */}
-              <div className="w-24 border-t border-lavender-100 dark:border-lavender-800 my-6" />
-
-              {/* Subject selector */}
-              <div className="flex flex-col items-center gap-2">
-                <p className="text-label">Subject</p>
-                <SubjectSelector value={subject} onChange={setSubject} />
+              {/* Stats row */}
+              <div className="flex items-center gap-6 mt-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-lg bg-lavender-100 dark:bg-lavender-800/40 flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-lavender-500 dark:text-lavender-400">
+                      <circle cx="10" cy="10" r="8" />
+                      <path d="M10 6v4l2.5 2.5" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
+                      {formatTime(todayMinutes)}
+                    </p>
+                    <p className="text-xs font-medium text-steel-400 mt-0.5">
+                      today
+                    </p>
+                  </div>
+                </div>
+                <div className="w-px h-10 bg-lavender-200 dark:bg-lavender-700" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-lg bg-cream-100 dark:bg-cream-900/30 flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-cream-600 dark:text-cream-400">
+                      <path d="M10 2v3M10 15v3M4.93 4.93l2.12 2.12M12.95 12.95l2.12 2.12M2 10h3M15 10h3M4.93 15.07l2.12-2.12M12.95 7.05l2.12-2.12" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
+                      {streak}
+                    </p>
+                    <p className="text-xs font-medium text-steel-400 mt-0.5">
+                      day streak
+                    </p>
+                  </div>
+                </div>
+                <div className="w-px h-10 bg-lavender-200 dark:bg-lavender-700" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-lg bg-ash-100 dark:bg-ash-900/30 flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-ash-600 dark:text-ash-400">
+                      <path d="M4 15l4-8 4 5 4-7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
+                      {todaySessions.length}
+                    </p>
+                    <p className="text-xs font-medium text-steel-400 mt-0.5">
+                      session{todaySessions.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              {/* Start button */}
-              <div className="mt-8">
-                <Button onClick={startTimer}>Start focusing</Button>
+              {/* Daily goal progress bar */}
+              <div className="mt-5">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-steel-400">
+                    Daily goal
+                  </span>
+                  <span className="text-xs font-bold text-baltic-600 dark:text-baltic-400">
+                    {Math.min(Math.round((todayMinutes / dailyGoal) * 100), 100)}%
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-baltic-100 dark:bg-baltic-800 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-baltic-500 dark:bg-baltic-400 transition-all duration-700"
+                    style={{ width: `${Math.min((todayMinutes / dailyGoal) * 100, 100)}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-steel-400 mt-1">
+                  {formatTime(todayMinutes)} of {formatTime(dailyGoal)}
+                </p>
               </div>
             </div>
+
+            {/* Today's sessions timeline */}
+            {todaySessions.length > 0 && (
+              <div className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-title text-baltic-800 dark:text-baltic-100">
+                    Today&apos;s sessions
+                  </h3>
+                  <span className="text-xs font-bold text-baltic-600 dark:text-baltic-400">
+                    {formatTime(todayMinutes)} total
+                  </span>
+                </div>
+
+                <div className="relative">
+                  {/* Timeline line */}
+                  <div className="absolute left-[9px] top-2 bottom-2 w-px bg-lavender-200 dark:bg-lavender-700" />
+
+                  <div className="space-y-1">
+                    {todaySessions.map((session, i) => {
+                      const sub = getSessionSubject(session.subject);
+                      return (
+                        <div
+                          key={session.id}
+                          className="relative flex items-center gap-3 py-2 pl-7"
+                        >
+                          {/* Timeline dot */}
+                          <div
+                            className="absolute left-[5px] top-1/2 -translate-y-1/2 w-[10px] h-[10px] rounded-full border-2 bg-white dark:bg-lavender-900"
+                            style={{ borderColor: sub.color }}
+                          />
+                          <span className="text-sm font-medium text-baltic-700 dark:text-baltic-300 flex-1 truncate">
+                            {sub.label}
+                          </span>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {session.reflection && (
+                              <QualityIndicator quality={session.reflection.quality} size={14} />
+                            )}
+                            <span className="text-xs font-semibold text-steel-400 tabular-nums">
+                              {formatTime(session.duration)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right column: the timer setup dial */}
+          <div className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm p-6 w-[320px] flex flex-col items-center">
+            {/* Decorative outer ring with tick marks */}
+            <div className="relative" style={{ width: 240, height: 240 }}>
+              <svg width={240} height={240} viewBox="0 0 240 240" className="absolute inset-0">
+                {/* Outer decorative ring */}
+                <circle
+                  cx="120"
+                  cy="120"
+                  r="116"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="0.5"
+                  className="text-lavender-200 dark:text-lavender-700"
+                />
+                {/* Tick marks around the dial */}
+                {Array.from({ length: 60 }).map((_, i) => {
+                  const angle = (i * 6 - 90) * (Math.PI / 180);
+                  const isMajor = i % 5 === 0;
+                  const outerR = 116;
+                  const innerR = isMajor ? 108 : 111;
+                  const x1 = 120 + innerR * Math.cos(angle);
+                  const y1 = 120 + innerR * Math.sin(angle);
+                  const x2 = 120 + outerR * Math.cos(angle);
+                  const y2 = 120 + outerR * Math.sin(angle);
+                  return (
+                    <line
+                      key={i}
+                      x1={x1} y1={y1} x2={x2} y2={y2}
+                      stroke="currentColor"
+                      strokeWidth={isMajor ? 1.5 : 0.5}
+                      strokeLinecap="round"
+                      className={isMajor
+                        ? "text-baltic-300 dark:text-baltic-600"
+                        : "text-lavender-200 dark:text-lavender-700"
+                      }
+                    />
+                  );
+                })}
+                {/* Duration arc — visual fill based on selected duration (max 120m) */}
+                {(() => {
+                  const pct = Math.min(duration / 120, 1);
+                  const r = 100;
+                  const circumference = 2 * Math.PI * r;
+                  const offset = circumference * (1 - pct);
+                  return (
+                    <circle
+                      cx="120"
+                      cy="120"
+                      r={r}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={offset}
+                      className="text-baltic-400/30 dark:text-baltic-500/30 -rotate-90 origin-center transition-all duration-500"
+                    />
+                  );
+                })()}
+                {/* Inner ring */}
+                <circle
+                  cx="120"
+                  cy="120"
+                  r="82"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="0.5"
+                  className="text-lavender-200 dark:text-lavender-700"
+                />
+              </svg>
+
+              {/* Duration display in center */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <DurationPicker value={duration} onChange={setDuration} />
+              </div>
+            </div>
+
+            {/* Subject selector */}
+            <div className="w-full mt-5">
+              <p className="text-label text-center mb-2">Subject</p>
+              <SubjectSelector value={subject} onChange={setSubject} />
+            </div>
+
+            {/* Start button — prominent */}
+            <button
+              onClick={startTimer}
+              className="mt-6 w-full py-3.5 rounded-xl bg-baltic-600 hover:bg-baltic-700 dark:bg-baltic-500 dark:hover:bg-baltic-400 text-white font-semibold text-sm shadow-[0_4px_20px_rgba(38,45,64,0.25)] hover:shadow-[0_6px_28px_rgba(38,45,64,0.35)] transition-smooth flex items-center justify-center gap-2"
+            >
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="10" cy="10" r="8" />
+                <path d="M10 6v4l2.5 2.5" />
+              </svg>
+              Start focusing
+            </button>
+
+            {/* Quick tip */}
+            <p className="text-[11px] text-steel-400 text-center mt-3 leading-relaxed">
+              Drag the number or scroll to adjust.
+              <br />
+              Pick a subject to track progress.
+            </p>
           </div>
         </div>
 
-        {/* Today's sessions */}
-        {todaySessions.length > 0 && (
-          <Card padding="md">
-            <h3 className="text-title text-baltic-800 dark:text-baltic-100 mb-3">
-              Today&apos;s sessions
-            </h3>
-            <div className="space-y-2">
-              {todaySessions.map((session) => {
-                const sub = getSessionSubject(session.subject);
-                return (
-                  <div key={session.id} className="flex items-center gap-3 py-1.5">
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: sub.color }}
-                    />
-                    <span className="text-sm text-baltic-700 dark:text-baltic-300 flex-1">
-                      {sub.label}
-                    </span>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {session.reflection && (
-                        <QualityIndicator quality={session.reflection.quality} size={14} />
-                      )}
-                      <span className="text-xs text-steel-400">{formatTime(session.duration)}</span>
-                    </div>
-                  </div>
-                );
-              })}
-              <div className="pt-2 border-t border-lavender-100 dark:border-lavender-800 flex items-center justify-between">
-                <span className="text-xs font-medium text-steel-400">Total</span>
-                <span className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
-                  {formatTime(todayMinutes)}
-                </span>
-              </div>
+        {/* ── Session history strip — only when no sessions today ── */}
+        {todaySessions.length === 0 && (
+          <div className="mt-6 rounded-xl border border-dashed border-lavender-300 dark:border-lavender-600 py-10 text-center">
+            <div className="flex justify-center mb-3">
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-lavender-300 dark:text-lavender-600">
+                <circle cx="18" cy="18" r="13" />
+                <path d="M18 11v7l4 4" />
+              </svg>
             </div>
-          </Card>
+            <p className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
+              No sessions yet today
+            </p>
+            <p className="text-xs text-steel-400 mt-0.5">
+              Start your first session to build your streak.
+            </p>
+          </div>
         )}
       </div>
     </>
