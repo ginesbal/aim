@@ -342,17 +342,17 @@ export default function FocusPage() {
       )}
 
       {/* Normal page content — visible when idle */}
-      <div className={cn("max-w-sm mx-auto", isFullscreen && "hidden")}>
+      <div className={cn("max-w-md mx-auto", isFullscreen && "hidden")}>
         {/* Timer setup dial — centered hero */}
-        <div className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm p-6 flex flex-col items-center">
+        <div className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm p-8 flex flex-col items-center">
           {/* Decorative outer ring with tick marks */}
-          <div className="relative" style={{ width: 240, height: 240 }}>
-            <svg width={240} height={240} viewBox="0 0 240 240" className="absolute inset-0">
+          <div className="relative" style={{ width: 300, height: 300 }}>
+            <svg width={300} height={300} viewBox="0 0 300 300" className="absolute inset-0">
               {/* Outer decorative ring */}
               <circle
-                cx="120"
-                cy="120"
-                r="116"
+                cx="150"
+                cy="150"
+                r="146"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="0.5"
@@ -362,12 +362,12 @@ export default function FocusPage() {
               {Array.from({ length: 60 }).map((_, i) => {
                 const angle = (i * 6 - 90) * (Math.PI / 180);
                 const isMajor = i % 5 === 0;
-                const outerR = 116;
-                const innerR = isMajor ? 108 : 111;
-                const x1 = 120 + innerR * Math.cos(angle);
-                const y1 = 120 + innerR * Math.sin(angle);
-                const x2 = 120 + outerR * Math.cos(angle);
-                const y2 = 120 + outerR * Math.sin(angle);
+                const outerR = 146;
+                const innerR = isMajor ? 136 : 140;
+                const x1 = 150 + innerR * Math.cos(angle);
+                const y1 = 150 + innerR * Math.sin(angle);
+                const x2 = 150 + outerR * Math.cos(angle);
+                const y2 = 150 + outerR * Math.sin(angle);
                 return (
                   <line
                     key={i}
@@ -385,13 +385,13 @@ export default function FocusPage() {
               {/* Duration arc — visual fill based on selected duration (max 120m) */}
               {(() => {
                 const pct = Math.min(duration / 120, 1);
-                const r = 100;
+                const r = 126;
                 const circumference = 2 * Math.PI * r;
                 const offset = circumference * (1 - pct);
                 return (
                   <circle
-                    cx="120"
-                    cy="120"
+                    cx="150"
+                    cy="150"
                     r={r}
                     fill="none"
                     stroke="currentColor"
@@ -405,9 +405,9 @@ export default function FocusPage() {
               })()}
               {/* Inner ring */}
               <circle
-                cx="120"
-                cy="120"
-                r="82"
+                cx="150"
+                cy="150"
+                r="105"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="0.5"
@@ -421,11 +421,11 @@ export default function FocusPage() {
             </div>
           </div>
 
-          {/* Subject selector */}
-          <div className="w-full mt-5">
-            <p className="text-label text-center mb-2">Subject</p>
-            <SubjectSelector value={subject} onChange={setSubject} />
-          </div>
+          {/* Divider */}
+          <div className="w-16 border-t border-lavender-100 dark:border-lavender-800 my-5" />
+
+          {/* Subject selector — clean inline layout */}
+          <SubjectSelector value={subject} onChange={setSubject} />
 
           {/* Start button — prominent */}
           <button
@@ -438,13 +438,6 @@ export default function FocusPage() {
             </svg>
             Start focusing
           </button>
-
-          {/* Quick tip */}
-          <p className="text-[11px] text-steel-400 text-center mt-3 leading-relaxed">
-            Drag the number or scroll to adjust.
-            <br />
-            Pick a subject to track progress.
-          </p>
         </div>
       </div>
     </>
