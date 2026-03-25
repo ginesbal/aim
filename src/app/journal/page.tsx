@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { useFocus, useSubjects } from "@/lib/contexts";
 import { QUALITY_LEVELS, type FocusQuality } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
+import Card from "@/components/ui/Card";
+import QualityIndicator from "@/components/ui/QualityIndicator";
 
 export default function JournalPage() {
   const { sessions } = useFocus();
@@ -21,7 +23,6 @@ export default function JournalPage() {
   const grouped = useMemo(() => {
     const groups: {
       label: string;
-      fullDate: string;
       dateKey: string;
       sessions: typeof sorted;
     }[] = [];
@@ -45,161 +46,119 @@ export default function JournalPage() {
         label = "Yesterday";
       else
         label = d.toLocaleDateString("en-US", {
+          weekday: "short",
           month: "short",
           day: "numeric",
         });
-
-      const fullDate = d.toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      });
-
-      groups.push({ label, fullDate, dateKey, sessions: items });
+      groups.push({ label, dateKey, sessions: items });
     }
 
     return groups;
   }, [sorted]);
 
-  /** Resolve a subject key/label to display info */
-  function resolveSubject(subjectKey: string) {
-    const sub = getSubject(subjectKey);
-    return {
-      label: sub?.label || subjectKey,
-      color: sub?.color || "#60729f",
-    };
-  }
-
-  /** Quality to a short handwritten-style description */
-  function qualityNote(q: FocusQuality): string {
-    return QUALITY_LEVELS[q].label.toLowerCase();
+  function resolveSubject(key: string) {
+    const sub = getSubject(key);
+    return { label: sub?.label || key, color: sub?.color || "#60729f" };
   }
 
   return (
-    <div className="max-w-2xl mx-auto journal-notebook journal-fade">
-      {/* Notebook page */}
-      <div className="journal-page">
-        {/* Hole punches */}
-        <div className="journal-holes">
-          <div className="journal-hole" style={{ top: "60px" }} />
-          <div className="journal-hole" style={{ top: "50%" }} />
-          <div className="journal-hole" style={{ bottom: "60px" }} />
-        </div>
-
-        {/* Content area with ruled lines */}
-        <div className="journal-lines" style={{ paddingLeft: "88px", paddingRight: "32px", paddingTop: "32px", paddingBottom: "48px", minHeight: "600px" }}>
-          {/* Title — written large like a journal cover page heading */}
-          <div className="journal-entry-line" style={{ fontSize: "32px", fontWeight: 600 }}>
-            <span className="journal-ink">Study Journal</span>
-          </div>
-          <div className="journal-entry-line" style={{ fontSize: "16px" }}>
-            <span className="journal-ink-light">
-              {sessions.length} session{sessions.length !== 1 ? "s" : ""} recorded
-            </span>
-          </div>
-
-          {/* Spacer line */}
-          <div className="journal-entry-line" />
-
-          {grouped.length > 0 ? (
-            grouped.map((group, gi) => (
-              <div key={group.dateKey}>
-                {/* Date header — like writing the date at the top of a new day */}
-                <div className="journal-entry-line" style={{ fontSize: "20px", fontWeight: 600 }}>
-                  <span className="journal-ink-accent">
-                    {group.label === "Today" || group.label === "Yesterday"
-                      ? `${group.label} — `
-                      : ""}
-                    {group.fullDate}
-                  </span>
-                </div>
-
-                {/* Underline beneath date — like a pen stroke */}
-                <div
-                  className="mb-1"
-                  style={{
-                    height: "1.5px",
-                    background: "linear-gradient(to right, rgba(74, 111, 165, 0.4), transparent 80%)",
-                    marginTop: "-2px",
-                  }}
-                />
-
-                {/* Session entries — written like journal paragraphs */}
-                {group.sessions.map((session) => {
-                  const sub = resolveSubject(session.subject);
-                  const time = new Date(session.completedAt).toLocaleTimeString(
-                    "en-US",
-                    { hour: "numeric", minute: "2-digit" }
-                  );
-
-                  return (
-                    <div key={session.id} className="mb-1">
-                      {/* Main entry line */}
-                      <div className="journal-entry-line" style={{ fontSize: "18px" }}>
-                        <span className="journal-ink">
-                          <span
-                            className="journal-dot"
-                            style={{ backgroundColor: sub.color }}
-                          />
-                          Studied{" "}
-                          <strong>{sub.label}</strong> for{" "}
-                          <strong>{formatTime(session.duration)}</strong>
-                          <span className="journal-ink-light">
-                            {" "}
-                            &mdash; {time}
-                          </span>
-                        </span>
-                      </div>
-
-                      {/* Reflection — like a personal note in lighter ink */}
-                      {session.reflection && (
-                        <div
-                          className="journal-entry-line journal-ink-light"
-                          style={{ fontSize: "16px", paddingLeft: "14px" }}
-                        >
-                          <em>
-                            Feeling {qualityNote(session.reflection.quality)}
-                            {session.reflection.note
-                              ? ` — "${session.reflection.note}"`
-                              : ""}
-                          </em>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* Blank line between day groups */}
-                {gi < grouped.length - 1 && (
-                  <div className="journal-entry-line" />
-                )}
-              </div>
-            ))
-          ) : (
-            <>
-              <div className="journal-entry-line" style={{ fontSize: "18px" }}>
-                <span className="journal-ink-light">
-                  <em>No sessions recorded yet...</em>
-                </span>
-              </div>
-              <div className="journal-entry-line" style={{ fontSize: "16px" }}>
-                <span className="journal-ink-light">
-                  <em>Complete a focus session to start writing your story.</em>
-                </span>
-              </div>
-            </>
-          )}
-        </div>
+    <div className="max-w-3xl mx-auto space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-display text-baltic-800 dark:text-baltic-100">
+          Journal
+        </h1>
+        <p className="text-sm text-steel-400 mt-1">
+          {sessions.length} session{sessions.length !== 1 ? "s" : ""} recorded
+        </p>
       </div>
 
-      {/* Subtle page edge shadow beneath */}
-      <div
-        className="mx-4 h-2 rounded-b-lg"
-        style={{
-          background: "linear-gradient(to bottom, rgba(0,0,0,0.04), transparent)",
-        }}
-      />
+      {/* Entries */}
+      {grouped.length > 0 ? (
+        <Card padding="lg" className="journal-ruled">
+          <div className="space-y-6">
+            {grouped.map((group, gi) => (
+              <div key={group.dateKey}>
+                {/* Date heading */}
+                <div className="flex items-center gap-3 mb-3">
+                  <h3 className="text-xs font-semibold text-baltic-600 dark:text-baltic-400 uppercase tracking-wider whitespace-nowrap">
+                    {group.label}
+                  </h3>
+                  <div className="flex-1 h-px bg-lavender-200 dark:bg-lavender-700" />
+                </div>
+
+                {/* Sessions for this day */}
+                <div className="space-y-3">
+                  {group.sessions.map((session) => {
+                    const sub = resolveSubject(session.subject);
+                    const time = new Date(
+                      session.completedAt
+                    ).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    });
+
+                    return (
+                      <div
+                        key={session.id}
+                        className="flex items-start gap-3 group"
+                      >
+                        {/* Subject dot */}
+                        <div
+                          className="w-2 h-2 rounded-full mt-[7px] shrink-0"
+                          style={{ backgroundColor: sub.color }}
+                        />
+
+                        {/* Entry content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-baltic-800 dark:text-baltic-100">
+                              {sub.label}
+                            </span>
+                            <span className="text-xs text-steel-400">
+                              {formatTime(session.duration)}
+                            </span>
+                            <span className="text-xs text-steel-400">
+                              {time}
+                            </span>
+                            {session.reflection && (
+                              <QualityIndicator
+                                quality={session.reflection.quality}
+                                size={14}
+                                showLabel
+                              />
+                            )}
+                          </div>
+
+                          {session.reflection?.note && (
+                            <p className="text-xs text-steel-400 mt-1 italic leading-relaxed">
+                              &ldquo;{session.reflection.note}&rdquo;
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Separator between day groups */}
+                {gi < grouped.length - 1 && (
+                  <div className="mt-6" />
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : (
+        <Card padding="md">
+          <div className="py-8 text-center">
+            <p className="text-sm text-steel-400">No sessions recorded yet.</p>
+            <p className="text-xs text-steel-400 mt-1">
+              Complete a focus session to start building your journal.
+            </p>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
