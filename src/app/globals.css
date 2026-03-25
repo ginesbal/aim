@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Caveat:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -174,6 +174,179 @@
   .dropdown-enter {
     animation: dropdown-in 0.15s ease-out;
     transform-origin: top center;
+  }
+
+  /* ─── Journal / Notebook styles ─── */
+  .journal-notebook {
+    font-family: 'Caveat', cursive;
+    position: relative;
+  }
+
+  .journal-page {
+    background: #fdf8f0;
+    border-radius: 4px 12px 12px 4px;
+    box-shadow:
+      inset 0 0 40px rgba(205, 190, 165, 0.15),
+      0 1px 4px rgba(0, 0, 0, 0.08),
+      4px 4px 12px rgba(0, 0, 0, 0.06);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dark .journal-page {
+    background: #1e1c18;
+    box-shadow:
+      inset 0 0 40px rgba(40, 35, 25, 0.4),
+      0 1px 4px rgba(0, 0, 0, 0.3),
+      4px 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Spine / binding edge */
+  .journal-page::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 48px;
+    background: linear-gradient(
+      to right,
+      rgba(180, 165, 140, 0.25) 0%,
+      rgba(180, 165, 140, 0.08) 60%,
+      transparent 100%
+    );
+    border-right: none;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .dark .journal-page::before {
+    background: linear-gradient(
+      to right,
+      rgba(60, 50, 35, 0.5) 0%,
+      rgba(60, 50, 35, 0.15) 60%,
+      transparent 100%
+    );
+  }
+
+  /* Red margin line */
+  .journal-page::after {
+    content: '';
+    position: absolute;
+    left: 72px;
+    top: 0;
+    bottom: 0;
+    width: 1.5px;
+    background: rgba(210, 100, 100, 0.35);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .dark .journal-page::after {
+    background: rgba(180, 80, 80, 0.2);
+  }
+
+  /* Horizontal ruled lines */
+  .journal-lines {
+    background-image: repeating-linear-gradient(
+      transparent,
+      transparent 31px,
+      rgba(160, 155, 145, 0.25) 31px,
+      rgba(160, 155, 145, 0.25) 32px
+    );
+    background-size: 100% 32px;
+    background-position: 0 0;
+  }
+
+  .dark .journal-lines {
+    background-image: repeating-linear-gradient(
+      transparent,
+      transparent 31px,
+      rgba(100, 90, 70, 0.2) 31px,
+      rgba(100, 90, 70, 0.2) 32px
+    );
+  }
+
+  /* Hole punches */
+  .journal-holes {
+    position: absolute;
+    left: 24px;
+    top: 0;
+    bottom: 0;
+    width: 12px;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .journal-hole {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #eff1f5;
+    border: 1px solid rgba(180, 165, 140, 0.3);
+    position: absolute;
+    left: 0;
+  }
+
+  .dark .journal-hole {
+    background: #131720;
+    border-color: rgba(60, 50, 35, 0.4);
+  }
+
+  /* Entry line height aligned to ruled lines */
+  .journal-entry-line {
+    line-height: 32px;
+    min-height: 32px;
+  }
+
+  /* Ink color */
+  .journal-ink {
+    color: #2c3e50;
+  }
+
+  .dark .journal-ink {
+    color: #c8bfa8;
+  }
+
+  .journal-ink-light {
+    color: #7a8a9a;
+  }
+
+  .dark .journal-ink-light {
+    color: #8a7e6a;
+  }
+
+  .journal-ink-accent {
+    color: #4a6fa5;
+  }
+
+  .dark .journal-ink-accent {
+    color: #8a9ec0;
+  }
+
+  /* Subject color dot — like a colored pen mark */
+  .journal-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  @keyframes journal-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .journal-fade {
+    animation: journal-fade-in 0.4s ease-out;
   }
 }
 
