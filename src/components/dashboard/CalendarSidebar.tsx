@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useTasks, useFocus } from "@/lib/contexts";
-import { SUBJECTS, type SubjectKey } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { useTasks, useFocus, useSubjects } from "@/lib/contexts";
+import { cn, formatTime } from "@/lib/utils";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
@@ -65,6 +64,7 @@ export default function CalendarSidebar({
 }: CalendarSidebarProps) {
   const { tasks } = useTasks();
   const { sessions } = useFocus();
+  const { getSubject } = useSubjects();
 
   const today = new Date();
   const todayKey = toDateKey(today);
@@ -317,7 +317,7 @@ export default function CalendarSidebar({
           {hasDetail ? (
             <div className="space-y-2">
               {selectedDateTasks.map((task) => {
-                const subject = SUBJECTS[task.subject as SubjectKey];
+                const subject = getSubject(task.subject);
                 return (
                   <div key={task.id} className="flex items-start gap-2.5">
                     <div
@@ -343,8 +343,7 @@ export default function CalendarSidebar({
                   <div className="border-t border-lavender-200 dark:border-lavender-700 my-2" />
                 )}
               {selectedDateSessions.map((session) => {
-                const sub = SUBJECTS[session.subject as SubjectKey];
-                const mins = session.duration;
+                const sub = getSubject(session.subject);
                 return (
                   <div key={session.id} className="flex items-start gap-2.5">
                     <div
@@ -358,10 +357,7 @@ export default function CalendarSidebar({
                         {sub?.label || session.subject}
                       </p>
                       <p className="text-sm font-medium text-baltic-800 dark:text-baltic-100">
-                        {mins >= 60
-                          ? `${Math.floor(mins / 60)}h ${mins % 60}m`
-                          : `${mins}m`}{" "}
-                        focus
+                        {formatTime(session.duration)} focus
                       </p>
                     </div>
                   </div>
