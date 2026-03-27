@@ -531,18 +531,23 @@ export default function DashboardPage() {
         onSelectDate={setSelectedDate}
       />
 
-      {/* Floating focus button — offset to clear calendar sidebar */}
-      <button
-        onClick={() => router.push("/focus")}
-        className="fixed bottom-8 w-14 h-14 rounded-full bg-baltic-600 hover:bg-baltic-700 dark:bg-baltic-500 dark:hover:bg-baltic-400 text-white shadow-[0_4px_20px_rgba(38,45,64,0.35)] hover:shadow-[0_6px_28px_rgba(38,45,64,0.45)] transition-smooth flex items-center justify-center z-50"
-        style={{ right: "calc(260px + 2rem + 2rem)" }}
-        title="Start Focus Session"
-      >
-        <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="10" cy="10" r="8" />
-          <path d="M10 5v5l3 3" />
-        </svg>
-      </button>
+      {/* Sticky focus bar */}
+      <div className="fixed bottom-0 left-[220px] right-0 z-40 pointer-events-none">
+        <div className="px-8 pb-4 pt-6 bg-gradient-to-t from-baltic-50 via-baltic-50/80 to-transparent dark:from-baltic-950 dark:via-baltic-950/80">
+          <div className="max-w-xl pointer-events-auto">
+            <button
+              onClick={() => router.push("/focus")}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-baltic-600 hover:bg-baltic-700 dark:bg-baltic-500 dark:hover:bg-baltic-400 text-white text-sm font-semibold shadow-sm transition-smooth"
+            >
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="10" cy="10" r="8" />
+                <path d="M10 5v5l3 3" />
+              </svg>
+              Start focus session
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
