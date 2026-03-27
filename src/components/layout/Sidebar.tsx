@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { usePreferences } from "@/lib/contexts";
-import AimLogo from "./AimLogo";
+import AnimatedAimLogo from "./AnimatedAimLogo";
 
 const NAV_ITEMS = [
   {
@@ -58,8 +58,8 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[220px] bg-baltic-800 dark:bg-baltic-950 flex flex-col z-40">
       {/* Brand */}
-      <div className="px-5 pt-7 pb-8 [&_svg_g]:fill-baltic-100 [&_svg_path:last-child]:fill-baltic-800 dark:[&_svg_path:last-child]:fill-baltic-950">
-        <AimLogo size="md" />
+      <div className="px-5 pt-7 pb-8">
+        <AnimatedAimLogo />
       </div>
 
       {/* Navigation */}
