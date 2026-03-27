@@ -69,9 +69,11 @@ function FocusRing({
         <span className="text-xl font-bold text-baltic-700 dark:text-baltic-200 leading-none">
           {pct}%
         </span>
-        <span className="text-[10px] text-steel-400 leading-none mt-1">
-          {formatTime(minutes)}
-        </span>
+        {minutes > 0 && (
+          <span className="text-[10px] text-steel-400 leading-none mt-1">
+            {formatTime(minutes)}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -110,10 +112,9 @@ export default function DashboardPage() {
     return pendingTasks.slice(0, 4);
   }, [pendingTasks, selectedDate]);
 
-  const recentReflections = useMemo(
+  const recentSessions = useMemo(
     () =>
       [...sessions]
-        .filter((s) => s.reflection)
         .sort(
           (a, b) =>
             new Date(b.completedAt).getTime() -
@@ -157,9 +158,8 @@ export default function DashboardPage() {
 
   function handleWelcomeSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (welcomeName.trim()) {
-      setName(welcomeName.trim());
-    }
+    if (!welcomeName.trim()) return;
+    setName(welcomeName.trim());
     setShowWelcome(false);
   }
 
@@ -170,7 +170,7 @@ export default function DashboardPage() {
         {/* Welcome modal */}
         <Modal
           open={showWelcome}
-          onClose={() => setShowWelcome(false)}
+          onClose={() => {}}
           width="sm"
         >
           <div className="text-center py-2">
@@ -473,7 +473,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent sessions — compact strip */}
-        {recentReflections.length > 0 && (
+        {recentSessions.length > 0 && (
           <div className="mt-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-title text-baltic-800 dark:text-baltic-100">
@@ -487,7 +487,7 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="flex gap-3">
-              {recentReflections.map((session) => {
+              {recentSessions.map((session) => {
                 const sub = getSubject(session.subject);
                 return (
                   <div
@@ -531,10 +531,11 @@ export default function DashboardPage() {
         onSelectDate={setSelectedDate}
       />
 
-      {/* Floating focus button */}
+      {/* Floating focus button — offset to clear calendar sidebar */}
       <button
         onClick={() => router.push("/focus")}
-        className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-baltic-600 hover:bg-baltic-700 dark:bg-baltic-500 dark:hover:bg-baltic-400 text-white shadow-[0_4px_20px_rgba(38,45,64,0.35)] hover:shadow-[0_6px_28px_rgba(38,45,64,0.45)] transition-smooth flex items-center justify-center z-50"
+        className="fixed bottom-8 w-14 h-14 rounded-full bg-baltic-600 hover:bg-baltic-700 dark:bg-baltic-500 dark:hover:bg-baltic-400 text-white shadow-[0_4px_20px_rgba(38,45,64,0.35)] hover:shadow-[0_6px_28px_rgba(38,45,64,0.45)] transition-smooth flex items-center justify-center z-50"
+        style={{ right: "calc(260px + 2rem + 2rem)" }}
         title="Start Focus Session"
       >
         <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
