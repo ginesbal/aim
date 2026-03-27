@@ -1,15 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { usePreferences, useTheme } from "@/lib/contexts";
+import { usePreferences } from "@/lib/contexts";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
   const { name, setName } = usePreferences();
-  const { dark, toggle } = useTheme();
   const [localName, setLocalName] = useState(name);
   const [saved, setSaved] = useState(false);
 
@@ -46,31 +44,6 @@ export default function SettingsPage() {
             )}
           </div>
         </form>
-      </Card>
-
-      {/* Appearance */}
-      <Card padding="md">
-        <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">Appearance</h2>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-baltic-800 dark:text-baltic-100">Dark mode</p>
-            <p className="text-xs text-steel-400 mt-0.5">Reduce eye strain during evening sessions</p>
-          </div>
-          <button
-            onClick={toggle}
-            className={cn(
-              "w-10 h-6 rounded-full transition-smooth relative",
-              dark ? "bg-baltic-500" : "bg-lavender-300"
-            )}
-          >
-            <span
-              className={cn(
-                "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-smooth",
-                dark ? "left-[18px]" : "left-0.5"
-              )}
-            />
-          </button>
-        </div>
       </Card>
 
       {/* Data */}
