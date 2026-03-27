@@ -16,7 +16,6 @@ import {
   isOverdue,
   cn,
 } from "@/lib/utils";
-import { SUBJECTS, type SubjectKey } from "@/lib/types";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
@@ -78,65 +77,12 @@ function FocusRing({
   );
 }
 
-// Collapsible section wrapper
-function Section({
-  title,
-  action,
-  collapsible = false,
-  defaultOpen = true,
-  children,
-}: {
-  title: string;
-  action?: React.ReactNode;
-  collapsible?: boolean;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          {collapsible && (
-            <button
-              onClick={() => setOpen(!open)}
-              className="text-steel-400 hover:text-baltic-600 dark:hover:text-baltic-300 transition-smooth"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={cn(
-                  "transition-transform duration-200",
-                  open ? "rotate-90" : "rotate-0"
-                )}
-              >
-                <path d="M5 3l4 4-4 4" />
-              </svg>
-            </button>
-          )}
-          <h2 className="text-title text-baltic-800 dark:text-baltic-100">
-            {title}
-          </h2>
-        </div>
-        {action}
-      </div>
-      {open && children}
-    </div>
-  );
-}
 
 export default function DashboardPage() {
   const { name, isFirstVisit, setName } = usePreferences();
   const { tasks, toggleComplete } = useTasks();
   const { todayMinutes, streak, sessions } = useFocus();
-  const { subjects: userSubjects } = useSubjects();
+  const { getSubject } = useSubjects();
   const router = useRouter();
 
   const [showWelcome, setShowWelcome] = useState(isFirstVisit);
@@ -186,15 +132,12 @@ export default function DashboardPage() {
     for (const task of tasks) {
       const subKey = task.subject;
       if (!subjectMap[subKey]) {
-        const sub = SUBJECTS[subKey as SubjectKey];
-        const userSub = userSubjects.find(
-          (s) => s.id === subKey || s.label === subKey
-        );
+        const sub = getSubject(subKey);
         subjectMap[subKey] = {
           total: 0,
           completed: 0,
-          label: sub?.label || userSub?.label || subKey,
-          color: sub?.color || userSub?.color || "#60729f",
+          label: sub?.label || subKey,
+          color: sub?.color || "#60729f",
         };
       }
       subjectMap[subKey].total++;
@@ -210,7 +153,7 @@ export default function DashboardPage() {
         ...val,
         progress: Math.round((val.completed / val.total) * 100),
       }));
-  }, [tasks, userSubjects]);
+  }, [tasks, getSubject]);
 
   function handleWelcomeSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -336,7 +279,7 @@ export default function DashboardPage() {
             <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">
               Subjects
             </h2>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(subjectCards.length, 4)}, minmax(0, 1fr))` }}>
               {subjectCards.map((subject) => {
                 const s = 44;
                 const cx = s / 2;
@@ -430,7 +373,7 @@ export default function DashboardPage() {
 
               <div className="space-y-2">
                 {upcomingTasks.map((task, i) => {
-                  const subject = SUBJECTS[task.subject as SubjectKey];
+                  const subject = getSubject(task.subject);
                   const overdue = isOverdue(task.dueDate);
                   const color = subject?.color || "#60729f";
                   return (
@@ -545,7 +488,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex gap-3">
               {recentReflections.map((session) => {
-                const sub = SUBJECTS[session.subject as SubjectKey];
+                const sub = getSubject(session.subject);
                 return (
                   <div
                     key={session.id}
