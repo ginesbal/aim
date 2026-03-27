@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useFocus, useSubjects } from "@/lib/contexts";
-import { formatTime } from "@/lib/utils";
+import { formatTime, getFormattedDate, getWeekday } from "@/lib/utils";
 import QualityIndicator from "@/components/ui/QualityIndicator";
 
 export default function JournalPage() {
@@ -64,8 +64,11 @@ export default function JournalPage() {
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-display text-baltic-800 dark:text-baltic-100">
-            Journal
+          <p className="text-xs font-semibold uppercase tracking-wider text-steel-400">
+            {getWeekday()}
+          </p>
+          <h1 className="text-display text-baltic-800 dark:text-baltic-100 mt-0.5">
+            {getFormattedDate()}
           </h1>
           <p className="text-sm text-steel-400 mt-1">
             {sessions.length} session{sessions.length !== 1 ? "s" : ""} recorded
