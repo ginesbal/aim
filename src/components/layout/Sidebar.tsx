@@ -48,16 +48,6 @@ const NAV_ITEMS = [
       </svg>
     ),
   },
-  {
-    href: "/settings",
-    label: "Settings",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="10" cy="10" r="2.5" />
-        <path d="M10 1.5v2M10 16.5v2M1.5 10h2M16.5 10h2M3.4 3.4l1.4 1.4M15.2 15.2l1.4 1.4M3.4 16.6l1.4-1.4M15.2 4.8l1.4-1.4" />
-      </svg>
-    ),
-  },
 ];
 
 export default function Sidebar() {
@@ -100,21 +90,38 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      {/* User section */}
-      {name && (
-        <div className="px-3 pb-4 mt-auto">
-          <div className="border-t border-lavender-100 dark:border-lavender-800 pt-4">
-            <div className="flex items-center gap-3 px-3 py-2">
-              <div className="w-8 h-8 rounded-full bg-lavender-100 dark:bg-lavender-800 flex items-center justify-center text-sm font-semibold text-baltic-600 dark:text-baltic-300">
-                {name.charAt(0).toUpperCase()}
-              </div>
-              <p className="text-sm font-medium text-baltic-800 dark:text-baltic-200 truncate">
-                {name}
-              </p>
-            </div>
+      {/* Bottom section */}
+      <div className="px-3 pb-4 mt-auto">
+        <div className="border-t border-lavender-100 dark:border-lavender-800 pt-4">
+          <div className="flex items-center gap-2 px-3 py-2">
+            {name && (
+              <>
+                <div className="w-8 h-8 rounded-full bg-lavender-100 dark:bg-lavender-800 flex items-center justify-center text-sm font-semibold text-baltic-600 dark:text-baltic-300">
+                  {name.charAt(0).toUpperCase()}
+                </div>
+                <p className="text-sm font-medium text-baltic-800 dark:text-baltic-200 truncate flex-1">
+                  {name}
+                </p>
+              </>
+            )}
+            <button
+              onClick={() => router.push("/settings")}
+              className={cn(
+                "w-8 h-8 rounded-lg flex items-center justify-center transition-smooth",
+                pathname === "/settings"
+                  ? "text-baltic-600 dark:text-baltic-300 bg-baltic-50 dark:bg-baltic-900/50"
+                  : "text-steel-400 hover:text-baltic-600 dark:hover:text-baltic-300 hover:bg-lavender-50 dark:hover:bg-lavender-900"
+              )}
+              title="Settings"
+            >
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="10" cy="10" r="2.5" />
+                <path d="M10 1.5v2M10 16.5v2M1.5 10h2M16.5 10h2M3.4 3.4l1.4 1.4M15.2 15.2l1.4 1.4M3.4 16.6l1.4-1.4M15.2 4.8l1.4-1.4" />
+              </svg>
+            </button>
           </div>
         </div>
-      )}
+      </div>
     </aside>
   );
 }
