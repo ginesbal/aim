@@ -338,49 +338,59 @@ export default function DashboardPage() {
             </h2>
             <div className="grid grid-cols-4 gap-3">
               {subjectCards.map((subject) => {
-                const size = 44;
-                const stroke = 3.5;
-                const radius = (size - stroke) / 2;
-                const circumference = 2 * Math.PI * radius;
-                const offset = circumference * (1 - subject.progress / 100);
+                const s = 44;
+                const cx = s / 2;
+                const outerR = s / 2 - 1;
+                const innerR = 8;
+                const progress = subject.progress / 100;
+
+                // Build a filled arc path (like the "a" in the aim logo)
+                // Full circle when 100%, arc + lines to center otherwise
+                const startAngle = -Math.PI / 2;
+                const endAngle = startAngle + 2 * Math.PI * Math.min(progress, 0.999);
+                const largeArc = progress > 0.5 ? 1 : 0;
+                const sx = cx + outerR * Math.cos(startAngle);
+                const sy = cx + outerR * Math.sin(startAngle);
+                const ex = cx + outerR * Math.cos(endAngle);
+                const ey = cx + outerR * Math.sin(endAngle);
+
+                const arcPath =
+                  progress >= 1
+                    ? `M${cx},${cx - outerR} A${outerR},${outerR} 0 1,1 ${cx - 0.01},${cx - outerR} A${outerR},${outerR} 0 0,1 ${cx},${cx - outerR}Z`
+                    : `M${cx},${cx} L${sx},${sy} A${outerR},${outerR} 0 ${largeArc},1 ${ex},${ey} Z`;
 
                 return (
                   <div
                     key={subject.key}
                     className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 p-4 flex items-center gap-3"
                   >
-                    {/* Mini progress ring */}
-                    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-                      <svg width={size} height={size} className="-rotate-90">
+                    {/* Filled arc with counter dot — aim logo style */}
+                    <div className="flex-shrink-0" style={{ width: s, height: s }}>
+                      <svg width={s} height={s}>
+                        {/* Track circle */}
                         <circle
-                          cx={size / 2}
-                          cy={size / 2}
-                          r={radius}
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth={stroke}
-                          className="text-lavender-100 dark:text-lavender-800"
+                          cx={cx}
+                          cy={cx}
+                          r={outerR}
+                          className="fill-lavender-100 dark:fill-lavender-800"
                         />
+                        {/* Filled progress arc */}
+                        {progress > 0 && (
+                          <path
+                            d={arcPath}
+                            fill={subject.color}
+                            style={{ opacity: 0.8 }}
+                            className="transition-all duration-500"
+                          />
+                        )}
+                        {/* White counter dot (like the "a" in aim) */}
                         <circle
-                          cx={size / 2}
-                          cy={size / 2}
-                          r={radius}
-                          fill="none"
-                          stroke={subject.color}
-                          strokeWidth={stroke}
-                          strokeLinecap="round"
-                          strokeDasharray={circumference}
-                          strokeDashoffset={offset}
-                          style={{ opacity: 0.75 }}
-                          className="transition-all duration-500"
+                          cx={cx}
+                          cy={cx}
+                          r={innerR}
+                          className="fill-white dark:fill-lavender-900"
                         />
                       </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div
-                          className="w-2.5 h-2.5 rounded-full"
-                          style={{ backgroundColor: subject.color }}
-                        />
-                      </div>
                     </div>
 
                     {/* Label + count */}
