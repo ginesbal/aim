@@ -330,37 +330,72 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Subject progress — slim bars */}
+        {/* Subject progress */}
         {subjectCards.length > 0 && (
-          <div className="py-5">
-            <Section title="Subject progress" collapsible defaultOpen>
-              <div className="space-y-3">
-                {subjectCards.map((subject) => (
-                  <div key={subject.key} className="flex items-center gap-3">
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: subject.color }}
-                    />
-                    <span className="text-sm font-medium text-baltic-800 dark:text-baltic-100 w-24 truncate">
-                      {subject.label}
-                    </span>
-                    <div className="flex-1 h-1.5 rounded-full bg-baltic-100 dark:bg-baltic-800">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${subject.progress}%`,
-                          backgroundColor: subject.color,
-                          opacity: 0.7,
-                        }}
-                      />
+          <div className="mt-6 mb-2">
+            <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">
+              Subjects
+            </h2>
+            <div className="grid grid-cols-4 gap-3">
+              {subjectCards.map((subject) => {
+                const size = 44;
+                const stroke = 3.5;
+                const radius = (size - stroke) / 2;
+                const circumference = 2 * Math.PI * radius;
+                const offset = circumference * (1 - subject.progress / 100);
+
+                return (
+                  <div
+                    key={subject.key}
+                    className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 p-4 flex items-center gap-3"
+                  >
+                    {/* Mini progress ring */}
+                    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+                      <svg width={size} height={size} className="-rotate-90">
+                        <circle
+                          cx={size / 2}
+                          cy={size / 2}
+                          r={radius}
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={stroke}
+                          className="text-lavender-100 dark:text-lavender-800"
+                        />
+                        <circle
+                          cx={size / 2}
+                          cy={size / 2}
+                          r={radius}
+                          fill="none"
+                          stroke={subject.color}
+                          strokeWidth={stroke}
+                          strokeLinecap="round"
+                          strokeDasharray={circumference}
+                          strokeDashoffset={offset}
+                          style={{ opacity: 0.75 }}
+                          className="transition-all duration-500"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: subject.color }}
+                        />
+                      </div>
                     </div>
-                    <span className="text-xs font-semibold text-steel-400 w-12 text-right">
-                      {subject.completed}/{subject.total}
-                    </span>
+
+                    {/* Label + count */}
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-baltic-800 dark:text-baltic-100 truncate">
+                        {subject.label}
+                      </p>
+                      <p className="text-xs text-steel-400">
+                        {subject.completed}/{subject.total} done
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </Section>
+                );
+              })}
+            </div>
           </div>
         )}
 
