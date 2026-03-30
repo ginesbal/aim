@@ -263,6 +263,7 @@ export default function CalendarSidebar({
                 <button
                   key={key}
                   onClick={() => handleDayClick(day)}
+                  aria-label={`${day.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}${hasTasks ? ", has tasks" : ""}${hasSessions ? ", has sessions" : ""}`}
                   className={cn(
                     "relative w-full aspect-square flex flex-col items-center justify-center rounded-lg text-xs transition-smooth",
                     isSelected
@@ -304,8 +305,20 @@ export default function CalendarSidebar({
         </>
       )}
 
+      {/* Dot legend */}
+      <div className="flex items-center gap-4 mt-3 mb-1">
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-baltic-400 dark:bg-baltic-500" />
+          <span className="text-[10px] text-steel-400">Tasks</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-ash-400 dark:bg-ash-500" />
+          <span className="text-[10px] text-steel-400">Sessions</span>
+        </div>
+      </div>
+
       {/* Divider */}
-      <div className="border-t border-lavender-200 dark:border-lavender-700 mt-4 mb-4" />
+      <div className="border-t border-lavender-200 dark:border-lavender-700 mt-3 mb-4" />
 
       {/* Selected date detail */}
       {selectedDate ? (

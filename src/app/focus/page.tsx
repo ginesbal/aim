@@ -112,19 +112,22 @@ export default function FocusPage() {
     setTimerState("reflecting");
   }, [totalSeconds, secondsLeft]);
 
+  // Default to first available user subject if none selected
+  const defaultSubject = subject || "Mathematics";
+
   const saveWithReflection = useCallback(() => {
     addSession(
-      subject || "General",
+      defaultSubject,
       elapsedMinutes,
       reflectionQuality ? { quality: reflectionQuality, ...(reflectionNote.trim() ? { note: reflectionNote.trim() } : {}) } : undefined
     );
     resetTimer();
-  }, [subject, elapsedMinutes, reflectionQuality, reflectionNote, addSession, resetTimer]);
+  }, [defaultSubject, elapsedMinutes, reflectionQuality, reflectionNote, addSession, resetTimer]);
 
   const skipReflection = useCallback(() => {
-    addSession(subject || "General", elapsedMinutes);
+    addSession(defaultSubject, elapsedMinutes);
     resetTimer();
-  }, [subject, elapsedMinutes, addSession, resetTimer]);
+  }, [defaultSubject, elapsedMinutes, addSession, resetTimer]);
 
   useEffect(() => {
     return () => clearTimer();

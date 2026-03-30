@@ -285,12 +285,7 @@ export default function DashboardPage() {
 
           {allSubjectCards.length > 0 ? (
             <>
-              <div
-                className="grid gap-3"
-                style={{
-                  gridTemplateColumns: `repeat(${Math.min(visibleSubjectCards.length, 4)}, minmax(0, 1fr))`,
-                }}
-              >
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 {visibleSubjectCards.map((subject) => {
                   const s = 44;
                   const cx = s / 2;

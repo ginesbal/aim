@@ -10,17 +10,25 @@ export default function SettingsPage() {
   const { name, dailyGoal, setName, setDailyGoal } = usePreferences();
   const [localName, setLocalName] = useState(name);
   const [localGoal, setLocalGoal] = useState(String(dailyGoal));
-  const [saved, setSaved] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (localName.trim()) {
-      setName(localName.trim());
-      const goalNum = parseInt(localGoal, 10);
-      if (goalNum > 0) setDailyGoal(goalNum);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+    if (!localName.trim()) {
+      setFeedback({ type: "error", message: "Name cannot be empty" });
+      setTimeout(() => setFeedback(null), 3000);
+      return;
     }
+    const goalNum = parseInt(localGoal, 10);
+    if (!goalNum || goalNum < 1) {
+      setFeedback({ type: "error", message: "Goal must be at least 1 minute" });
+      setTimeout(() => setFeedback(null), 3000);
+      return;
+    }
+    setName(localName.trim());
+    setDailyGoal(goalNum);
+    setFeedback({ type: "success", message: "Saved" });
+    setTimeout(() => setFeedback(null), 2000);
   }
 
   return (
@@ -50,8 +58,10 @@ export default function SettingsPage() {
           />
           <div className="flex items-center gap-3">
             <Button type="submit" size="sm">Save</Button>
-            {saved && (
-              <span className="text-xs text-ash-600 font-medium">Saved</span>
+            {feedback && (
+              <span className={`text-xs font-medium ${feedback.type === "error" ? "text-red-500" : "text-ash-600"}`}>
+                {feedback.message}
+              </span>
             )}
           </div>
         </form>

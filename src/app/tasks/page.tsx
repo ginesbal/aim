@@ -32,13 +32,12 @@ export default function TasksPage() {
       result = result.filter((t) => t.completed);
     }
 
-    result.sort(
-      (a, b) =>
-        new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-    );
-    result.sort((a, b) =>
-      a.completed === b.completed ? 0 : a.completed ? 1 : -1
-    );
+    result.sort((a, b) => {
+      // Incomplete tasks first
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      // Then by due date
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    });
 
     return result;
   }, [tasks, filterSubject, filterStatus]);
