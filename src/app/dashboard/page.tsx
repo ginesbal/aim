@@ -81,7 +81,7 @@ function FocusRing({
 
 
 export default function DashboardPage() {
-  const { name, isFirstVisit, setName } = usePreferences();
+  const { name, isFirstVisit, dailyGoal, setName } = usePreferences();
   const { tasks, toggleComplete } = useTasks();
   const { todayMinutes, streak, sessions } = useFocus();
   const { getSubject } = useSubjects();
@@ -90,9 +90,9 @@ export default function DashboardPage() {
   const [showWelcome, setShowWelcome] = useState(isFirstVisit);
   const [welcomeName, setWelcomeName] = useState("");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [showAllSubjects, setShowAllSubjects] = useState(false);
 
   const firstName = name ? name.split(" ")[0] : "there";
-  const dailyGoal = 120;
 
   const pendingTasks = useMemo(
     () =>
@@ -124,7 +124,7 @@ export default function DashboardPage() {
     [sessions]
   );
 
-  const subjectCards = useMemo(() => {
+  const allSubjectCards = useMemo(() => {
     const subjectMap: Record<
       string,
       { total: number; completed: number; label: string; color: string }
@@ -148,13 +148,17 @@ export default function DashboardPage() {
     return Object.entries(subjectMap)
       .filter(([, v]) => v.total > 0)
       .sort((a, b) => b[1].total - a[1].total)
-      .slice(0, 4)
       .map(([key, val]) => ({
         key,
         ...val,
         progress: Math.round((val.completed / val.total) * 100),
       }));
   }, [tasks, getSubject]);
+
+  const visibleSubjectCards = showAllSubjects
+    ? allSubjectCards
+    : allSubjectCards.slice(0, 4);
+  const hasMoreSubjects = allSubjectCards.length > 4;
 
   function handleWelcomeSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -201,8 +205,8 @@ export default function DashboardPage() {
 
         {/* Header card with focus ring + stats */}
         <div className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="min-w-0">
               <h1 className="text-2xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100">
                 {getGreeting()}, {firstName}
               </h1>
@@ -210,8 +214,8 @@ export default function DashboardPage() {
                 {getWeekday()}, {getFormattedDate()}
               </p>
 
-              {/* Stats row */}
-              <div className="flex items-center gap-6 mt-5">
+              {/* Stats row — wraps on narrow screens */}
+              <div className="flex items-center gap-4 sm:gap-6 mt-5 flex-wrap">
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 rounded-lg bg-cream-100 dark:bg-cream-900/30 flex items-center justify-center">
                     <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-cream-600 dark:text-cream-400">
@@ -227,7 +231,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <div className="w-px h-10 bg-lavender-200 dark:bg-lavender-700" />
+                <div className="w-px h-10 bg-lavender-200 dark:bg-lavender-700 hidden sm:block" />
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 rounded-lg bg-ash-100 dark:bg-ash-900/30 flex items-center justify-center">
                     <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-ash-600 dark:text-ash-400">
@@ -244,7 +248,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <div className="w-px h-10 bg-lavender-200 dark:bg-lavender-700" />
+                <div className="w-px h-10 bg-lavender-200 dark:bg-lavender-700 hidden sm:block" />
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 rounded-lg bg-lavender-100 dark:bg-lavender-800/40 flex items-center justify-center">
                     <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-lavender-500 dark:text-lavender-400">
@@ -264,7 +268,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center flex-shrink-0">
               <FocusRing minutes={todayMinutes} goal={dailyGoal} />
               <p className="text-[11px] font-medium text-steel-400 mt-1.5">
                 Daily focus
@@ -274,90 +278,128 @@ export default function DashboardPage() {
         </div>
 
         {/* Subject progress */}
-        {subjectCards.length > 0 && (
-          <div className="mt-6 mb-2">
-            <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">
-              Subjects
-            </h2>
-            <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(subjectCards.length, 4)}, minmax(0, 1fr))` }}>
-              {subjectCards.map((subject) => {
-                const s = 44;
-                const cx = s / 2;
-                const outerR = s / 2 - 1;
-                const innerR = 8;
-                const progress = subject.progress / 100;
+        <div className="mt-6 mb-2">
+          <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">
+            Subjects
+          </h2>
 
-                // Build a filled arc path (like the "a" in the aim logo)
-                // Full circle when 100%, arc + lines to center otherwise
-                const startAngle = -Math.PI / 2;
-                const endAngle = startAngle + 2 * Math.PI * Math.min(progress, 0.999);
-                const largeArc = progress > 0.5 ? 1 : 0;
-                const sx = cx + outerR * Math.cos(startAngle);
-                const sy = cx + outerR * Math.sin(startAngle);
-                const ex = cx + outerR * Math.cos(endAngle);
-                const ey = cx + outerR * Math.sin(endAngle);
+          {allSubjectCards.length > 0 ? (
+            <>
+              <div
+                className="grid gap-3"
+                style={{
+                  gridTemplateColumns: `repeat(${Math.min(visibleSubjectCards.length, 4)}, minmax(0, 1fr))`,
+                }}
+              >
+                {visibleSubjectCards.map((subject) => {
+                  const s = 44;
+                  const cx = s / 2;
+                  const outerR = s / 2 - 1;
+                  const innerR = 8;
+                  const progress = subject.progress / 100;
 
-                const arcPath =
-                  progress >= 1
-                    ? `M${cx},${cx - outerR} A${outerR},${outerR} 0 1,1 ${cx - 0.01},${cx - outerR} A${outerR},${outerR} 0 0,1 ${cx},${cx - outerR}Z`
-                    : `M${cx},${cx} L${sx},${sy} A${outerR},${outerR} 0 ${largeArc},1 ${ex},${ey} Z`;
+                  const startAngle = -Math.PI / 2;
+                  const endAngle = startAngle + 2 * Math.PI * Math.min(progress, 0.999);
+                  const largeArc = progress > 0.5 ? 1 : 0;
+                  const sx = cx + outerR * Math.cos(startAngle);
+                  const sy = cx + outerR * Math.sin(startAngle);
+                  const ex = cx + outerR * Math.cos(endAngle);
+                  const ey = cx + outerR * Math.sin(endAngle);
 
-                return (
-                  <div
-                    key={subject.key}
-                    className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 p-4 flex items-center gap-3"
-                  >
-                    {/* Filled arc with counter dot — aim logo style */}
-                    <div className="flex-shrink-0" style={{ width: s, height: s }}>
-                      <svg width={s} height={s}>
-                        {/* Track circle */}
-                        <circle
-                          cx={cx}
-                          cy={cx}
-                          r={outerR}
-                          className="fill-lavender-100 dark:fill-lavender-800"
-                        />
-                        {/* Filled progress arc */}
-                        {progress > 0 && (
-                          <path
-                            d={arcPath}
-                            fill={subject.color}
-                            style={{ opacity: 0.8 }}
-                            className="transition-all duration-500"
+                  const arcPath =
+                    progress >= 1
+                      ? `M${cx},${cx - outerR} A${outerR},${outerR} 0 1,1 ${cx - 0.01},${cx - outerR} A${outerR},${outerR} 0 0,1 ${cx},${cx - outerR}Z`
+                      : `M${cx},${cx} L${sx},${sy} A${outerR},${outerR} 0 ${largeArc},1 ${ex},${ey} Z`;
+
+                  return (
+                    <div
+                      key={subject.key}
+                      className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 p-4 flex items-center gap-3"
+                    >
+                      <div className="flex-shrink-0" style={{ width: s, height: s }}>
+                        <svg width={s} height={s}>
+                          <circle
+                            cx={cx}
+                            cy={cx}
+                            r={outerR}
+                            className="fill-lavender-100 dark:fill-lavender-800"
                           />
-                        )}
-                        {/* White counter dot (like the "a" in aim) */}
-                        <circle
-                          cx={cx}
-                          cy={cx}
-                          r={innerR}
-                          className="fill-white dark:fill-lavender-900"
-                        />
-                      </svg>
+                          {progress > 0 && (
+                            <path
+                              d={arcPath}
+                              fill={subject.color}
+                              style={{ opacity: 0.8 }}
+                              className="transition-all duration-500"
+                            />
+                          )}
+                          <circle
+                            cx={cx}
+                            cy={cx}
+                            r={innerR}
+                            className="fill-white dark:fill-lavender-900"
+                          />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-baltic-800 dark:text-baltic-100 truncate">
+                          {subject.label}
+                        </p>
+                        <p className="text-xs text-steel-400">
+                          {subject.completed}/{subject.total} done
+                        </p>
+                      </div>
                     </div>
-
-                    {/* Label + count */}
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-baltic-800 dark:text-baltic-100 truncate">
-                        {subject.label}
-                      </p>
-                      <p className="text-xs text-steel-400">
-                        {subject.completed}/{subject.total} done
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+              {hasMoreSubjects && (
+                <button
+                  onClick={() => setShowAllSubjects(!showAllSubjects)}
+                  className="mt-3 text-xs font-medium text-baltic-500 hover:text-baltic-700 dark:hover:text-baltic-300 transition-smooth"
+                >
+                  {showAllSubjects
+                    ? "Show less"
+                    : `+${allSubjectCards.length - 4} more subject${allSubjectCards.length - 4 !== 1 ? "s" : ""}`}
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="rounded-xl border border-dashed border-lavender-300 dark:border-lavender-600 py-8 text-center">
+              <div className="flex justify-center mb-3">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-lavender-300 dark:text-lavender-600">
+                  <path d="M4 19.5v-15A2.5 2.5 0 016.5 2H20v20H6.5a2.5 2.5 0 010-5H20" />
+                  <path d="M9 10h6M9 14h4" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
+                No subjects yet
+              </p>
+              <p className="text-xs text-steel-400 mt-0.5">
+                Add tasks to see your subject progress here.
+              </p>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Up next — timeline-style task cards */}
         <div className="mt-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-title text-baltic-800 dark:text-baltic-100">
-              {selectedDate ? `Tasks for ${formatDate(selectedDate)}` : "Up next"}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-title text-baltic-800 dark:text-baltic-100">
+                {selectedDate ? `Tasks for ${formatDate(selectedDate)}` : "Up next"}
+              </h2>
+              {selectedDate && (
+                <button
+                  onClick={() => setSelectedDate(null)}
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-steel-400 hover:text-baltic-600 hover:bg-baltic-100 dark:hover:bg-baltic-800 dark:hover:text-baltic-300 transition-smooth"
+                  title="Clear date filter"
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M3 3l6 6M9 3l-6 6" />
+                  </svg>
+                </button>
+              )}
+            </div>
             <button
               onClick={() => router.push("/tasks")}
               className="text-xs text-baltic-500 hover:text-baltic-700 dark:hover:text-baltic-300 font-medium transition-smooth"
@@ -486,13 +528,13 @@ export default function DashboardPage() {
                 View all
               </button>
             </div>
-            <div className="flex gap-3">
+            <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(recentSessions.length, 3)}, minmax(0, 1fr))` }}>
               {recentSessions.map((session) => {
                 const sub = getSubject(session.subject);
                 return (
                   <div
                     key={session.id}
-                    className="flex-1 rounded-lg bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 p-3"
+                    className="rounded-lg bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 p-3"
                   >
                     <div className="flex items-center gap-2 mb-1.5">
                       <span

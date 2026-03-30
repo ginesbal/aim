@@ -7,14 +7,17 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
 export default function SettingsPage() {
-  const { name, setName } = usePreferences();
+  const { name, dailyGoal, setName, setDailyGoal } = usePreferences();
   const [localName, setLocalName] = useState(name);
+  const [localGoal, setLocalGoal] = useState(String(dailyGoal));
   const [saved, setSaved] = useState(false);
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (localName.trim()) {
       setName(localName.trim());
+      const goalNum = parseInt(localGoal, 10);
+      if (goalNum > 0) setDailyGoal(goalNum);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
@@ -36,6 +39,14 @@ export default function SettingsPage() {
             label="Name"
             value={localName}
             onChange={(e) => setLocalName(e.target.value)}
+          />
+          <Input
+            id="settings-goal"
+            label="Daily focus goal (minutes)"
+            type="number"
+            min="1"
+            value={localGoal}
+            onChange={(e) => setLocalGoal(e.target.value)}
           />
           <div className="flex items-center gap-3">
             <Button type="submit" size="sm">Save</Button>
@@ -60,6 +71,7 @@ export default function SettingsPage() {
               localStorage.removeItem("aim_tasks");
               localStorage.removeItem("aim_sessions");
               localStorage.removeItem("aim_name");
+              localStorage.removeItem("aim_daily_goal");
               window.location.reload();
             }
           }}
