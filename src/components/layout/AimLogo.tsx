@@ -1,46 +1,35 @@
 /**
- * aim logo — bold rounded wordmark recreated from the brand logo image.
- * Features a solid "a" with white counter dot, "i" with circular dot,
- * and thick rounded "m" with two arches.
+ * aim logo — converted directly from src/lib/aim_logo.svg brand asset.
  */
 export default function AimLogo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-  const w = size === "sm" ? 60 : size === "lg" ? 120 : 84;
-  const h = w * 0.52;
+  const w = size === "sm" ? 40 : size === "lg" ? 100 : 64;
+  const h = w * 0.49;
 
   return (
     <svg
       width={w}
       height={h}
-      viewBox="0 0 250 130"
+      viewBox="172 210 312 153"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
       aria-label="aim"
     >
       <g className="fill-baltic-700 dark:fill-baltic-100">
-        {/* ===== "a" — solid bowl + right stem + white counter ===== */}
-        <circle cx="48" cy="78" r="42" />
-        <rect x="70" y="48" width="22" height="74" rx="2" />
+        {/* "a" — circle bowl */}
+        <path d="M306 293.5C306 328.57 277.122 357 241.5 357C205.878 357 177 328.57 177 293.5C177 258.43 205.878 230 241.5 230C277.122 230 306 258.43 306 293.5Z" />
+        {/* "a" — right stem + connector */}
+        <path d="M305.782 288.417L306 290V356H233V279H302.256L305.782 288.417Z" />
+
+        {/* "i" — dot */}
+        <path d="M347 230.75C347 239.448 338.717 246.5 328.5 246.5C318.283 246.5 310 239.448 310 230.75C310 222.052 318.283 215 328.5 215C338.717 215 347 222.052 347 230.75Z" />
+
+        {/* "m" */}
+        <path d="M308.943 356V246.909H346.159V267.648H347.295C349.568 260.83 353.451 255.432 358.943 251.455C364.436 247.477 370.97 245.489 378.545 245.489C386.216 245.489 392.821 247.525 398.361 251.597C403.901 255.621 407.239 260.972 408.375 267.648H409.511C411.358 260.972 415.288 255.621 421.301 251.597C427.314 247.525 434.369 245.489 442.466 245.489C452.93 245.489 461.405 248.85 467.892 255.574C474.426 262.297 477.693 271.246 477.693 282.42V356H438.489V292.364C438.489 287.581 437.281 283.841 434.866 281.142C432.452 278.396 429.208 277.023 425.136 277.023C421.112 277.023 417.916 278.396 415.548 281.142C413.228 283.841 412.068 287.581 412.068 292.364V356H374.568V292.364C374.568 287.581 373.361 283.841 370.946 281.142C368.531 278.396 365.288 277.023 361.216 277.023C358.517 277.023 356.197 277.638 354.256 278.869C352.314 280.1 350.799 281.876 349.71 284.196C348.669 286.469 348.148 289.191 348.148 292.364V356H308.943Z" />
       </g>
+
       {/* White counter dot inside "a" */}
-      <circle cx="42" cy="72" r="13" className="fill-white dark:fill-baltic-900" />
-
-      <g className="fill-baltic-700 dark:fill-baltic-100">
-        {/* ===== "i" — dot + stem ===== */}
-        <circle cx="116" cy="22" r="11" />
-        <rect x="106" y="46" width="20" height="76" rx="2" />
-
-        {/* ===== "m" — three stems + two arches ===== */}
-        <rect x="142" y="46" width="20" height="76" rx="2" />
-        <rect x="182" y="46" width="20" height="76" rx="2" />
-        <rect x="222" y="46" width="20" height="76" rx="2" />
-
-        {/* First arch (stem 1 → stem 2) */}
-        <path d="M152,46 C152,12 192,12 192,46 L182,46 C182,30 162,30 162,46 Z" />
-
-        {/* Second arch (stem 2 → stem 3) */}
-        <path d="M192,46 C192,12 232,12 232,46 L222,46 C222,30 202,30 202,46 Z" />
-      </g>
+      <path d="M262 294.5C262 305.822 253.046 315 242 315C230.954 315 222 305.822 222 294.5C222 283.178 230.954 274 242 274C253.046 274 262 283.178 262 294.5Z" className="fill-white dark:fill-baltic-900" />
     </svg>
   );
 }

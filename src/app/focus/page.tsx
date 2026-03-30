@@ -5,10 +5,9 @@ import dynamic from "next/dynamic";
 import { useFocus, useSubjects } from "@/lib/contexts";
 import { SUBJECTS, type SubjectKey, type FocusQuality } from "@/lib/types";
 import { cn, formatTime } from "@/lib/utils";
-import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import ProgressRing from "@/components/ui/ProgressRing";
-import QualityIndicator, { QualitySelector } from "@/components/ui/QualityIndicator";
+import { QualitySelector } from "@/components/ui/QualityIndicator";
 import DurationPicker from "@/components/ui/DurationPicker";
 import SubjectSelector from "@/components/ui/SubjectSelector";
 
@@ -26,7 +25,7 @@ const TOPO_STATES = {
 type TimerState = "idle" | "running" | "paused" | "done" | "reflecting";
 
 export default function FocusPage() {
-  const { sessions, addSession, todayMinutes, streak } = useFocus();
+  const { addSession } = useFocus();
   const { getSubject } = useSubjects();
   const [duration, setDuration] = useState(25);
   const [subject, setSubject] = useState<string | null>(null);
@@ -136,19 +135,6 @@ export default function FocusPage() {
       setSecondsLeft(duration * 60);
     }
   }, [duration, timerState]);
-
-  const todaySessions = sessions.filter(
-    (s) => new Date(s.completedAt).toDateString() === new Date().toDateString()
-  );
-
-  // Resolve session subject for display in today's list
-  const getSessionSubject = (sessionSubject: string) => {
-    const userSub = getSubject(sessionSubject);
-    if (userSub) return { label: userSub.label, color: userSub.color };
-    const legacySub = SUBJECTS[sessionSubject as SubjectKey];
-    if (legacySub) return legacySub;
-    return { label: sessionSubject, color: "#60729f" };
-  };
 
   return (
     <>
@@ -356,76 +342,103 @@ export default function FocusPage() {
       )}
 
       {/* Normal page content — visible when idle */}
-      <div className={cn("space-y-8 max-w-2xl mx-auto", isFullscreen && "hidden")}>
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="text-display text-baltic-800 dark:text-baltic-100">Focus</h1>
-          <p className="text-sm text-steel-400 mt-1">
-            {todayMinutes > 0 ? `${formatTime(todayMinutes)} studied today` : "Ready to begin a session"}
-            {streak > 0 && ` · ${streak} day streak`}
-          </p>
-        </div>
-
-        {/* Timer setup card — idle state */}
-        <div className="relative rounded-lg">
-          <div className="border border-lavender-100 dark:border-lavender-800 p-6 bg-white dark:bg-lavender-900">
-            <div className="flex flex-col items-center py-4">
-              {/* Duration picker */}
-              <DurationPicker value={duration} onChange={setDuration} />
-
-              {/* Divider */}
-              <div className="w-24 border-t border-lavender-100 dark:border-lavender-800 my-6" />
-
-              {/* Subject selector */}
-              <div className="flex flex-col items-center gap-2">
-                <p className="text-label">Subject</p>
-                <SubjectSelector value={subject} onChange={setSubject} />
-              </div>
-
-              {/* Start button */}
-              <div className="mt-8">
-                <Button onClick={startTimer}>Start focusing</Button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Today's sessions */}
-        {todaySessions.length > 0 && (
-          <Card padding="md">
-            <h3 className="text-title text-baltic-800 dark:text-baltic-100 mb-3">
-              Today&apos;s sessions
-            </h3>
-            <div className="space-y-2">
-              {todaySessions.map((session) => {
-                const sub = getSessionSubject(session.subject);
+      <div className={cn("max-w-md mx-auto", isFullscreen && "hidden")}>
+        {/* Timer setup dial — centered hero */}
+        <div className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm p-8 flex flex-col items-center">
+          {/* Decorative outer ring with tick marks */}
+          <div className="relative" style={{ width: 300, height: 300 }}>
+            <svg width={300} height={300} viewBox="0 0 300 300" className="absolute inset-0">
+              {/* Outer decorative ring */}
+              <circle
+                cx="150"
+                cy="150"
+                r="146"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="0.5"
+                className="text-lavender-200 dark:text-lavender-700"
+              />
+              {/* Tick marks around the dial */}
+              {Array.from({ length: 60 }).map((_, i) => {
+                const angle = (i * 6 - 90) * (Math.PI / 180);
+                const isMajor = i % 5 === 0;
+                const outerR = 146;
+                const innerR = isMajor ? 136 : 140;
+                const x1 = 150 + innerR * Math.cos(angle);
+                const y1 = 150 + innerR * Math.sin(angle);
+                const x2 = 150 + outerR * Math.cos(angle);
+                const y2 = 150 + outerR * Math.sin(angle);
                 return (
-                  <div key={session.id} className="flex items-center gap-3 py-1.5">
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: sub.color }}
-                    />
-                    <span className="text-sm text-baltic-700 dark:text-baltic-300 flex-1">
-                      {sub.label}
-                    </span>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {session.reflection && (
-                        <QualityIndicator quality={session.reflection.quality} size={14} />
-                      )}
-                      <span className="text-xs text-steel-400">{formatTime(session.duration)}</span>
-                    </div>
-                  </div>
+                  <line
+                    key={i}
+                    x1={x1} y1={y1} x2={x2} y2={y2}
+                    stroke="currentColor"
+                    strokeWidth={isMajor ? 1.5 : 0.5}
+                    strokeLinecap="round"
+                    className={isMajor
+                      ? "text-baltic-300 dark:text-baltic-600"
+                      : "text-lavender-200 dark:text-lavender-700"
+                    }
+                  />
                 );
               })}
-              <div className="pt-2 border-t border-lavender-100 dark:border-lavender-800 flex items-center justify-between">
-                <span className="text-xs font-medium text-steel-400">Total</span>
-                <span className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
-                  {formatTime(todayMinutes)}
-                </span>
-              </div>
+              {/* Duration arc — visual fill based on selected duration (max 120m) */}
+              {(() => {
+                const pct = Math.min(duration / 120, 1);
+                const r = 126;
+                const circumference = 2 * Math.PI * r;
+                const offset = circumference * (1 - pct);
+                return (
+                  <circle
+                    cx="150"
+                    cy="150"
+                    r={r}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    className="text-baltic-400/30 dark:text-baltic-500/30 -rotate-90 origin-center transition-all duration-500"
+                  />
+                );
+              })()}
+              {/* Inner ring */}
+              <circle
+                cx="150"
+                cy="150"
+                r="105"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="0.5"
+                className="text-lavender-200 dark:text-lavender-700"
+              />
+            </svg>
+
+            {/* Duration display in center */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <DurationPicker value={duration} onChange={setDuration} />
             </div>
-          </Card>
-        )}
+          </div>
+
+          {/* Divider */}
+          <div className="w-16 border-t border-lavender-100 dark:border-lavender-800 my-5" />
+
+          {/* Subject selector — clean inline layout */}
+          <SubjectSelector value={subject} onChange={setSubject} />
+
+          {/* Start button — prominent */}
+          <button
+            onClick={startTimer}
+            className="mt-6 w-full py-3.5 rounded-xl bg-baltic-600 hover:bg-baltic-700 dark:bg-baltic-500 dark:hover:bg-baltic-400 text-white font-semibold text-sm shadow-[0_4px_20px_rgba(38,45,64,0.25)] hover:shadow-[0_6px_28px_rgba(38,45,64,0.35)] transition-smooth flex items-center justify-center gap-2"
+          >
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="10" cy="10" r="8" />
+              <path d="M10 6v4l2.5 2.5" />
+            </svg>
+            Start focusing
+          </button>
+        </div>
       </div>
     </>
   );
