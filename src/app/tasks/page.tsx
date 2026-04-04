@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { useTasks } from "@/lib/contexts";
-import { SUBJECTS, PRIORITIES, type SubjectKey, type Task } from "@/lib/types";
+import { useTasks, useSubjects } from "@/lib/contexts";
+import { PRIORITIES, type Task } from "@/lib/types";
 import { cn, formatDate, isOverdue } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -10,13 +10,13 @@ import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 
 type FilterStatus = "all" | "pending" | "completed";
-type FilterSubject = "all" | SubjectKey;
 
 export default function TasksPage() {
   const { tasks, addTask, toggleComplete, deleteTask } = useTasks();
+  const { subjects, getSubject } = useSubjects();
 
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("pending");
-  const [filterSubject, setFilterSubject] = useState<FilterSubject>("all");
+  const [filterSubject, setFilterSubject] = useState<string>("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
@@ -33,9 +33,7 @@ export default function TasksPage() {
     }
 
     result.sort((a, b) => {
-      // Incomplete tasks first
       if (a.completed !== b.completed) return a.completed ? 1 : -1;
-      // Then by due date
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
     });
 
@@ -44,28 +42,34 @@ export default function TasksPage() {
 
   const pendingCount = tasks.filter((t) => !t.completed).length;
   const completedCount = tasks.filter((t) => t.completed).length;
+  const overdueCount = tasks.filter((t) => !t.completed && isOverdue(t.dueDate)).length;
   const completionPct =
     tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
 
-  // Group tasks by due proximity for visual sections
-  const { overdueTasks, todayTasks, laterTasks } = useMemo(() => {
+  const { overdueTasks, todayTasks, upcomingTasks, completedTasks } = useMemo(() => {
     const today = new Date().toISOString().split("T")[0];
     const overdue: Task[] = [];
     const todayGroup: Task[] = [];
-    const later: Task[] = [];
+    const upcoming: Task[] = [];
+    const completed: Task[] = [];
 
     for (const task of filteredTasks) {
       if (task.completed) {
-        later.push(task);
+        completed.push(task);
       } else if (isOverdue(task.dueDate)) {
         overdue.push(task);
       } else if (task.dueDate === today) {
         todayGroup.push(task);
       } else {
-        later.push(task);
+        upcoming.push(task);
       }
     }
-    return { overdueTasks: overdue, todayTasks: todayGroup, laterTasks: later };
+    return {
+      overdueTasks: overdue,
+      todayTasks: todayGroup,
+      upcomingTasks: upcoming,
+      completedTasks: completed,
+    };
   }, [filteredTasks]);
 
   return (
@@ -74,9 +78,16 @@ export default function TasksPage() {
       <div className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100">
-              Tasks
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100">
+                Tasks
+              </h1>
+              {overdueCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[11px] font-bold">
+                  {overdueCount} overdue
+                </span>
+              )}
+            </div>
             <p className="text-sm text-steel-400 mt-1">
               Stay on track — one task at a time.
             </p>
@@ -151,33 +162,31 @@ export default function TasksPage() {
 
         <div className="w-px h-5 bg-lavender-200 dark:bg-lavender-700 mx-1" />
 
-        {Object.entries(SUBJECTS).map(([key, { label, color }]) => (
+        {subjects.map((sub) => (
           <button
-            key={key}
+            key={sub.id}
             onClick={() =>
-              setFilterSubject(
-                filterSubject === key ? "all" : (key as SubjectKey)
-              )
+              setFilterSubject(filterSubject === sub.label ? "all" : sub.label)
             }
             className={cn(
               "px-3 py-1.5 rounded-full text-xs font-medium transition-smooth flex items-center gap-1.5",
-              filterSubject === key
+              filterSubject === sub.label
                 ? "text-white"
                 : "bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 text-steel-400 hover:text-baltic-600"
             )}
             style={
-              filterSubject === key
-                ? { backgroundColor: color }
+              filterSubject === sub.label
+                ? { backgroundColor: sub.color }
                 : undefined
             }
           >
-            {filterSubject !== key && (
+            {filterSubject !== sub.label && (
               <span
                 className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: color }}
+                style={{ backgroundColor: sub.color }}
               />
             )}
-            {label}
+            {sub.label}
           </button>
         ))}
       </div>
@@ -185,7 +194,6 @@ export default function TasksPage() {
       {/* ── Task list ── */}
       {filteredTasks.length > 0 ? (
         <div className="space-y-5">
-          {/* Overdue group */}
           {overdueTasks.length > 0 && (
             <TaskGroup label="Overdue" accent="text-red-500">
               {overdueTasks.map((task) => (
@@ -199,7 +207,6 @@ export default function TasksPage() {
             </TaskGroup>
           )}
 
-          {/* Today group */}
           {todayTasks.length > 0 && (
             <TaskGroup label="Today" accent="text-baltic-600 dark:text-baltic-400">
               {todayTasks.map((task) => (
@@ -213,19 +220,22 @@ export default function TasksPage() {
             </TaskGroup>
           )}
 
-          {/* Upcoming / completed */}
-          {laterTasks.length > 0 && (
-            <TaskGroup
-              label={
-                filterStatus === "completed"
-                  ? "Completed"
-                  : overdueTasks.length > 0 || todayTasks.length > 0
-                    ? "Upcoming"
-                    : ""
-              }
-              accent="text-steel-400"
-            >
-              {laterTasks.map((task) => (
+          {upcomingTasks.length > 0 && (
+            <TaskGroup label="Upcoming" accent="text-steel-400">
+              {upcomingTasks.map((task) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  onToggle={() => toggleComplete(task.id)}
+                  onSelect={() => setSelectedTask(task)}
+                />
+              ))}
+            </TaskGroup>
+          )}
+
+          {completedTasks.length > 0 && (
+            <TaskGroup label="Completed" accent="text-ash-500">
+              {completedTasks.map((task) => (
                 <TaskRow
                   key={task.id}
                   task={task}
@@ -336,7 +346,8 @@ function TaskRow({
   onToggle: () => void;
   onSelect: () => void;
 }) {
-  const subject = SUBJECTS[task.subject as keyof typeof SUBJECTS];
+  const { getSubject } = useSubjects();
+  const subject = getSubject(task.subject);
   const overdue = !task.completed && isOverdue(task.dueDate);
   const color = subject?.color || "#60729f";
 
@@ -430,11 +441,15 @@ function TaskRow({
         >
           {overdue ? "Overdue" : formatDate(task.dueDate)}
         </span>
-        <div
-          className="w-1.5 h-1.5 rounded-full"
-          style={{ backgroundColor: PRIORITIES[task.priority].color }}
-          title={PRIORITIES[task.priority].label}
-        />
+        <span
+          className="px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none"
+          style={{
+            backgroundColor: PRIORITIES[task.priority].color + "18",
+            color: PRIORITIES[task.priority].color,
+          }}
+        >
+          {PRIORITIES[task.priority].label}
+        </span>
       </div>
     </div>
   );
@@ -450,9 +465,10 @@ function AddTaskModal({
   onClose: () => void;
   onAdd: (task: Omit<Task, "id" | "createdAt" | "completed">) => void;
 }) {
+  const { subjects } = useSubjects();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [subject, setSubject] = useState<string>("mathematics");
+  const [subject, setSubject] = useState<string>(subjects[0]?.label || "");
   const [priority, setPriority] = useState<"low" | "medium" | "high">(
     "medium"
   );
@@ -473,12 +489,12 @@ function AddTaskModal({
       });
       setTitle("");
       setDescription("");
-      setSubject("mathematics");
+      setSubject(subjects[0]?.label || "");
       setPriority("medium");
       setDueDate(new Date().toISOString().split("T")[0]);
       onClose();
     },
-    [title, description, subject, priority, dueDate, onAdd, onClose]
+    [title, description, subject, priority, dueDate, onAdd, onClose, subjects]
   );
 
   return (
@@ -516,9 +532,9 @@ function AddTaskModal({
               onChange={(e) => setSubject(e.target.value)}
               className="w-full px-3 py-2 text-sm rounded-md border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 outline-none focus:ring-2 focus:ring-baltic-400/30"
             >
-              {Object.entries(SUBJECTS).map(([key, { label }]) => (
-                <option key={key} value={key}>
-                  {label}
+              {subjects.map((sub) => (
+                <option key={sub.id} value={sub.label}>
+                  {sub.label}
                 </option>
               ))}
             </select>
@@ -585,23 +601,34 @@ function TaskDetailModal({
   onToggle: () => void;
   onDelete: () => void;
 }) {
-  const subject = SUBJECTS[task.subject as keyof typeof SUBJECTS];
+  const { getSubject } = useSubjects();
+  const subject = getSubject(task.subject);
+  const color = subject?.color || "#60729f";
 
   return (
     <Modal open={true} onClose={onClose} title={task.title} width="sm">
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <div
-            className="w-2 h-2 rounded-full"
-            style={{ backgroundColor: subject?.color || "#60729f" }}
-          />
-          <span className="text-sm text-baltic-700 dark:text-baltic-300">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white"
+            style={{ backgroundColor: color }}
+          >
             {subject?.label || task.subject}
           </span>
-          <Badge color={PRIORITIES[task.priority].color}>
-            {PRIORITIES[task.priority].label}
-          </Badge>
-          {task.completed && <Badge color="#76946b">Completed</Badge>}
+          <span
+            className="px-2 py-1 rounded-full text-xs font-medium"
+            style={{
+              backgroundColor: PRIORITIES[task.priority].color + "18",
+              color: PRIORITIES[task.priority].color,
+            }}
+          >
+            {PRIORITIES[task.priority].label} priority
+          </span>
+          {task.completed && (
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-ash-100 dark:bg-ash-900/30 text-ash-600 dark:text-ash-400">
+              Completed
+            </span>
+          )}
         </div>
 
         {task.description && (
@@ -610,10 +637,18 @@ function TaskDetailModal({
           </p>
         )}
 
-        <div className="text-xs text-steel-400">
-          Due: {formatDate(task.dueDate)}
-          {!task.completed && isOverdue(task.dueDate) && (
-            <span className="text-red-500 ml-2">Overdue</span>
+        <div className="flex items-center gap-4 text-xs text-steel-400">
+          <span>
+            Due: {formatDate(task.dueDate)}
+            {!task.completed && isOverdue(task.dueDate) && (
+              <span className="text-red-500 ml-1.5 font-medium">Overdue</span>
+            )}
+          </span>
+          {task.createdAt && (
+            <>
+              <span className="text-steel-300 dark:text-steel-600">·</span>
+              <span>Created: {formatDate(task.createdAt.split("T")[0])}</span>
+            </>
           )}
         </div>
 
