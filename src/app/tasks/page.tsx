@@ -11,8 +11,8 @@ import Modal from "@/components/ui/Modal";
 
 type FilterStatus = "all" | "pending" | "completed";
 
-/* ─── Subject Accordion Strip ─── */
-function SubjectAccordion({
+/* ─── Subject Bookshelf ─── */
+function SubjectBookshelf({
   activeSubject,
   onSelect,
 }: {
@@ -37,13 +37,12 @@ function SubjectAccordion({
     return stats;
   }, [subjects, tasks]);
 
-  // Determine which panel is visually expanded
   const activeIndex = hoveredIndex !== null
     ? hoveredIndex
     : subjects.findIndex((s) => s.label === activeSubject);
 
   return (
-    <div className="flex gap-2 h-[120px]">
+    <div className="flex items-end gap-1.5 h-[180px]">
       {subjects.map((sub, index) => {
         const isExpanded = index === activeIndex;
         const isSelected = sub.label === activeSubject;
@@ -54,65 +53,82 @@ function SubjectAccordion({
         return (
           <div
             key={sub.id}
-            className={cn(
-              "relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-700 ease-in-out",
-              isSelected && "ring-2 ring-white/50"
-            )}
+            className="relative h-full cursor-pointer transition-all duration-700 ease-in-out"
             style={{
-              flex: isExpanded ? "4 1 0%" : "0.5 1 0%",
-              backgroundColor: sub.color,
+              width: isExpanded ? 200 : 36,
             }}
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex(null)}
             onClick={() => onSelect(isSelected ? "all" : sub.label)}
           >
-            {/* Dark overlay for depth */}
-            <div className="absolute inset-0 bg-black/20" />
-
-            {/* Collapsed: vertical label */}
-            <span
-              className={cn(
-                "absolute text-white text-sm font-semibold whitespace-nowrap transition-all duration-500 ease-in-out",
-                isExpanded
-                  ? "opacity-0 pointer-events-none"
-                  : "bottom-8 left-1/2 -translate-x-1/2 rotate-[-90deg] opacity-100"
-              )}
-            >
-              {sub.label}
-            </span>
-
-            {/* Expanded: full content */}
+            {/* Book spine / expanded panel */}
             <div
               className={cn(
-                "absolute inset-0 flex flex-col justify-end p-4 transition-opacity duration-500 ease-in-out",
-                isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
+                "absolute inset-0 rounded-xl overflow-hidden transition-all duration-700 ease-in-out",
+                isSelected && !isExpanded && "ring-2 ring-offset-2 ring-offset-lavender-50 dark:ring-offset-baltic-900"
               )}
+              style={{
+                backgroundColor: sub.color,
+                borderRadius: isExpanded ? 16 : 20,
+                ...(isSelected && !isExpanded ? { ringColor: sub.color } : {}),
+              }}
             >
-              <p className="text-white text-base font-bold leading-tight">
-                {sub.label}
-              </p>
-              <div className="flex items-center gap-3 mt-1.5">
-                <span className="text-white/80 text-xs font-medium">
-                  {stats.pending} pending
-                </span>
-                <span className="text-white/50 text-xs">·</span>
-                <span className="text-white/80 text-xs font-medium">
-                  {stats.completed} done
+              {/* Subtle inner shadow for book depth */}
+              <div
+                className="absolute inset-0 transition-opacity duration-700"
+                style={{
+                  background: isExpanded
+                    ? "linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.25) 100%)"
+                    : "linear-gradient(90deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.15) 50%, rgba(255,255,255,0.05) 100%)",
+                }}
+              />
+
+              {/* Spine: vertical label (visible when collapsed) */}
+              <div
+                className={cn(
+                  "absolute inset-0 flex items-center justify-center transition-opacity duration-300",
+                  isExpanded ? "opacity-0" : "opacity-100"
+                )}
+              >
+                <span
+                  className="text-white text-xs font-semibold whitespace-nowrap"
+                  style={{
+                    writingMode: "vertical-rl",
+                    transform: "rotate(180deg)",
+                  }}
+                >
+                  {sub.label}
                 </span>
               </div>
-              {/* Mini progress bar */}
-              <div className="mt-2 h-1 rounded-full bg-white/20 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-white/70 transition-all duration-500"
-                  style={{ width: `${pct}%` }}
-                />
+
+              {/* Expanded content: label + stats at bottom */}
+              <div
+                className={cn(
+                  "absolute inset-0 flex flex-col justify-end p-5 transition-opacity duration-500",
+                  isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}
+              >
+                <p className="text-white text-lg font-bold leading-tight">
+                  {sub.label}
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-white/80 text-xs font-medium">
+                    {stats.pending} pending
+                  </span>
+                  <span className="text-white/40">·</span>
+                  <span className="text-white/80 text-xs font-medium">
+                    {stats.completed} done
+                  </span>
+                </div>
+                {/* Progress bar */}
+                <div className="mt-2.5 h-1 rounded-full bg-white/20 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-white/70 transition-all duration-500"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
               </div>
             </div>
-
-            {/* Selected indicator dot */}
-            {isSelected && !isExpanded && (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white" />
-            )}
           </div>
         );
       })}
@@ -246,8 +262,8 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* ── Subject Accordion Strip ── */}
-      <SubjectAccordion
+      {/* ── Subject Bookshelf ── */}
+      <SubjectBookshelf
         activeSubject={filterSubject}
         onSelect={setFilterSubject}
       />
