@@ -42,7 +42,7 @@ function SubjectBookshelf({
     : subjects.findIndex((s) => s.label === activeSubject);
 
   return (
-    <div className="flex items-end gap-1.5 h-[180px]">
+    <div className="flex items-end gap-1.5 h-full">
       {subjects.map((sub, index) => {
         const isExpanded = index === activeIndex;
         const isSelected = sub.label === activeSubject;
@@ -55,35 +55,33 @@ function SubjectBookshelf({
             key={sub.id}
             className="relative h-full cursor-pointer transition-all duration-700 ease-in-out"
             style={{
-              width: isExpanded ? 200 : 36,
+              flex: isExpanded ? "3 1 0%" : "0 0 40px",
             }}
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex(null)}
             onClick={() => onSelect(isSelected ? "all" : sub.label)}
           >
-            {/* Book spine / expanded panel */}
             <div
               className={cn(
-                "absolute inset-0 rounded-xl overflow-hidden transition-all duration-700 ease-in-out",
+                "absolute inset-0 overflow-hidden transition-all duration-700 ease-in-out",
                 isSelected && !isExpanded && "ring-2 ring-offset-2 ring-offset-lavender-50 dark:ring-offset-baltic-900"
               )}
               style={{
                 backgroundColor: sub.color,
-                borderRadius: isExpanded ? 16 : 20,
-                ...(isSelected && !isExpanded ? { ringColor: sub.color } : {}),
+                borderRadius: isExpanded ? 16 : 22,
               }}
             >
-              {/* Subtle inner shadow for book depth */}
+              {/* Book depth gradient */}
               <div
                 className="absolute inset-0 transition-opacity duration-700"
                 style={{
                   background: isExpanded
-                    ? "linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.25) 100%)"
-                    : "linear-gradient(90deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.15) 50%, rgba(255,255,255,0.05) 100%)",
+                    ? "linear-gradient(180deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.3) 100%)"
+                    : "linear-gradient(90deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.18) 50%, rgba(255,255,255,0.06) 100%)",
                 }}
               />
 
-              {/* Spine: vertical label (visible when collapsed) */}
+              {/* Spine: vertical label */}
               <div
                 className={cn(
                   "absolute inset-0 flex items-center justify-center transition-opacity duration-300",
@@ -101,27 +99,26 @@ function SubjectBookshelf({
                 </span>
               </div>
 
-              {/* Expanded content: label + stats at bottom */}
+              {/* Expanded content */}
               <div
                 className={cn(
                   "absolute inset-0 flex flex-col justify-end p-5 transition-opacity duration-500",
                   isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
                 )}
               >
-                <p className="text-white text-lg font-bold leading-tight">
+                <p className="text-white text-xl font-bold leading-tight">
                   {sub.label}
                 </p>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-white/80 text-xs font-medium">
+                <div className="flex items-center gap-2 mt-2.5">
+                  <span className="text-white/80 text-sm font-medium">
                     {stats.pending} pending
                   </span>
                   <span className="text-white/40">·</span>
-                  <span className="text-white/80 text-xs font-medium">
+                  <span className="text-white/80 text-sm font-medium">
                     {stats.completed} done
                   </span>
                 </div>
-                {/* Progress bar */}
-                <div className="mt-2.5 h-1 rounded-full bg-white/20 overflow-hidden">
+                <div className="mt-3 h-1.5 rounded-full bg-white/20 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-white/70 transition-all duration-500"
                     style={{ width: `${pct}%` }}
@@ -198,78 +195,74 @@ export default function TasksPage() {
   }, [filteredTasks]);
 
   return (
-    <div className="space-y-6">
-      {/* ── Header card ── */}
-      <div className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100">
-                Tasks
-              </h1>
-              {overdueCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[11px] font-bold">
-                  {overdueCount} overdue
+    <div className="flex gap-6 -my-8 -mr-8 min-h-[calc(100vh-0px)]">
+      {/* ── Left: Task content ── */}
+      <div className="flex-1 min-w-0 py-8 space-y-6 overflow-y-auto">
+        {/* Header card */}
+        <div className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100">
+                  Tasks
+                </h1>
+                {overdueCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[11px] font-bold">
+                    {overdueCount} overdue
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-steel-400 mt-1">
+                Stay on track — one task at a time.
+              </p>
+            </div>
+            <Button onClick={() => setShowAddModal(true)}>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              >
+                <path d="M7 2v10M2 7h10" />
+              </svg>
+              New task
+            </Button>
+          </div>
+
+          {/* Progress bar + counts */}
+          <div className="mt-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-4">
+                <span className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
+                  {pendingCount}
                 </span>
-              )}
+                <span className="text-xs font-medium text-steel-400">
+                  pending
+                </span>
+                <div className="w-px h-5 bg-lavender-200 dark:bg-lavender-700" />
+                <span className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
+                  {completedCount}
+                </span>
+                <span className="text-xs font-medium text-steel-400">done</span>
+              </div>
+              <span className="text-sm font-bold text-baltic-600 dark:text-baltic-400">
+                {completionPct}%
+              </span>
             </div>
-            <p className="text-sm text-steel-400 mt-1">
-              Stay on track — one task at a time.
-            </p>
+            <div className="h-2 rounded-full bg-baltic-100 dark:bg-baltic-800 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-baltic-500 dark:bg-baltic-400 transition-all duration-700"
+                style={{ width: `${completionPct}%` }}
+              />
+            </div>
           </div>
-          <Button onClick={() => setShowAddModal(true)}>
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 14 14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            >
-              <path d="M7 2v10M2 7h10" />
-            </svg>
-            New task
-          </Button>
         </div>
 
-        {/* Progress bar + counts */}
-        <div className="mt-5">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-4">
-              <span className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
-                {pendingCount}
-              </span>
-              <span className="text-xs font-medium text-steel-400">
-                pending
-              </span>
-              <div className="w-px h-5 bg-lavender-200 dark:bg-lavender-700" />
-              <span className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
-                {completedCount}
-              </span>
-              <span className="text-xs font-medium text-steel-400">done</span>
-            </div>
-            <span className="text-sm font-bold text-baltic-600 dark:text-baltic-400">
-              {completionPct}%
-            </span>
-          </div>
-          <div className="h-2 rounded-full bg-baltic-100 dark:bg-baltic-800 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-baltic-500 dark:bg-baltic-400 transition-all duration-700"
-              style={{ width: `${completionPct}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Subject Bookshelf ── */}
-      <SubjectBookshelf
-        activeSubject={filterSubject}
-        onSelect={setFilterSubject}
-      />
-
-      {/* ── Status filters ── */}
-      <div className="flex items-center gap-2 flex-wrap">
+        {/* Status filters */}
+        <div className="flex items-center gap-2 flex-wrap">
         {(
           [
             { value: "pending", label: "Pending" },
@@ -403,6 +396,19 @@ export default function TasksPage() {
         </div>
       )}
 
+      </div>
+
+      {/* ── Right: Subject Bookshelf ── */}
+      <div className="w-[280px] flex-shrink-0 py-8 pr-8">
+        <div className="sticky top-8 h-[calc(100vh-4rem)]">
+          <SubjectBookshelf
+            activeSubject={filterSubject}
+            onSelect={setFilterSubject}
+          />
+        </div>
+      </div>
+
+      {/* Modals (outside layout flow) */}
       <AddTaskModal
         open={showAddModal}
         onClose={() => setShowAddModal(false)}
