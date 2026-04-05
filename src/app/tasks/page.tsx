@@ -11,6 +11,115 @@ import Modal from "@/components/ui/Modal";
 
 type FilterStatus = "all" | "pending" | "completed";
 
+/* ─── Subject Accordion Strip ─── */
+function SubjectAccordion({
+  activeSubject,
+  onSelect,
+}: {
+  activeSubject: string;
+  onSelect: (subject: string) => void;
+}) {
+  const { subjects } = useSubjects();
+  const { tasks } = useTasks();
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const subjectStats = useMemo(() => {
+    const stats: Record<string, { pending: number; completed: number }> = {};
+    for (const sub of subjects) {
+      stats[sub.label] = { pending: 0, completed: 0 };
+    }
+    for (const task of tasks) {
+      if (stats[task.subject]) {
+        if (task.completed) stats[task.subject].completed++;
+        else stats[task.subject].pending++;
+      }
+    }
+    return stats;
+  }, [subjects, tasks]);
+
+  // Determine which panel is visually expanded
+  const activeIndex = hoveredIndex !== null
+    ? hoveredIndex
+    : subjects.findIndex((s) => s.label === activeSubject);
+
+  return (
+    <div className="flex gap-2 h-[120px]">
+      {subjects.map((sub, index) => {
+        const isExpanded = index === activeIndex;
+        const isSelected = sub.label === activeSubject;
+        const stats = subjectStats[sub.label] || { pending: 0, completed: 0 };
+        const total = stats.pending + stats.completed;
+        const pct = total > 0 ? Math.round((stats.completed / total) * 100) : 0;
+
+        return (
+          <div
+            key={sub.id}
+            className={cn(
+              "relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-700 ease-in-out",
+              isSelected && "ring-2 ring-white/50"
+            )}
+            style={{
+              flex: isExpanded ? "4 1 0%" : "0.5 1 0%",
+              backgroundColor: sub.color,
+            }}
+            onMouseEnter={() => setHoveredIndex(index)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            onClick={() => onSelect(isSelected ? "all" : sub.label)}
+          >
+            {/* Dark overlay for depth */}
+            <div className="absolute inset-0 bg-black/20" />
+
+            {/* Collapsed: vertical label */}
+            <span
+              className={cn(
+                "absolute text-white text-sm font-semibold whitespace-nowrap transition-all duration-500 ease-in-out",
+                isExpanded
+                  ? "opacity-0 pointer-events-none"
+                  : "bottom-8 left-1/2 -translate-x-1/2 rotate-[-90deg] opacity-100"
+              )}
+            >
+              {sub.label}
+            </span>
+
+            {/* Expanded: full content */}
+            <div
+              className={cn(
+                "absolute inset-0 flex flex-col justify-end p-4 transition-opacity duration-500 ease-in-out",
+                isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
+              )}
+            >
+              <p className="text-white text-base font-bold leading-tight">
+                {sub.label}
+              </p>
+              <div className="flex items-center gap-3 mt-1.5">
+                <span className="text-white/80 text-xs font-medium">
+                  {stats.pending} pending
+                </span>
+                <span className="text-white/50 text-xs">·</span>
+                <span className="text-white/80 text-xs font-medium">
+                  {stats.completed} done
+                </span>
+              </div>
+              {/* Mini progress bar */}
+              <div className="mt-2 h-1 rounded-full bg-white/20 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-white/70 transition-all duration-500"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Selected indicator dot */}
+            {isSelected && !isExpanded && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white" />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function TasksPage() {
   const { tasks, addTask, toggleComplete, deleteTask } = useTasks();
   const { subjects, getSubject } = useSubjects();
@@ -137,7 +246,13 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* ── Filters — single row of pills ── */}
+      {/* ── Subject Accordion Strip ── */}
+      <SubjectAccordion
+        activeSubject={filterSubject}
+        onSelect={setFilterSubject}
+      />
+
+      {/* ── Status filters ── */}
       <div className="flex items-center gap-2 flex-wrap">
         {(
           [
@@ -160,35 +275,20 @@ export default function TasksPage() {
           </button>
         ))}
 
-        <div className="w-px h-5 bg-lavender-200 dark:bg-lavender-700 mx-1" />
-
-        {subjects.map((sub) => (
-          <button
-            key={sub.id}
-            onClick={() =>
-              setFilterSubject(filterSubject === sub.label ? "all" : sub.label)
-            }
-            className={cn(
-              "px-3 py-1.5 rounded-full text-xs font-medium transition-smooth flex items-center gap-1.5",
-              filterSubject === sub.label
-                ? "text-white"
-                : "bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 text-steel-400 hover:text-baltic-600"
-            )}
-            style={
-              filterSubject === sub.label
-                ? { backgroundColor: sub.color }
-                : undefined
-            }
-          >
-            {filterSubject !== sub.label && (
-              <span
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: sub.color }}
-              />
-            )}
-            {sub.label}
-          </button>
-        ))}
+        {filterSubject !== "all" && (
+          <>
+            <div className="w-px h-5 bg-lavender-200 dark:bg-lavender-700 mx-1" />
+            <button
+              onClick={() => setFilterSubject("all")}
+              className="px-3 py-1.5 rounded-full text-xs font-medium transition-smooth bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 text-steel-400 hover:text-baltic-600 hover:border-lavender-300 flex items-center gap-1.5"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M2 2l6 6M8 2l-6 6" />
+              </svg>
+              Clear filter
+            </button>
+          </>
+        )}
       </div>
 
       {/* ── Task list ── */}
