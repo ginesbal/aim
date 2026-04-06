@@ -87,7 +87,17 @@ export default function TasksPage() {
   }
 
   return (
-    <div>
+    <div className="relative">
+      {/* ─── Decorative blobs ─── */}
+      <div
+        aria-hidden
+        className="absolute top-8 right-[-60px] w-56 h-56 blob-2 bg-ash-200/25 dark:bg-ash-800/15 float-slow pointer-events-none -z-10"
+      />
+      <div
+        aria-hidden
+        className="absolute top-[420px] left-[-50px] w-32 h-32 blob-1 bg-baltic-200/25 dark:bg-baltic-700/15 float-medium pointer-events-none -z-10"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

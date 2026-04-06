@@ -118,6 +118,20 @@ export default function JournalPage() {
 
   return (
     <div className="relative space-y-8">
+      {/* ─── Decorative blobs ─── */}
+      <div
+        aria-hidden
+        className="absolute top-10 right-[-50px] w-56 h-56 blob-1 bg-cream-200/25 dark:bg-cream-800/15 float-slow pointer-events-none -z-10"
+      />
+      <div
+        aria-hidden
+        className="absolute top-[420px] left-[-70px] w-40 h-40 blob-3 bg-baltic-200/25 dark:bg-baltic-700/15 float-medium pointer-events-none -z-10"
+      />
+      <div
+        aria-hidden
+        className="absolute bottom-40 right-[5%] w-28 h-28 blob-2 bg-lavender-200/40 dark:bg-lavender-800/20 float-slow pointer-events-none -z-10"
+      />
+
       {/* ─── SECTION 1: Header ─── */}
       <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
@@ -137,47 +151,99 @@ export default function JournalPage() {
       {/* ─── SECTION 2: Weekly rhythm (heatmap) + summary ─── */}
       {sessions.length > 0 && (
         <section className="rounded-3xl border-2 border-lavender-200 dark:border-lavender-800 bg-white dark:bg-lavender-900 p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-5">
-            <span className="w-1.5 h-6 rounded-full bg-baltic-500" />
-            <h2 className="text-lg font-bold text-baltic-800 dark:text-baltic-100">
-              This week&apos;s rhythm
-            </h2>
+          {/* Title + helper */}
+          <div className="mb-1 flex items-baseline justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <span className="w-1.5 h-6 rounded-full bg-baltic-500" />
+              <h2 className="text-lg font-bold text-baltic-800 dark:text-baltic-100">
+                Your last 7 days of focus
+              </h2>
+            </div>
+            <p className="text-xs text-steel-400">
+              Each bar = total focus time that day
+            </p>
+          </div>
+          <p className="text-xs text-steel-500 dark:text-steel-400 ml-6 mb-6">
+            Tap any day to see how it compares.
+          </p>
+
+          {/* Chart area with y-axis labels */}
+          <div className="flex gap-3 mb-2">
+            {/* Y-axis labels */}
+            <div className="flex flex-col justify-between text-[10px] text-steel-400 font-mono tabular-nums w-10 text-right py-1">
+              <span>{formatTime(heatmap.maxMins)}</span>
+              <span>{formatTime(Math.round(heatmap.maxMins / 2))}</span>
+              <span>0m</span>
+            </div>
+
+            {/* Bars area */}
+            <div className="flex-1 relative">
+              {/* Gridlines */}
+              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                <div className="border-t border-dashed border-lavender-200 dark:border-lavender-800" />
+                <div className="border-t border-dashed border-lavender-200 dark:border-lavender-800" />
+                <div className="border-t-2 border-baltic-300 dark:border-baltic-700" />
+              </div>
+
+              {/* Bars */}
+              <div className="relative flex items-end justify-between gap-2 h-32 px-1">
+                {heatmap.days.map((day, idx) => {
+                  const heightPct = (day.minutes / heatmap.maxMins) * 100;
+                  return (
+                    <div
+                      key={idx}
+                      className="flex-1 flex flex-col items-center justify-end h-full group cursor-default"
+                    >
+                      {/* Always-visible value above bar */}
+                      <span
+                        className={cn(
+                          "text-[10px] font-bold tabular-nums mb-1 transition-colors",
+                          day.minutes === 0
+                            ? "text-steel-300 dark:text-steel-600"
+                            : day.isToday
+                            ? "text-baltic-700 dark:text-baltic-200"
+                            : "text-steel-500 dark:text-steel-400"
+                        )}
+                      >
+                        {day.minutes === 0 ? "—" : formatTime(day.minutes)}
+                      </span>
+
+                      {/* The bar itself */}
+                      <div
+                        className={cn(
+                          "w-full rounded-t-md transition-all duration-500 relative",
+                          day.isToday
+                            ? "bg-baltic-600 dark:bg-baltic-400 ring-2 ring-baltic-200 dark:ring-baltic-700/60"
+                            : day.minutes > 0
+                            ? "bg-baltic-300 dark:bg-baltic-700 group-hover:bg-baltic-400 dark:group-hover:bg-baltic-600"
+                            : "bg-lavender-100 dark:bg-lavender-800/40"
+                        )}
+                        style={{
+                          height:
+                            day.minutes > 0
+                              ? `${Math.max(heightPct, 6)}%`
+                              : "3px",
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
-          {/* Heatmap bars */}
-          <div className="flex items-end justify-between gap-2 h-28 mb-5 px-1">
-            {heatmap.days.map((day, idx) => {
-              const heightPct = (day.minutes / heatmap.maxMins) * 100;
-              return (
+          {/* X-axis labels */}
+          <div className="flex gap-3">
+            <div className="w-10" />
+            <div className="flex-1 flex justify-between gap-2 px-1">
+              {heatmap.days.map((day, idx) => (
                 <div
                   key={idx}
-                  className="flex-1 flex flex-col items-center gap-1.5 group"
+                  className="flex-1 flex flex-col items-center"
                 >
-                  <div className="flex-1 w-full flex items-end">
-                    <div
-                      className={cn(
-                        "w-full rounded-lg transition-all duration-500 relative",
-                        day.isToday
-                          ? "bg-baltic-500 dark:bg-baltic-400"
-                          : day.minutes > 0
-                          ? "bg-baltic-300 dark:bg-baltic-700"
-                          : "bg-lavender-100 dark:bg-lavender-800/60"
-                      )}
-                      style={{
-                        height: day.minutes > 0 ? `${Math.max(heightPct, 8)}%` : "4px",
-                      }}
-                      title={`${day.minutes} min`}
-                    >
-                      {day.minutes > 0 && (
-                        <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] font-bold text-baltic-600 dark:text-baltic-300 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                          {formatTime(day.minutes)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
                   <span
                     className={cn(
-                      "text-[10px] font-bold uppercase",
+                      "text-[11px] font-bold uppercase",
                       day.isToday
                         ? "text-baltic-700 dark:text-baltic-200"
                         : "text-steel-400"
@@ -187,50 +253,80 @@ export default function JournalPage() {
                   </span>
                   <span
                     className={cn(
-                      "text-[10px] tabular-nums",
+                      "text-[10px] tabular-nums mt-0.5",
                       day.isToday
-                        ? "text-baltic-700 dark:text-baltic-200 font-semibold"
+                        ? "text-baltic-700 dark:text-baltic-200 font-bold"
                         : "text-steel-400"
                     )}
                   >
                     {day.dayNum}
                   </span>
+                  {day.isToday && (
+                    <span className="mt-1 text-[8px] font-bold uppercase tracking-wider text-baltic-600 dark:text-baltic-400 bg-baltic-100 dark:bg-baltic-900/50 px-1.5 py-0.5 rounded-full">
+                      Today
+                    </span>
+                  )}
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
 
-          {/* Stats row */}
-          <div className="grid grid-cols-3 gap-3 pt-5 border-t border-lavender-100 dark:border-lavender-800">
-            <div>
-              <p className="text-2xl font-bold text-baltic-700 dark:text-baltic-200">
-                {weeklyStats.count}
-              </p>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-steel-400">
-                Sessions
-              </p>
+          {/* Stats row with explainers */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-7 pt-5 border-t border-lavender-100 dark:border-lavender-800">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-baltic-100 dark:bg-baltic-900/40 flex items-center justify-center flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="text-baltic-600 dark:text-baltic-400">
+                  <circle cx="8" cy="8" r="6" />
+                  <path d="M8 5v3l2 2" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xl font-bold text-baltic-800 dark:text-baltic-100 leading-tight">
+                  {weeklyStats.count}
+                </p>
+                <p className="text-[11px] text-steel-500 dark:text-steel-400">
+                  sessions this week
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-baltic-700 dark:text-baltic-200">
-                {formatTime(weeklyStats.totalMinutes)}
-              </p>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-steel-400">
-                Total focus
-              </p>
+
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-cream-100 dark:bg-cream-900/40 flex items-center justify-center flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-cream-600 dark:text-cream-400">
+                  <path d="M8 1.5c2 2.5 4 4.5 4 7a4 4 0 1 1-8 0c0-2.5 2-4.5 4-7Z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xl font-bold text-baltic-800 dark:text-baltic-100 leading-tight">
+                  {formatTime(weeklyStats.totalMinutes)}
+                </p>
+                <p className="text-[11px] text-steel-500 dark:text-steel-400">
+                  total time focused
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-baltic-700 dark:text-baltic-200">
-                {weeklyStats.avgQuality >= 3.5
-                  ? "Deep"
-                  : weeklyStats.avgQuality >= 2.5
-                  ? "Good"
-                  : weeklyStats.avgQuality > 0
-                  ? "Fair"
-                  : "—"}
-              </p>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-steel-400">
-                Avg quality
-              </p>
+
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-ash-100 dark:bg-ash-900/40 flex items-center justify-center flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-ash-600 dark:text-ash-400">
+                  <path d="M2 12s2-4 6-4 6 4 6 4" />
+                  <circle cx="8" cy="5" r="2" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xl font-bold text-baltic-800 dark:text-baltic-100 leading-tight">
+                  {weeklyStats.avgQuality >= 3.5
+                    ? "Deep"
+                    : weeklyStats.avgQuality >= 2.5
+                    ? "Good"
+                    : weeklyStats.avgQuality > 0
+                    ? "Fair"
+                    : "—"}
+                </p>
+                <p className="text-[11px] text-steel-500 dark:text-steel-400">
+                  how focused you felt
+                </p>
+              </div>
             </div>
           </div>
         </section>
