@@ -59,7 +59,6 @@ export default function TasksPage() {
     }
     result.sort((a, b) => {
       if (a.completed !== b.completed) return a.completed ? 1 : -1;
-      // overdue first, then by date
       const aOverdue = !a.completed && isOverdue(a.dueDate);
       const bOverdue = !b.completed && isOverdue(b.dueDate);
       if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
@@ -69,28 +68,40 @@ export default function TasksPage() {
   }, [tasks, expandedSubject, filterStatus]);
 
   const currentStats = subjectStats[expandedSubject] || subjectStats.all;
-  const completionPct = currentStats.total > 0
-    ? Math.round((currentStats.completed / currentStats.total) * 100)
-    : 0;
 
   // Accordion panels: "All" + each subject
   const panels = useMemo(() => {
-    const all = { id: "all", label: "All Tasks", color: "#60729f" };
+    const all = { id: "all", label: "All", color: "#9faac6" };
     const subs = subjects.map((s) => ({ id: s.label, label: s.label, color: s.color }));
     return [all, ...subs];
   }, [subjects]);
 
+  // Helper: lighten a hex color for background tint
+  function lighten(hex: string, amount: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const lr = Math.round(r + (255 - r) * amount);
+    const lg = Math.round(g + (255 - g) * amount);
+    const lb = Math.round(b + (255 - b) * amount);
+    return `rgb(${lr}, ${lg}, ${lb})`;
+  }
+
   return (
-    <div className="relative">
+    <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-display text-baltic-800 dark:text-baltic-100">Tasks</h1>
           <p className="text-sm text-steel-400 mt-1">
-            {currentStats.pending} pending{currentStats.overdue > 0 && (
+            {currentStats.pending} pending
+            {currentStats.overdue > 0 && (
               <span className="text-red-500 font-medium ml-1">
-                ({currentStats.overdue} overdue)
+                · {currentStats.overdue} overdue
               </span>
+            )}
+            {currentStats.completed > 0 && (
+              <span className="ml-1">· {currentStats.completed} done</span>
             )}
           </p>
         </div>
@@ -105,8 +116,8 @@ export default function TasksPage() {
         </Button>
       </div>
 
-      {/* ─── Subject Accordion ─── */}
-      <div className="flex gap-2 h-[calc(100vh-12rem)] min-h-[500px]">
+      {/* ─── Accordion ─── */}
+      <div className="flex gap-1.5 h-[calc(100vh-13rem)] min-h-[420px]">
         {panels.map((panel) => {
           const isExpanded = panel.id === expandedSubject;
           const stats = subjectStats[panel.id] || { pending: 0, completed: 0, overdue: 0, total: 0 };
@@ -115,43 +126,32 @@ export default function TasksPage() {
           return (
             <div
               key={panel.id}
-              className="relative transition-all duration-500 ease-in-out overflow-hidden"
+              className={cn(
+                "relative transition-all duration-500 ease-in-out rounded-2xl overflow-hidden",
+                isExpanded ? "shadow-sm" : "cursor-pointer"
+              )}
               style={{
-                flex: isExpanded ? "1 1 0%" : "0 0 56px",
-                minWidth: isExpanded ? 0 : 56,
+                flex: isExpanded ? "1 1 0%" : "0 0 52px",
+                minWidth: isExpanded ? 0 : 52,
               }}
             >
-              {/* Panel background */}
-              <div
-                className={cn(
-                  "absolute inset-0 transition-all duration-500",
-                  isExpanded ? "rounded-2xl" : "rounded-2xl"
-                )}
-                style={{ backgroundColor: isExpanded ? undefined : panel.color }}
-              >
-                {/* Gradient overlay for collapsed spines */}
-                {!isExpanded && (
-                  <div
-                    className="absolute inset-0 rounded-2xl"
-                    style={{
-                      background: "linear-gradient(90deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.15) 50%, rgba(255,255,255,0.05) 100%)",
-                    }}
-                  />
-                )}
-              </div>
-
-              {/* ── Collapsed spine ── */}
+              {/* ── Collapsed tab ── */}
               {!isExpanded && (
                 <button
                   onClick={() => setExpandedSubject(panel.id)}
-                  className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 cursor-pointer group"
+                  className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-2xl transition-all duration-200 group"
+                  style={{
+                    backgroundColor: lighten(panel.color, 0.82),
+                    borderLeft: `3px solid ${panel.color}`,
+                  }}
                 >
                   {stats.overdue > 0 && (
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.6)]" />
+                    <div className="w-2 h-2 rounded-full bg-red-400" />
                   )}
                   <span
-                    className="text-white text-xs font-semibold whitespace-nowrap select-none group-hover:text-white/90"
+                    className="text-[11px] font-semibold whitespace-nowrap select-none transition-colors"
                     style={{
+                      color: panel.color,
                       writingMode: "vertical-rl",
                       transform: "rotate(180deg)",
                     }}
@@ -159,71 +159,86 @@ export default function TasksPage() {
                     {panel.label}
                   </span>
                   {stats.pending > 0 && (
-                    <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold text-white">
+                    <span
+                      className="text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center"
+                      style={{
+                        backgroundColor: lighten(panel.color, 0.7),
+                        color: panel.color,
+                      }}
+                    >
                       {stats.pending}
                     </span>
                   )}
                 </button>
               )}
 
-              {/* ── Expanded content ── */}
+              {/* ── Expanded panel ── */}
               {isExpanded && (
-                <div className="relative h-full flex flex-col rounded-2xl bg-white dark:bg-lavender-900 shadow-sm overflow-hidden">
-                  {/* Colored header bar */}
+                <div className="h-full flex flex-col bg-white dark:bg-lavender-900 rounded-2xl">
+                  {/* Light colored header */}
                   <div
-                    className="flex-shrink-0 px-5 py-4"
-                    style={{ backgroundColor: panel.color }}
+                    className="flex-shrink-0 px-5 pt-4 pb-3"
+                    style={{ backgroundColor: lighten(panel.color, 0.88) }}
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h2 className="text-lg font-bold text-white">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: panel.color }}
+                        />
+                        <h2
+                          className="text-base font-bold"
+                          style={{ color: panel.color }}
+                        >
                           {panel.label}
                         </h2>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-white/70 text-xs font-medium">
-                            {stats.pending} pending
-                          </span>
-                          <span className="text-white/40">·</span>
-                          <span className="text-white/70 text-xs font-medium">
-                            {stats.completed} done
-                          </span>
-                          {stats.overdue > 0 && (
-                            <>
-                              <span className="text-white/40">·</span>
-                              <span className="text-red-200 text-xs font-medium">
-                                {stats.overdue} overdue
-                              </span>
-                            </>
-                          )}
-                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            setAddModalSubject(panel.id !== "all" ? panel.id : null);
-                            setShowAddModal(true);
-                          }}
-                          className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
-                          title="Add task"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round">
-                            <path d="M7 3v8M3 7h8" />
-                          </svg>
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => {
+                          setAddModalSubject(panel.id !== "all" ? panel.id : null);
+                          setShowAddModal(true);
+                        }}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/60"
+                        style={{ color: panel.color }}
+                        title="Add task"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                          <path d="M8 3v10M3 8h10" />
+                        </svg>
+                      </button>
                     </div>
 
-                    {/* Progress bar */}
-                    <div className="mt-3 h-1.5 rounded-full bg-white/20 overflow-hidden">
+                    {/* Compact stats row */}
+                    <div className="flex items-center gap-4 text-xs">
+                      <span style={{ color: panel.color }} className="font-semibold">
+                        {stats.pending} pending
+                      </span>
+                      <span className="text-steel-300">·</span>
+                      <span className="text-steel-400">
+                        {stats.completed} done
+                      </span>
+                      {stats.overdue > 0 && (
+                        <>
+                          <span className="text-steel-300">·</span>
+                          <span className="text-red-400 font-medium">
+                            {stats.overdue} overdue
+                          </span>
+                        </>
+                      )}
+                      <span className="text-steel-300 ml-auto">{pct}%</span>
+                    </div>
+
+                    {/* Thin progress bar */}
+                    <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ backgroundColor: lighten(panel.color, 0.7) }}>
                       <div
-                        className="h-full rounded-full bg-white/70 transition-all duration-500"
-                        style={{ width: `${pct}%` }}
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${pct}%`, backgroundColor: panel.color }}
                       />
                     </div>
                   </div>
 
-                  {/* Filter pills */}
-                  <div className="flex-shrink-0 flex items-center gap-1.5 px-5 py-3 border-b border-lavender-100 dark:border-lavender-800">
+                  {/* Filter tabs — simple text tabs */}
+                  <div className="flex-shrink-0 flex items-center gap-4 px-5 py-2.5 border-b border-lavender-100 dark:border-lavender-800">
                     {(
                       [
                         { value: "pending", label: "Pending" },
@@ -235,22 +250,22 @@ export default function TasksPage() {
                         key={opt.value}
                         onClick={() => setFilterStatus(opt.value)}
                         className={cn(
-                          "px-3 py-1 rounded-full text-[11px] font-semibold transition-smooth",
+                          "text-xs font-medium pb-0.5 transition-all border-b-2",
                           filterStatus === opt.value
-                            ? "text-white shadow-sm"
-                            : "bg-lavender-50 dark:bg-lavender-800 text-steel-400 hover:text-baltic-600"
+                            ? "border-current"
+                            : "border-transparent text-steel-400 hover:text-steel-600"
                         )}
-                        style={filterStatus === opt.value ? { backgroundColor: panel.color } : undefined}
+                        style={filterStatus === opt.value ? { color: panel.color } : undefined}
                       >
                         {opt.label}
                       </button>
                     ))}
                   </div>
 
-                  {/* Task list — scrollable */}
-                  <div className="flex-1 overflow-y-auto px-4 py-3">
+                  {/* Task list */}
+                  <div className="flex-1 overflow-y-auto px-3 py-2">
                     {filteredTasks.length > 0 ? (
-                      <div className="space-y-1.5">
+                      <div className="space-y-0.5">
                         {filteredTasks.map((task) => (
                           <TaskRow
                             key={task.id}
@@ -263,34 +278,23 @@ export default function TasksPage() {
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                        <div className="flex gap-2 mb-4">
-                          <div className="w-4 h-4 rounded-full bg-lavender-200/60 dark:bg-lavender-700/30" />
-                          <div className="w-6 h-6 rounded-full bg-lavender-100/80 dark:bg-lavender-800/30 -mt-1" />
-                          <div className="w-3 h-3 rounded-full bg-lavender-200/40 dark:bg-lavender-700/20 mt-1" />
-                        </div>
-                        <p className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
-                          {filterStatus !== "all" ? "No tasks match this filter" : "No tasks yet"}
+                        <p className="text-sm text-steel-400">
+                          {filterStatus !== "all" ? "No matching tasks" : "No tasks yet"}
                         </p>
-                        <p className="text-xs text-steel-400 mt-1">
-                          {filterStatus !== "all" ? (
-                            <button
-                              onClick={() => setFilterStatus("pending")}
-                              className="underline hover:text-baltic-600 transition-smooth"
-                            >
-                              Show pending
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setAddModalSubject(panel.id !== "all" ? panel.id : null);
-                                setShowAddModal(true);
-                              }}
-                              className="underline hover:text-baltic-600 transition-smooth"
-                            >
-                              Add your first task
-                            </button>
-                          )}
-                        </p>
+                        <button
+                          onClick={() => {
+                            if (filterStatus !== "all") {
+                              setFilterStatus("pending");
+                            } else {
+                              setAddModalSubject(panel.id !== "all" ? panel.id : null);
+                              setShowAddModal(true);
+                            }
+                          }}
+                          className="text-xs mt-1 underline transition-smooth hover:text-baltic-600"
+                          style={{ color: panel.color }}
+                        >
+                          {filterStatus !== "all" ? "Show pending" : "Add a task"}
+                        </button>
                       </div>
                     )}
                   </div>
@@ -345,14 +349,14 @@ function TaskRow({
   const { getSubject } = useSubjects();
   const subject = getSubject(task.subject);
   const overdue = !task.completed && isOverdue(task.dueDate);
-  const color = subject?.color || "#60729f";
+  const color = subject?.color || "#9faac6";
 
   return (
     <div
       onClick={onSelect}
       className={cn(
         "group flex items-center gap-3 rounded-xl px-3 py-2.5 cursor-pointer transition-all duration-150",
-        "hover:bg-lavender-50 dark:hover:bg-lavender-800/40",
+        "hover:bg-baltic-50/60 dark:hover:bg-lavender-800/30",
         task.completed && "opacity-40"
       )}
     >
@@ -364,9 +368,7 @@ function TaskRow({
         }}
         className={cn(
           "w-[18px] h-[18px] rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-smooth",
-          task.completed
-            ? "border-ash-400 bg-ash-400"
-            : "hover:scale-110"
+          task.completed ? "border-ash-400 bg-ash-400" : "hover:scale-110"
         )}
         style={!task.completed ? { borderColor: color } : undefined}
       >
@@ -397,16 +399,16 @@ function TaskRow({
               <span className="text-[11px] text-steel-400 truncate">
                 {subject?.label || task.subject}
               </span>
-              <span className="text-steel-300 dark:text-steel-600 text-[11px]">·</span>
+              <span className="text-steel-300 text-[11px]">·</span>
             </>
           )}
-          <span className={cn("text-[11px]", overdue ? "text-red-500 font-medium" : "text-steel-400")}>
+          <span className={cn("text-[11px]", overdue ? "text-red-400 font-medium" : "text-steel-400")}>
             {overdue ? "Overdue" : formatDate(task.dueDate)}
           </span>
           <span
             className="px-1.5 py-0.5 rounded text-[9px] font-bold leading-none uppercase tracking-wide"
             style={{
-              backgroundColor: PRIORITIES[task.priority].color + "15",
+              backgroundColor: PRIORITIES[task.priority].color + "12",
               color: PRIORITIES[task.priority].color,
             }}
           >
@@ -414,20 +416,6 @@ function TaskRow({
           </span>
         </div>
       </div>
-
-      {/* Delete on hover */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle();
-        }}
-        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 w-6 h-6 rounded-lg hover:bg-lavender-100 dark:hover:bg-lavender-700 flex items-center justify-center"
-        title={task.completed ? "Mark pending" : "Mark complete"}
-      >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-steel-400">
-          <path d="M2 6l3 3 5-5" />
-        </svg>
-      </button>
     </div>
   );
 }
@@ -570,7 +558,7 @@ function TaskDetailModal({
 }) {
   const { getSubject } = useSubjects();
   const subject = getSubject(task.subject);
-  const color = subject?.color || "#60729f";
+  const color = subject?.color || "#9faac6";
 
   return (
     <Modal open={true} onClose={onClose} title={task.title} width="sm">
@@ -608,7 +596,7 @@ function TaskDetailModal({
           <span>
             Due: {formatDate(task.dueDate)}
             {!task.completed && isOverdue(task.dueDate) && (
-              <span className="text-red-500 ml-1.5 font-medium">Overdue</span>
+              <span className="text-red-400 ml-1.5 font-medium">Overdue</span>
             )}
           </span>
           {task.createdAt && (

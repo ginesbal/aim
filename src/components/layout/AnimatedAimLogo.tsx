@@ -12,8 +12,8 @@ import { useState, useEffect } from "react";
  *  4. Instant swap to icon mark, container shrinks
  */
 export default function AnimatedAimLogo({
-  fillClass = "fill-baltic-100",
-  counterClass = "fill-baltic-800 dark:fill-baltic-950",
+  fillClass = "fill-baltic-700 dark:fill-baltic-200",
+  counterClass = "fill-white dark:fill-baltic-950",
 }: {
   fillClass?: string;
   counterClass?: string;
