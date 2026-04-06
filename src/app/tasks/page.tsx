@@ -4,7 +4,6 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useTasks, useSubjects } from "@/lib/contexts";
 import { PRIORITIES, type Task } from "@/lib/types";
 import { cn, formatDate, isOverdue } from "@/lib/utils";
-import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
@@ -81,11 +80,11 @@ function SubjectBookshelf({
             <div
               className={cn(
                 "absolute inset-0 overflow-hidden transition-all duration-700 ease-in-out",
-                isSelected && !isExpanded && "ring-2 ring-offset-2 ring-offset-lavender-50 dark:ring-offset-baltic-900"
+                isSelected && !isExpanded && "ring-2 ring-offset-2 ring-offset-baltic-50 dark:ring-offset-baltic-950"
               )}
               style={{
                 backgroundColor: sub.color,
-                borderRadius: isExpanded ? 16 : 22,
+                borderRadius: isExpanded ? 20 : 24,
               }}
             >
               {/* Book depth gradient */}
@@ -279,224 +278,218 @@ export default function TasksPage() {
   }, [filteredTasks]);
 
   return (
-    <div className="flex gap-6 -my-8 -mr-8 min-h-[calc(100vh-0px)]">
-      {/* ── Left: Task content ── */}
-      <div className="flex-1 min-w-0 py-8 space-y-6 overflow-y-auto">
-        {/* Header card */}
-        <div className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100">
-                  Tasks
-                </h1>
-                {overdueCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[11px] font-bold">
-                    {overdueCount} overdue
-                  </span>
-                )}
+    <div className="relative">
+      {/* Decorative blob */}
+      <div className="absolute -top-10 -right-16 w-48 h-48 blob-2 bg-lavender-200/20 dark:bg-lavender-700/10 float-slow pointer-events-none" />
+
+      <div className="flex gap-6">
+        {/* ── Left: Task content ── */}
+        <div className="flex-1 min-w-0 space-y-6">
+          {/* Header card */}
+          <div className="card-base rounded-2xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-display text-baltic-800 dark:text-baltic-100">
+                    Tasks
+                  </h1>
+                  {overdueCount > 0 && (
+                    <span className="px-2.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[11px] font-bold">
+                      {overdueCount} overdue
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-steel-400 mt-1">
+                  Stay on track — one task at a time.
+                </p>
               </div>
-              <p className="text-sm text-steel-400 mt-1">
-                Stay on track — one task at a time.
+              <Button onClick={() => setShowAddModal(true)}>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                >
+                  <path d="M7 2v10M2 7h10" />
+                </svg>
+                New task
+              </Button>
+            </div>
+
+            {/* Progress bar + counts */}
+            <div className="mt-5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-4">
+                  <span className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
+                    {pendingCount}
+                  </span>
+                  <span className="text-xs font-medium text-steel-400">
+                    pending
+                  </span>
+                  <div className="w-px h-5 bg-lavender-200 dark:bg-lavender-700" />
+                  <span className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
+                    {completedCount}
+                  </span>
+                  <span className="text-xs font-medium text-steel-400">done</span>
+                </div>
+                <span className="text-sm font-bold text-baltic-600 dark:text-baltic-400">
+                  {completionPct}%
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-baltic-100 dark:bg-baltic-800 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-baltic-500 dark:bg-baltic-400 transition-all duration-700"
+                  style={{ width: `${completionPct}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Status filters */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {(
+              [
+                { value: "pending", label: "Pending" },
+                { value: "completed", label: "Done" },
+                { value: "all", label: "All" },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setFilterStatus(opt.value)}
+                className={cn(
+                  "px-4 py-2 rounded-full text-xs font-semibold transition-smooth",
+                  filterStatus === opt.value
+                    ? "bg-baltic-600 text-white dark:bg-baltic-500 shadow-sm"
+                    : "bg-white dark:bg-lavender-900 text-steel-400 hover:text-baltic-600 shadow-sm"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+
+            {filterSubject !== "all" && (
+              <>
+                <div className="w-px h-5 bg-lavender-200 dark:bg-lavender-700 mx-1" />
+                <button
+                  onClick={() => setFilterSubject("all")}
+                  className="px-3.5 py-2 rounded-full text-xs font-medium transition-smooth bg-white dark:bg-lavender-900 text-steel-400 hover:text-baltic-600 shadow-sm flex items-center gap-1.5"
+                >
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <path d="M2 2l6 6M8 2l-6 6" />
+                  </svg>
+                  Clear filter
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* ── Task list ── */}
+          {filteredTasks.length > 0 ? (
+            <div className="space-y-5">
+              {overdueTasks.length > 0 && (
+                <TaskGroup label="Overdue" accent="text-red-500">
+                  {overdueTasks.map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      onToggle={() => toggleComplete(task.id)}
+                      onSelect={() => setSelectedTask(task)}
+                    />
+                  ))}
+                </TaskGroup>
+              )}
+
+              {todayTasks.length > 0 && (
+                <TaskGroup label="Today" accent="text-baltic-600 dark:text-baltic-400">
+                  {todayTasks.map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      onToggle={() => toggleComplete(task.id)}
+                      onSelect={() => setSelectedTask(task)}
+                    />
+                  ))}
+                </TaskGroup>
+              )}
+
+              {upcomingTasks.length > 0 && (
+                <TaskGroup label="Upcoming" accent="text-steel-400">
+                  {upcomingTasks.map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      onToggle={() => toggleComplete(task.id)}
+                      onSelect={() => setSelectedTask(task)}
+                    />
+                  ))}
+                </TaskGroup>
+              )}
+
+              {completedTasks.length > 0 && (
+                <TaskGroup label="Completed" accent="text-ash-500">
+                  {completedTasks.map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      onToggle={() => toggleComplete(task.id)}
+                      onSelect={() => setSelectedTask(task)}
+                    />
+                  ))}
+                </TaskGroup>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-white dark:bg-lavender-900 shadow-sm py-12 text-center">
+              {/* Decorative shapes */}
+              <div className="flex justify-center gap-3 mb-4">
+                <div className="w-6 h-6 rounded-lg bg-baltic-100 dark:bg-baltic-800 rotate-12" />
+                <div className="w-8 h-8 rounded-full bg-lavender-100 dark:bg-lavender-800 -mt-1" />
+                <div className="w-5 h-5 rounded-lg bg-cream-100 dark:bg-cream-800 rotate-[-8deg] mt-1" />
+              </div>
+              <p className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
+                {filterStatus !== "all" || filterSubject !== "all"
+                  ? "No tasks match your filters"
+                  : "No tasks yet"}
+              </p>
+              <p className="text-xs text-steel-400 mt-0.5">
+                {filterStatus !== "all" || filterSubject !== "all" ? (
+                  <button
+                    onClick={() => {
+                      setFilterStatus("pending");
+                      setFilterSubject("all");
+                    }}
+                    className="underline hover:text-baltic-600 transition-smooth"
+                  >
+                    Clear filters
+                  </button>
+                ) : (
+                  "Add your first task to get started."
+                )}
               </p>
             </div>
-            <Button onClick={() => setShowAddModal(true)}>
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              >
-                <path d="M7 2v10M2 7h10" />
-              </svg>
-              New task
-            </Button>
-          </div>
-
-          {/* Progress bar + counts */}
-          <div className="mt-5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-4">
-                <span className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
-                  {pendingCount}
-                </span>
-                <span className="text-xs font-medium text-steel-400">
-                  pending
-                </span>
-                <div className="w-px h-5 bg-lavender-200 dark:bg-lavender-700" />
-                <span className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
-                  {completedCount}
-                </span>
-                <span className="text-xs font-medium text-steel-400">done</span>
-              </div>
-              <span className="text-sm font-bold text-baltic-600 dark:text-baltic-400">
-                {completionPct}%
-              </span>
-            </div>
-            <div className="h-2 rounded-full bg-baltic-100 dark:bg-baltic-800 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-baltic-500 dark:bg-baltic-400 transition-all duration-700"
-                style={{ width: `${completionPct}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Status filters */}
-        <div className="flex items-center gap-2 flex-wrap">
-        {(
-          [
-            { value: "pending", label: "Pending" },
-            { value: "completed", label: "Done" },
-            { value: "all", label: "All" },
-          ] as const
-        ).map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => setFilterStatus(opt.value)}
-            className={cn(
-              "px-3.5 py-1.5 rounded-full text-xs font-semibold transition-smooth",
-              filterStatus === opt.value
-                ? "bg-baltic-600 text-white dark:bg-baltic-500"
-                : "bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 text-steel-400 hover:text-baltic-600 hover:border-lavender-300"
-            )}
-          >
-            {opt.label}
-          </button>
-        ))}
-
-        {filterSubject !== "all" && (
-          <>
-            <div className="w-px h-5 bg-lavender-200 dark:bg-lavender-700 mx-1" />
-            <button
-              onClick={() => setFilterSubject("all")}
-              className="px-3 py-1.5 rounded-full text-xs font-medium transition-smooth bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 text-steel-400 hover:text-baltic-600 hover:border-lavender-300 flex items-center gap-1.5"
-            >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                <path d="M2 2l6 6M8 2l-6 6" />
-              </svg>
-              Clear filter
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* ── Task list ── */}
-      {filteredTasks.length > 0 ? (
-        <div className="space-y-5">
-          {overdueTasks.length > 0 && (
-            <TaskGroup label="Overdue" accent="text-red-500">
-              {overdueTasks.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onToggle={() => toggleComplete(task.id)}
-                  onSelect={() => setSelectedTask(task)}
-                />
-              ))}
-            </TaskGroup>
-          )}
-
-          {todayTasks.length > 0 && (
-            <TaskGroup label="Today" accent="text-baltic-600 dark:text-baltic-400">
-              {todayTasks.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onToggle={() => toggleComplete(task.id)}
-                  onSelect={() => setSelectedTask(task)}
-                />
-              ))}
-            </TaskGroup>
-          )}
-
-          {upcomingTasks.length > 0 && (
-            <TaskGroup label="Upcoming" accent="text-steel-400">
-              {upcomingTasks.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onToggle={() => toggleComplete(task.id)}
-                  onSelect={() => setSelectedTask(task)}
-                />
-              ))}
-            </TaskGroup>
-          )}
-
-          {completedTasks.length > 0 && (
-            <TaskGroup label="Completed" accent="text-ash-500">
-              {completedTasks.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onToggle={() => toggleComplete(task.id)}
-                  onSelect={() => setSelectedTask(task)}
-                />
-              ))}
-            </TaskGroup>
           )}
         </div>
-      ) : (
-        <div className="rounded-xl border border-dashed border-lavender-300 dark:border-lavender-600 py-12 text-center">
-          <div className="flex justify-center mb-3">
-            <svg
-              width="36"
-              height="36"
-              viewBox="0 0 36 36"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-lavender-300 dark:text-lavender-600"
-            >
-              <rect x="6" y="8" width="24" height="22" rx="3" />
-              <path d="M13 16l4 4 6-6" />
-            </svg>
+
+        {/* ── Right: Subject Bookshelf ── */}
+        <div className="w-[280px] flex-shrink-0 hidden lg:block">
+          <div className="sticky top-24 h-[calc(100vh-8rem)]">
+            <SubjectBookshelf
+              activeSubject={filterSubject}
+              onSelect={setFilterSubject}
+              onQuickAdd={(subject) => {
+                setAddModalSubject(subject);
+                setShowAddModal(true);
+              }}
+            />
           </div>
-          <p className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
-            {filterStatus !== "all" || filterSubject !== "all"
-              ? "No tasks match your filters"
-              : "No tasks yet"}
-          </p>
-          <p className="text-xs text-steel-400 mt-0.5">
-            {filterStatus !== "all" || filterSubject !== "all" ? (
-              <button
-                onClick={() => {
-                  setFilterStatus("pending");
-                  setFilterSubject("all");
-                }}
-                className="underline hover:text-baltic-600 transition-smooth"
-              >
-                Clear filters
-              </button>
-            ) : (
-              "Add your first task to get started."
-            )}
-          </p>
-        </div>
-      )}
-
-      </div>
-
-      {/* ── Right: Subject Bookshelf ── */}
-      <div className="w-[280px] flex-shrink-0 py-8 pr-8">
-        <div className="sticky top-8 h-[calc(100vh-4rem)]">
-          <SubjectBookshelf
-            activeSubject={filterSubject}
-            onSelect={setFilterSubject}
-            onQuickAdd={(subject) => {
-              setAddModalSubject(subject);
-              setShowAddModal(true);
-            }}
-          />
         </div>
       </div>
 
-      {/* Modals (outside layout flow) */}
+      {/* Modals */}
       <AddTaskModal
         open={showAddModal}
         onClose={() => {
@@ -545,7 +538,7 @@ function TaskGroup({
           <div className="flex-1 h-px bg-lavender-200 dark:bg-lavender-700" />
         </div>
       )}
-      <div className="space-y-1.5">{children}</div>
+      <div className="space-y-2">{children}</div>
     </div>
   );
 }
@@ -569,9 +562,9 @@ function TaskRow({
     <div
       onClick={onSelect}
       className={cn(
-        "group flex items-center gap-3 rounded-xl p-3 cursor-pointer transition-smooth",
-        "bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700",
-        "hover:shadow-sm hover:border-lavender-300 dark:hover:border-lavender-600",
+        "group flex items-center gap-3 rounded-2xl p-4 cursor-pointer transition-all duration-200",
+        "bg-white dark:bg-lavender-900 shadow-sm",
+        "hover:shadow-md",
         task.completed && "opacity-50"
       )}
     >
@@ -656,7 +649,7 @@ function TaskRow({
           {overdue ? "Overdue" : formatDate(task.dueDate)}
         </span>
         <span
-          className="px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none"
+          className="px-1.5 py-0.5 rounded-lg text-[10px] font-semibold leading-none"
           style={{
             backgroundColor: PRIORITIES[task.priority].color + "18",
             color: PRIORITIES[task.priority].color,
@@ -692,7 +685,6 @@ function AddTaskModal({
     new Date().toISOString().split("T")[0]
   );
 
-  // Sync subject when modal opens with a pre-filled subject
   useEffect(() => {
     if (open && initialSubject) {
       setSubject(initialSubject);
@@ -737,7 +729,7 @@ function AddTaskModal({
             Description
           </label>
           <textarea
-            className="w-full px-3 py-2 text-sm rounded-md border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-400 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth resize-none"
+            className="w-full px-3 py-2 text-sm rounded-xl border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-400 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth resize-none"
             rows={2}
             placeholder="Additional details..."
             value={description}
@@ -753,7 +745,7 @@ function AddTaskModal({
             <select
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-md border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 outline-none focus:ring-2 focus:ring-baltic-400/30"
+              className="w-full px-3 py-2 text-sm rounded-xl border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 outline-none focus:ring-2 focus:ring-baltic-400/30"
             >
               {subjects.map((sub) => (
                 <option key={sub.id} value={sub.label}>
@@ -771,7 +763,7 @@ function AddTaskModal({
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-md border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 outline-none focus:ring-2 focus:ring-baltic-400/30"
+              className="w-full px-3 py-2 text-sm rounded-xl border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 outline-none focus:ring-2 focus:ring-baltic-400/30"
             />
           </div>
         </div>
@@ -787,7 +779,7 @@ function AddTaskModal({
                 type="button"
                 onClick={() => setPriority(p)}
                 className={cn(
-                  "flex-1 py-2 rounded-md text-xs font-medium transition-smooth border",
+                  "flex-1 py-2 rounded-xl text-xs font-medium transition-smooth border",
                   priority === p
                     ? "border-baltic-400 bg-baltic-50 text-baltic-700 dark:bg-baltic-900/50 dark:text-baltic-300 dark:border-baltic-600"
                     : "border-lavender-200 dark:border-lavender-700 text-steel-500 hover:border-lavender-300"

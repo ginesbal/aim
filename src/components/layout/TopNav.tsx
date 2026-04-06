@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { usePreferences } from "@/lib/contexts";
-import AimLogo from "./AimLogo";
+import AnimatedAimLogo from "./AnimatedAimLogo";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
@@ -19,17 +19,19 @@ export default function TopNav() {
   const { name } = usePreferences();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 h-14 bg-white dark:bg-lavender-950 border-b border-lavender-100 dark:border-lavender-800">
-      <div className="max-w-5xl mx-auto h-full px-6 flex items-center justify-between">
-        <button
-          onClick={() => router.push("/dashboard")}
-          className="flex items-center group"
-        >
-          <AimLogo size="md" />
-        </button>
+    <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 dark:bg-baltic-950/80 backdrop-blur-md border-b border-lavender-200/60 dark:border-lavender-800/40 z-40 flex items-center px-6">
+      {/* Logo */}
+      <button
+        onClick={() => router.push("/dashboard")}
+        className="flex-shrink-0 mr-8"
+        aria-label="Go to dashboard"
+      >
+        <AnimatedAimLogo />
+      </button>
 
-        {/* Navigation */}
-        <nav className="flex items-center gap-1">
+      {/* Nav links — center */}
+      <nav className="flex-1 flex items-center justify-center">
+        <div className="flex items-center gap-1 bg-baltic-50 dark:bg-baltic-900/50 rounded-full p-1">
           {NAV_ITEMS.map((item) => {
             const active = pathname === item.href;
             return (
@@ -37,24 +39,26 @@ export default function TopNav() {
                 key={item.href}
                 onClick={() => router.push(item.href)}
                 className={cn(
-                  "px-3 py-1.5 text-sm font-medium transition-smooth",
+                  "px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200",
                   active
-                    ? "text-baltic-700 dark:text-baltic-200 border-b-2 border-baltic-500"
-                    : "text-steel-400 hover:text-baltic-600 dark:hover:text-baltic-300"
+                    ? "bg-baltic-600 text-white dark:bg-baltic-500 shadow-sm"
+                    : "text-steel-500 hover:text-baltic-700 dark:text-steel-400 dark:hover:text-baltic-200"
                 )}
               >
                 {item.label}
               </button>
             );
           })}
-        </nav>
-
-        {/* User initial */}
-        <div className="w-8 h-8 rounded-md bg-lavender-100 dark:bg-lavender-800 flex items-center justify-center">
-          <span className="text-xs font-semibold text-baltic-600 dark:text-baltic-300">
-            {name?.charAt(0)?.toUpperCase() || "U"}
-          </span>
         </div>
+      </nav>
+
+      {/* User avatar — right */}
+      <div className="flex-shrink-0">
+        {name && (
+          <div className="w-8 h-8 rounded-full bg-baltic-600 dark:bg-baltic-500 flex items-center justify-center text-sm font-semibold text-white">
+            {name.charAt(0).toUpperCase()}
+          </div>
+        )}
       </div>
     </header>
   );

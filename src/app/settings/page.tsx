@@ -32,14 +32,17 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="relative space-y-6 max-w-2xl mx-auto">
+      {/* Decorative blob */}
+      <div className="absolute -top-8 -right-20 w-36 h-36 blob-2 bg-ash-200/20 dark:bg-ash-700/10 float-slow pointer-events-none" />
+
       <div>
         <h1 className="text-display text-baltic-800 dark:text-baltic-100">Settings</h1>
         <p className="text-sm text-steel-400 mt-1">Manage your preferences</p>
       </div>
 
       {/* Profile */}
-      <Card padding="md">
+      <Card padding="lg">
         <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">Profile</h2>
         <form onSubmit={handleSave} className="space-y-3">
           <Input
@@ -68,7 +71,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Data */}
-      <Card padding="md">
+      <Card padding="lg">
         <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">Data</h2>
         <p className="text-sm text-steel-400 mb-3">
           All data is stored locally in your browser.

@@ -25,7 +25,7 @@ export default function Card({
         color === "lavender" && "card-lavender",
         padding === "sm" && "p-4",
         padding === "md" && "p-5",
-        padding === "lg" && "p-6",
+        padding === "lg" && "p-7",
         className
       )}
       {...props}
