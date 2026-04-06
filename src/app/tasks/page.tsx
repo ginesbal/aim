@@ -116,7 +116,7 @@ export default function TasksPage() {
       {/* ─── Folder Tabs ─── */}
       <div className="relative">
         {/* Tab row */}
-        <div className="flex items-end gap-0.5 px-1 overflow-x-auto no-scrollbar">
+        <div className="flex flex-wrap items-end gap-1 px-1">
           {tabs.map((tab) => {
             const isActive = tab.id === activeTab;
             const stats = subjectStats[tab.id] || { pending: 0, completed: 0, overdue: 0, total: 0 };
@@ -126,37 +126,35 @@ export default function TasksPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-all duration-200 whitespace-nowrap flex-shrink-0",
-                  "rounded-t-xl border border-b-0",
+                  "relative flex items-center gap-2.5 px-5 py-3 text-base font-semibold transition-all duration-200 whitespace-nowrap",
+                  "rounded-t-xl border-2 border-b-0",
                   isActive
-                    ? "bg-white dark:bg-lavender-900 z-10 -mb-px"
-                    : "hover:bg-white/50 dark:hover:bg-lavender-900/50 cursor-pointer"
+                    ? "bg-white dark:bg-lavender-900 z-10 -mb-[2px] shadow-sm"
+                    : "hover:bg-white/70 dark:hover:bg-lavender-900/50 cursor-pointer"
                 )}
                 style={{
-                  borderColor: isActive ? lighten(tab.color, 0.6) : "transparent",
-                  backgroundColor: isActive ? undefined : lighten(tab.color, 0.92),
+                  borderColor: isActive ? lighten(tab.color, 0.35) : lighten(tab.color, 0.7),
+                  backgroundColor: isActive ? undefined : lighten(tab.color, 0.9),
                   color: isActive ? tab.color : undefined,
                 }}
               >
                 {/* Colored dot */}
                 <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: tab.color, opacity: isActive ? 1 : 0.5 }}
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: tab.color, opacity: isActive ? 1 : 0.55 }}
                 />
 
                 {/* Label */}
-                <span className={cn(!isActive && "text-steel-500")}>
+                <span className={cn(!isActive && "text-steel-600 dark:text-steel-300")}>
                   {tab.label}
                 </span>
 
                 {/* Pending count */}
                 {stats.pending > 0 && (
                   <span
-                    className={cn(
-                      "text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1",
-                    )}
+                    className="text-[11px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1.5"
                     style={{
-                      backgroundColor: isActive ? lighten(tab.color, 0.85) : lighten(tab.color, 0.75),
+                      backgroundColor: isActive ? lighten(tab.color, 0.82) : lighten(tab.color, 0.7),
                       color: tab.color,
                     }}
                   >
@@ -175,8 +173,8 @@ export default function TasksPage() {
 
         {/* ─── Folder Body ─── */}
         <div
-          className="bg-white dark:bg-lavender-900 rounded-b-2xl rounded-tr-2xl shadow-sm border overflow-hidden"
-          style={{ borderColor: lighten(activeColor, 0.6) }}
+          className="bg-white dark:bg-lavender-900 rounded-b-2xl rounded-tr-2xl shadow-sm border-2 overflow-hidden"
+          style={{ borderColor: lighten(activeColor, 0.35) }}
         >
           {/* Info bar: stats + progress + filter + add */}
           <div
