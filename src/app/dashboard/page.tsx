@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   usePreferences,
   useTasks,
@@ -19,7 +19,6 @@ import {
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
-import QualityIndicator from "@/components/ui/QualityIndicator";
 import AimLogo from "@/components/layout/AimLogo";
 import { useRouter } from "next/navigation";
 
@@ -46,7 +45,8 @@ export default function DashboardPage() {
     [tasks]
   );
 
-  const upcomingTasks = useMemo(() => pendingTasks.slice(0, 4), [pendingTasks]);
+  const nextTask = pendingTasks[0];
+  const remainingCount = Math.max(pendingTasks.length - 1, 0);
 
   const lastSession = useMemo(
     () =>
@@ -58,21 +58,27 @@ export default function DashboardPage() {
     [sessions]
   );
 
-  const weekMinutes = useMemo(() => {
-    const now = new Date();
-    const weekAgo = new Date(now);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    return sessions
-      .filter((s) => new Date(s.completedAt) >= weekAgo)
-      .reduce((sum, s) => sum + s.duration, 0);
-  }, [sessions]);
-
   const focusPct = Math.min(Math.round((todayMinutes / dailyGoal) * 100), 100);
+  const minutesToGoal = Math.max(dailyGoal - todayMinutes, 0);
 
   // SVG ring math
-  const ringRadius = 58;
+  const ringRadius = 54;
   const ringCircumference = 2 * Math.PI * ringRadius;
   const ringOffset = ringCircumference * (1 - focusPct / 100);
+
+  // Plain-language guidance copy that adapts to current state
+  const aimGuidance = useMemo(() => {
+    if (todayMinutes === 0) {
+      return `Your goal is ${formatTime(dailyGoal)}. Start whenever you're ready.`;
+    }
+    if (focusPct >= 100) {
+      return "You hit today's goal. Anything more is a bonus.";
+    }
+    if (focusPct >= 75) {
+      return `Almost there — just ${formatTime(minutesToGoal)} left.`;
+    }
+    return `${formatTime(minutesToGoal)} to go to reach your goal.`;
+  }, [todayMinutes, dailyGoal, focusPct, minutesToGoal]);
 
   function handleWelcomeSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -80,15 +86,6 @@ export default function DashboardPage() {
     setName(welcomeName.trim());
     setShowWelcome(false);
   }
-
-  // Editorial intention copy that adapts to time of day
-  const intention = useMemo(() => {
-    const h = new Date().getHours();
-    if (h < 12) return "Where will you point your attention today?";
-    if (h < 17) return "Pick the thing that matters and start there.";
-    if (h < 21) return "A little more focus before the day folds up.";
-    return "Wind down. Tomorrow is another aim.";
-  }, []);
 
   return (
     <div className="relative">
@@ -120,426 +117,485 @@ export default function DashboardPage() {
         </div>
       </Modal>
 
-      {/* ─── Decorative blobs (creatively placed, low opacity) ─── */}
+      {/* ─── Decorative blobs (subtle, behind everything) ─── */}
       <div
         aria-hidden
-        className="absolute top-20 right-[-60px] w-72 h-72 blob-1 bg-baltic-200/25 dark:bg-baltic-700/15 float-slow pointer-events-none -z-10"
+        className="absolute top-32 right-[-80px] w-72 h-72 blob-1 bg-baltic-200/25 dark:bg-baltic-700/15 float-slow pointer-events-none -z-10"
       />
       <div
         aria-hidden
-        className="absolute top-[480px] left-[-80px] w-44 h-44 blob-3 bg-cream-200/30 dark:bg-cream-800/15 float-medium pointer-events-none -z-10"
+        className="absolute top-[520px] left-[-60px] w-40 h-40 blob-3 bg-cream-200/30 dark:bg-cream-800/15 float-medium pointer-events-none -z-10"
       />
       <div
         aria-hidden
-        className="absolute bottom-20 right-[10%] w-32 h-32 blob-2 bg-ash-200/30 dark:bg-ash-800/15 float-slow pointer-events-none -z-10"
+        className="absolute bottom-20 right-[8%] w-32 h-32 blob-2 bg-ash-200/30 dark:bg-ash-800/15 float-slow pointer-events-none -z-10"
       />
 
-      {/* ─── Editorial masthead ─── */}
-      <div className="flex items-baseline justify-between mb-2 pb-3 border-b border-baltic-800/15 dark:border-baltic-200/15">
-        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-baltic-700 dark:text-baltic-300">
-          Today&apos;s Brief
-        </p>
-        <p className="text-[10px] font-mono uppercase tracking-wider text-steel-400">
+      {/* ─── 1. Greeting (plain, sets the room) ─── */}
+      <header className="mb-8">
+        <p className="text-xs font-mono uppercase tracking-[0.2em] text-steel-400 mb-2">
           {getWeekday()} · {getFormattedDate()}
         </p>
-      </div>
+        <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100 leading-tight">
+          {getGreeting()},{" "}
+          <span className="italic font-light text-baltic-600 dark:text-baltic-300">
+            {firstName}.
+          </span>
+        </h1>
+      </header>
 
-      {/* ─── 01 — The aim (asymmetric hero) ─── */}
-      <section className="relative mb-14 mt-6">
-        <SectionLabel num="01" title="The aim" />
+      {/* ─── 2. Your aim today — primary card ─── */}
+      <TapeCard tapeColor="cream" className="mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 md:gap-8 items-center">
+          {/* Target ring */}
+          <div className="relative mx-auto md:mx-0">
+            <div className="absolute inset-0 -m-4 rounded-full bg-baltic-100/50 dark:bg-baltic-800/30 blur-xl" />
+            <svg
+              viewBox="0 0 130 130"
+              className="relative w-44 h-44"
+              aria-label={`${focusPct} percent of daily goal complete`}
+            >
+              {/* Concentric target rings */}
+              <circle
+                cx="65"
+                cy="65"
+                r={ringRadius}
+                stroke="currentColor"
+                className="text-lavender-200 dark:text-lavender-800"
+                strokeWidth="3"
+                fill="none"
+              />
+              <circle
+                cx="65"
+                cy="65"
+                r={ringRadius - 10}
+                stroke="currentColor"
+                className="text-lavender-200/60 dark:text-lavender-800/60"
+                strokeWidth="1"
+                fill="none"
+              />
+              <circle
+                cx="65"
+                cy="65"
+                r={ringRadius - 20}
+                stroke="currentColor"
+                className="text-lavender-200/40 dark:text-lavender-800/40"
+                strokeWidth="1"
+                fill="none"
+              />
+              <circle
+                cx="65"
+                cy="65"
+                r="3"
+                className="fill-baltic-700 dark:fill-baltic-300"
+              />
+              {/* Progress arc */}
+              <circle
+                cx="65"
+                cy="65"
+                r={ringRadius}
+                stroke="currentColor"
+                className="text-baltic-600 dark:text-baltic-400"
+                strokeWidth="6"
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={ringCircumference}
+                strokeDashoffset={ringOffset}
+                transform="rotate(-90 65 65)"
+                style={{ transition: "stroke-dashoffset 1s ease-out" }}
+              />
+              {/* Center text */}
+              <text
+                x="65"
+                y="62"
+                textAnchor="middle"
+                className="fill-baltic-800 dark:fill-baltic-100"
+                style={{ fontSize: "20px", fontWeight: 700 }}
+              >
+                {formatTime(todayMinutes)}
+              </text>
+              <text
+                x="65"
+                y="80"
+                textAnchor="middle"
+                className="fill-steel-400"
+                style={{ fontSize: "9px", letterSpacing: "1.5px", textTransform: "uppercase" }}
+              >
+                of {formatTime(dailyGoal)}
+              </text>
+            </svg>
+          </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          {/* Left: greeting + intention */}
-          <div className="lg:col-span-7">
-            <h1 className="text-5xl lg:text-6xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100 leading-[1.05]">
-              {getGreeting()},
-              <br />
-              <span className="italic font-light text-baltic-600 dark:text-baltic-300">
-                {firstName}.
-              </span>
-            </h1>
-            <p className="mt-5 text-base text-steel-500 dark:text-steel-400 italic max-w-md leading-relaxed">
-              &ldquo;{intention}&rdquo;
+          {/* Title + guidance + CTA */}
+          <div className="text-center md:text-left">
+            <CardEyebrow>Your aim today</CardEyebrow>
+            <p className="mt-2 text-2xl font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
+              {aimGuidance}
             </p>
 
-            {/* Quick action chips */}
-            <div className="mt-6 flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => router.push("/focus")}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors shadow-sm"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-cream-300 animate-pulse" />
-                Begin a focus session
-              </button>
-              <button
-                onClick={() => router.push("/tasks")}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-baltic-200 dark:border-baltic-700 text-baltic-700 dark:text-baltic-300 text-sm font-semibold hover:bg-baltic-50 dark:hover:bg-baltic-900/40 transition-colors"
-              >
-                Plan tasks
-              </button>
+            {/* Progress bar with anchors */}
+            <div className="mt-4">
+              <div className="h-2 rounded-full bg-lavender-100 dark:bg-lavender-800 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-baltic-600 dark:bg-baltic-400 transition-all duration-700"
+                  style={{ width: `${focusPct}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between mt-1.5">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-steel-400">
+                  Start
+                </span>
+                <span className="text-[10px] font-bold text-baltic-600 dark:text-baltic-400 tabular-nums">
+                  {focusPct}%
+                </span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-steel-400">
+                  Goal
+                </span>
+              </div>
             </div>
+
+            {/* CTA */}
+            <button
+              onClick={() => router.push("/focus")}
+              className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors shadow-sm"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-cream-300 animate-pulse" />
+              {todayMinutes === 0 ? "Begin a focus session" : "Continue focusing"}
+              <span className="text-base leading-none">→</span>
+            </button>
           </div>
+        </div>
+      </TapeCard>
 
-          {/* Right: target ring */}
-          <div className="lg:col-span-5 flex justify-center lg:justify-end">
-            <div className="relative">
-              {/* Soft halo behind ring */}
-              <div className="absolute inset-0 -m-6 rounded-full bg-baltic-100/40 dark:bg-baltic-800/30 blur-2xl" />
+      {/* ─── Pointer arrow ─── */}
+      <div className="flex justify-center mb-3">
+        <div className="flex flex-col items-center text-steel-400">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
+            Start here
+          </span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M7 2v10M3 8l4 4 4-4" />
+          </svg>
+        </div>
+      </div>
 
-              <svg
-                viewBox="0 0 140 140"
-                className="relative w-56 h-56 lg:w-64 lg:h-64"
-              >
-                {/* Outer ring (track) */}
-                <circle
-                  cx="70"
-                  cy="70"
-                  r={ringRadius}
-                  stroke="currentColor"
-                  className="text-lavender-200 dark:text-lavender-800"
-                  strokeWidth="3"
-                  fill="none"
-                />
-                {/* Inner concentric — like an actual target */}
-                <circle
-                  cx="70"
-                  cy="70"
-                  r={ringRadius - 10}
-                  stroke="currentColor"
-                  className="text-lavender-200/60 dark:text-lavender-800/60"
-                  strokeWidth="1"
-                  fill="none"
-                />
-                <circle
-                  cx="70"
-                  cy="70"
-                  r={ringRadius - 20}
-                  stroke="currentColor"
-                  className="text-lavender-200/40 dark:text-lavender-800/40"
-                  strokeWidth="1"
-                  fill="none"
-                />
-                {/* Bullseye */}
-                <circle
-                  cx="70"
-                  cy="70"
-                  r="3"
-                  className="fill-baltic-700 dark:fill-baltic-300"
-                />
-                {/* Progress arc */}
-                <circle
-                  cx="70"
-                  cy="70"
-                  r={ringRadius}
-                  stroke="currentColor"
-                  className="text-baltic-600 dark:text-baltic-400"
-                  strokeWidth="6"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeDasharray={ringCircumference}
-                  strokeDashoffset={ringOffset}
-                  transform="rotate(-90 70 70)"
-                  style={{ transition: "stroke-dashoffset 1s ease-out" }}
-                />
+      {/* ─── 3. Next up — guided task card ─── */}
+      <TapeCard tapeColor="baltic" className="mb-6">
+        <CardEyebrow>Next up</CardEyebrow>
 
-                {/* Center text */}
-                <text
-                  x="70"
-                  y="64"
-                  textAnchor="middle"
-                  className="fill-baltic-800 dark:fill-baltic-100"
-                  style={{ fontSize: "22px", fontWeight: 700 }}
-                >
-                  {formatTime(todayMinutes)}
-                </text>
-                <text
-                  x="70"
-                  y="82"
-                  textAnchor="middle"
-                  className="fill-steel-400"
-                  style={{ fontSize: "9px", letterSpacing: "1.5px", textTransform: "uppercase" }}
-                >
-                  of {formatTime(dailyGoal)}
-                </text>
-                <text
-                  x="70"
-                  y="96"
-                  textAnchor="middle"
-                  className="fill-baltic-500 dark:fill-baltic-400"
-                  style={{ fontSize: "10px", fontWeight: 600 }}
-                >
-                  {focusPct}% to goal
-                </text>
+        {nextTask ? (
+          <NextTaskBlock
+            task={nextTask}
+            subject={getSubject(nextTask.subject)}
+            onComplete={() => toggleComplete(nextTask.id)}
+            onFocus={() => router.push("/focus")}
+            onViewAll={() => router.push("/tasks")}
+            remainingCount={remainingCount}
+          />
+        ) : (
+          <EmptyBlock
+            title="Nothing on your plate."
+            subtitle="A clear list is a fine place to begin."
+            actionLabel="Add your first task"
+            onAction={() => router.push("/tasks")}
+          />
+        )}
+      </TapeCard>
+
+      {/* ─── 4. Two side-by-side context cards ─── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Streak card */}
+        <TapeCard tapeColor="ash">
+          <CardEyebrow>Your streak</CardEyebrow>
+          <div className="mt-3 flex items-center gap-4">
+            {/* Flame */}
+            <div className="w-14 h-14 rounded-2xl bg-cream-100 dark:bg-cream-900/40 flex items-center justify-center flex-shrink-0">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-cream-600 dark:text-cream-400">
+                <path d="M12 2c2.5 4 5 7 5 11a5 5 0 1 1-10 0c0-4 2.5-7 5-11Z" />
+                <path d="M12 16a2 2 0 0 0 2-2c0-1.5-1-2-2-3.5-1 1.5-2 2-2 3.5a2 2 0 0 0 2 2Z" />
               </svg>
             </div>
+            <div>
+              <p className="text-3xl font-bold text-baltic-800 dark:text-baltic-100 leading-none tabular-nums">
+                {streak}
+              </p>
+              <p className="text-xs text-steel-500 dark:text-steel-400 mt-1">
+                {streak === 0
+                  ? "Start one today."
+                  : streak === 1
+                  ? "day in a row. Keep it going."
+                  : `days in a row. Don't break it today.`}
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
+        </TapeCard>
 
-      {/* ─── 02 — By the numbers (editorial stat strip) ─── */}
-      <section className="mb-14">
-        <SectionLabel num="02" title="By the numbers" />
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 divide-x divide-baltic-800/10 dark:divide-baltic-200/10 border-y border-baltic-800/10 dark:border-baltic-200/10 py-6">
-          <Stat
-            label="Day streak"
-            value={String(streak)}
-            sub={streak === 1 ? "day in a row" : "days in a row"}
-            accent="cream"
-          />
-          <Stat
-            label="On your plate"
-            value={String(pendingTasks.length)}
-            sub={pendingTasks.length === 1 ? "task pending" : "tasks pending"}
-            accent="ash"
-          />
-          <Stat
-            label="This week"
-            value={formatTime(weekMinutes)}
-            sub="time invested"
-            accent="baltic"
-          />
-        </div>
-      </section>
-
-      {/* ─── 03 — On the horizon (asymmetric: tasks + last entry) ─── */}
-      <section className="mb-10">
-        <SectionLabel num="03" title="On the horizon" />
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Tasks — wider */}
-          <div className="lg:col-span-7">
-            <div className="flex items-baseline justify-between mb-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-steel-500 dark:text-steel-400">
-                What&apos;s next
+        {/* Pick up where you left off */}
+        <TapeCard tapeColor="lavender">
+          <CardEyebrow>Pick up where you left off</CardEyebrow>
+          {lastSession ? (
+            <LastSessionBlock
+              session={lastSession}
+              subject={getSubject(lastSession.subject)}
+              onContinue={() => router.push("/focus")}
+              onViewJournal={() => router.push("/journal")}
+            />
+          ) : (
+            <div className="mt-3">
+              <p className="text-sm text-steel-500 dark:text-steel-400">
+                No sessions yet. Your first one will live here.
               </p>
               <button
-                onClick={() => router.push("/tasks")}
-                className="text-xs text-baltic-600 hover:text-baltic-800 dark:text-baltic-400 dark:hover:text-baltic-200 font-semibold transition-smooth"
+                onClick={() => router.push("/focus")}
+                className="mt-3 text-xs font-semibold text-baltic-600 dark:text-baltic-400 hover:text-baltic-800 dark:hover:text-baltic-200 transition-colors"
               >
-                All tasks &rarr;
+                Start your first session →
               </button>
             </div>
-
-            {upcomingTasks.length > 0 ? (
-              <ol className="space-y-1">
-                {upcomingTasks.map((task, idx) => {
-                  const subject = getSubject(task.subject);
-                  const overdue = isOverdue(task.dueDate);
-                  const color = subject?.color || "#60729f";
-                  return (
-                    <li
-                      key={task.id}
-                      className="group flex items-center gap-4 py-3 border-b border-dashed border-lavender-200 dark:border-lavender-800 hover:border-baltic-300 dark:hover:border-baltic-600 transition-colors"
-                    >
-                      {/* Numeral */}
-                      <span className="text-[11px] font-mono font-bold text-steel-300 dark:text-steel-600 tabular-nums w-5">
-                        {String(idx + 1).padStart(2, "0")}
-                      </span>
-
-                      {/* Check */}
-                      <button
-                        onClick={() => toggleComplete(task.id)}
-                        className="w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-smooth hover:scale-110"
-                        style={{ borderColor: color }}
-                      >
-                        <svg
-                          width="9"
-                          height="9"
-                          viewBox="0 0 10 10"
-                          fill="none"
-                          stroke={color}
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <path d="M2 5l2.5 2.5L8 3" />
-                        </svg>
-                      </button>
-
-                      {/* Title */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-baltic-800 dark:text-baltic-100 truncate">
-                          {task.title}
-                        </p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span
-                            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: color }}
-                          />
-                          <span className="text-[11px] text-steel-400 truncate">
-                            {subject?.label || task.subject}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Date chip */}
-                      <span
-                        className={cn(
-                          "text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full border whitespace-nowrap",
-                          overdue
-                            ? "border-red-200 text-red-500 bg-red-50 dark:bg-red-900/20 dark:border-red-800"
-                            : "border-lavender-200 dark:border-lavender-700 text-steel-500 dark:text-steel-400"
-                        )}
-                      >
-                        {overdue ? "Overdue" : formatDate(task.dueDate)}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ol>
-            ) : (
-              <div className="py-12 text-center border-y border-dashed border-lavender-200 dark:border-lavender-800">
-                <p className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
-                  Nothing on the horizon.
-                </p>
-                <p className="text-xs text-steel-400 mt-1 italic">
-                  A clear plate is a fine place to begin.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Last entry — narrower, journal-style nod */}
-          <div className="lg:col-span-5">
-            <div className="flex items-baseline justify-between mb-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-steel-500 dark:text-steel-400">
-                Latest entry
-              </p>
-              <button
-                onClick={() => router.push("/journal")}
-                className="text-xs text-baltic-600 hover:text-baltic-800 dark:text-baltic-400 dark:hover:text-baltic-200 font-semibold transition-smooth"
-              >
-                Journal &rarr;
-              </button>
-            </div>
-
-            {lastSession ? (
-              <LastEntryCard
-                session={lastSession}
-                subject={getSubject(lastSession.subject)}
-              />
-            ) : (
-              <div className="py-12 text-center border border-dashed border-lavender-200 dark:border-lavender-800 rounded-2xl">
-                <p className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
-                  No entries yet.
-                </p>
-                <p className="text-xs text-steel-400 mt-1 italic">
-                  Your first session writes itself here.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+          )}
+        </TapeCard>
+      </div>
     </div>
   );
 }
 
-/* ─── Section label (editorial numbered header) ─── */
-function SectionLabel({ num, title }: { num: string; title: string }) {
-  return (
-    <div className="flex items-center gap-3 mb-5">
-      <span className="text-[10px] font-mono font-bold text-baltic-500 dark:text-baltic-400 tabular-nums">
-        {num}
-      </span>
-      <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-baltic-800 dark:text-baltic-200">
-        {title}
-      </span>
-      <div className="flex-1 h-px bg-baltic-800/15 dark:bg-baltic-200/15" />
-    </div>
-  );
-}
+/* ─────────────────────────────────────────────────────────────
+   REUSABLE PIECES — single design language across the page
+   ───────────────────────────────────────────────────────────── */
 
-/* ─── Editorial stat ─── */
-function Stat({
-  label,
-  value,
-  sub,
-  accent,
+/* Tape strip color variants */
+const TAPE_VARIANTS = {
+  cream: "bg-cream-300/70 dark:bg-cream-600/50",
+  baltic: "bg-baltic-300/60 dark:bg-baltic-600/50",
+  ash: "bg-ash-300/60 dark:bg-ash-600/50",
+  lavender: "bg-lavender-300/70 dark:bg-lavender-600/50",
+} as const;
+
+type TapeColor = keyof typeof TAPE_VARIANTS;
+
+/* Unified card with tape strip — used for every section */
+function TapeCard({
+  children,
+  tapeColor = "cream",
+  className,
 }: {
-  label: string;
-  value: string;
-  sub: string;
-  accent: "baltic" | "cream" | "ash";
+  children: ReactNode;
+  tapeColor?: TapeColor;
+  className?: string;
 }) {
-  const accentColor = {
-    baltic: "text-baltic-700 dark:text-baltic-200",
-    cream: "text-cream-700 dark:text-cream-300",
-    ash: "text-ash-700 dark:text-ash-300",
-  }[accent];
-
   return (
-    <div className="px-4 first:pl-0">
-      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-steel-400 mb-2">
-        {label}
-      </p>
-      <p className={cn("text-3xl font-bold tracking-tight tabular-nums", accentColor)}>
-        {value}
-      </p>
-      <p className="text-[11px] text-steel-400 mt-0.5 italic">{sub}</p>
+    <div
+      className={cn(
+        "relative rounded-2xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-800 px-6 pt-8 pb-6 shadow-sm",
+        className
+      )}
+    >
+      {/* Tape strip */}
+      <div
+        aria-hidden
+        className={cn(
+          "absolute -top-2 left-8 w-16 h-4 rounded-sm shadow-sm",
+          TAPE_VARIANTS[tapeColor]
+        )}
+        style={{ clipPath: "polygon(5% 0, 95% 0, 100% 100%, 0 100%)" }}
+      />
+      {children}
     </div>
   );
 }
 
-/* ─── Last entry card (small journal-style nod) ─── */
-function LastEntryCard({
+/* Small uppercase eyebrow used at the top of every card */
+function CardEyebrow({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-steel-500 dark:text-steel-400">
+      {children}
+    </p>
+  );
+}
+
+/* Next task block — guided action */
+function NextTaskBlock({
+  task,
+  subject,
+  onComplete,
+  onFocus,
+  onViewAll,
+  remainingCount,
+}: {
+  task: { id: string; title: string; subject: string; dueDate: string };
+  subject: { label: string; color: string } | undefined;
+  onComplete: () => void;
+  onFocus: () => void;
+  onViewAll: () => void;
+  remainingCount: number;
+}) {
+  const color = subject?.color || "#60729f";
+  const overdue = isOverdue(task.dueDate);
+
+  return (
+    <div className="mt-3">
+      {/* Task headline */}
+      <div className="flex items-start gap-4">
+        <div
+          className="w-1 self-stretch rounded-full flex-shrink-0 mt-1"
+          style={{ backgroundColor: color }}
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-xl font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
+            {task.title}
+          </p>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 text-xs text-steel-500 dark:text-steel-400">
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+              {subject?.label || task.subject}
+            </span>
+            <span className="text-steel-300 dark:text-steel-600">·</span>
+            <span
+              className={cn(
+                "text-xs font-medium",
+                overdue
+                  ? "text-red-500"
+                  : "text-steel-500 dark:text-steel-400"
+              )}
+            >
+              {overdue ? "Overdue" : `Due ${formatDate(task.dueDate)}`}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="mt-5 flex items-center gap-2 flex-wrap">
+        <button
+          onClick={onFocus}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-xs font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors"
+        >
+          Focus on this
+          <span className="text-sm leading-none">→</span>
+        </button>
+        <button
+          onClick={onComplete}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-lavender-200 dark:border-lavender-700 text-baltic-700 dark:text-baltic-300 text-xs font-semibold hover:bg-baltic-50 dark:hover:bg-baltic-900/40 transition-colors"
+        >
+          <svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 5l2.5 2.5L8 3" />
+          </svg>
+          Mark done
+        </button>
+      </div>
+
+      {/* More tasks footer */}
+      {remainingCount > 0 && (
+        <div className="mt-5 pt-4 border-t border-dashed border-lavender-200 dark:border-lavender-800">
+          <button
+            onClick={onViewAll}
+            className="text-xs text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors"
+          >
+            <span className="font-semibold tabular-nums">{remainingCount}</span>{" "}
+            more on your list →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Last session block */
+function LastSessionBlock({
   session,
   subject,
+  onContinue,
+  onViewJournal,
 }: {
-  session: { id: string; subject: string; duration: number; completedAt: string; reflection?: { quality: 1 | 2 | 3 | 4; note?: string } };
+  session: { id: string; subject: string; duration: number; completedAt: string };
   subject: { label: string; color: string } | undefined;
+  onContinue: () => void;
+  onViewJournal: () => void;
 }) {
   const color = subject?.color || "#60729f";
   const date = new Date(session.completedAt);
-  const dateStr = date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-  const timeStr = date.toLocaleTimeString("en-US", {
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  const whenLabel = isToday
+    ? "Earlier today"
+    : isYesterday
+    ? "Yesterday"
+    : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const timeLabel = date.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
   });
 
   return (
-    <div className="relative rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-800 p-5 pt-6 shadow-sm">
-      {/* Tape strip — tying to journal aesthetic */}
-      <div
-        className="absolute -top-2 left-6 w-12 h-3.5 rounded-sm shadow-sm bg-cream-300/70 dark:bg-cream-600/50"
-        style={{ clipPath: "polygon(5% 0, 95% 0, 100% 100%, 0 100%)" }}
-      />
-
-      {/* Date stamp */}
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-[10px] font-mono uppercase tracking-wider text-steel-400">
-          {dateStr} · {timeStr}
-        </p>
-        {session.reflection && (
-          <QualityIndicator quality={session.reflection.quality} size={12} />
-        )}
-      </div>
-
-      {/* Subject + duration */}
-      <div className="flex items-center gap-2 mb-1">
-        <span
-          className="w-2 h-2 rounded-full flex-shrink-0"
+    <div className="mt-3">
+      <div className="flex items-center gap-3">
+        <div
+          className="w-1 self-stretch rounded-full flex-shrink-0"
           style={{ backgroundColor: color }}
         />
-        <span className="text-[11px] font-bold uppercase tracking-wider text-baltic-700 dark:text-baltic-300 truncate">
-          {subject?.label || session.subject}
-        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-base font-bold text-baltic-800 dark:text-baltic-100 truncate">
+            {subject?.label || session.subject}
+          </p>
+          <p className="text-xs text-steel-500 dark:text-steel-400 mt-0.5">
+            {formatTime(session.duration)} · {whenLabel} at {timeLabel}
+          </p>
+        </div>
       </div>
-      <p className="text-3xl font-bold text-baltic-800 dark:text-baltic-100 tracking-tight leading-none">
-        {formatTime(session.duration)}
-      </p>
 
-      {/* Note excerpt */}
-      {session.reflection?.note && (
-        <p className="mt-3 pt-3 border-t border-dashed border-lavender-200 dark:border-lavender-700 text-xs text-steel-500 dark:text-steel-400 italic leading-relaxed line-clamp-2">
-          &ldquo;{session.reflection.note}&rdquo;
-        </p>
-      )}
+      <div className="mt-4 flex items-center gap-2">
+        <button
+          onClick={onContinue}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-xs font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors"
+        >
+          Continue
+          <span className="text-sm leading-none">→</span>
+        </button>
+        <button
+          onClick={onViewJournal}
+          className="text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors px-2"
+        >
+          See journal
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* Empty state for next-up */
+function EmptyBlock({
+  title,
+  subtitle,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  subtitle: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  return (
+    <div className="mt-3 py-2">
+      <p className="text-xl font-bold text-baltic-800 dark:text-baltic-100">
+        {title}
+      </p>
+      <p className="text-xs text-steel-500 dark:text-steel-400 italic mt-1">
+        {subtitle}
+      </p>
+      <button
+        onClick={onAction}
+        className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-xs font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors"
+      >
+        {actionLabel}
+        <span className="text-sm leading-none">→</span>
+      </button>
     </div>
   );
 }
