@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useTasks, useSubjects } from "@/lib/contexts";
 import { PRIORITIES, type Task } from "@/lib/types";
 import { cn, formatDate, isOverdue } from "@/lib/utils";
@@ -15,26 +15,43 @@ type FilterStatus = "all" | "pending" | "completed";
 function SubjectBookshelf({
   activeSubject,
   onSelect,
+  onQuickAdd,
 }: {
   activeSubject: string;
   onSelect: (subject: string) => void;
+  onQuickAdd: (subject: string) => void;
 }) {
   const { subjects } = useSubjects();
   const { tasks } = useTasks();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  const subjectStats = useMemo(() => {
-    const stats: Record<string, { pending: number; completed: number }> = {};
+  const subjectData = useMemo(() => {
+    const data: Record<string, {
+      pending: number;
+      completed: number;
+      overdue: number;
+      upcoming: Task[];
+    }> = {};
     for (const sub of subjects) {
-      stats[sub.label] = { pending: 0, completed: 0 };
+      data[sub.label] = { pending: 0, completed: 0, overdue: 0, upcoming: [] };
     }
     for (const task of tasks) {
-      if (stats[task.subject]) {
-        if (task.completed) stats[task.subject].completed++;
-        else stats[task.subject].pending++;
+      const d = data[task.subject];
+      if (!d) continue;
+      if (task.completed) {
+        d.completed++;
+      } else {
+        d.pending++;
+        if (isOverdue(task.dueDate)) d.overdue++;
+        if (d.upcoming.length < 3) d.upcoming.push(task);
       }
     }
-    return stats;
+    for (const key in data) {
+      data[key].upcoming.sort(
+        (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+      );
+    }
+    return data;
   }, [subjects, tasks]);
 
   const activeIndex = hoveredIndex !== null
@@ -46,7 +63,7 @@ function SubjectBookshelf({
       {subjects.map((sub, index) => {
         const isExpanded = index === activeIndex;
         const isSelected = sub.label === activeSubject;
-        const stats = subjectStats[sub.label] || { pending: 0, completed: 0 };
+        const stats = subjectData[sub.label] || { pending: 0, completed: 0, overdue: 0, upcoming: [] };
         const total = stats.pending + stats.completed;
         const pct = total > 0 ? Math.round((stats.completed / total) * 100) : 0;
 
@@ -81,13 +98,16 @@ function SubjectBookshelf({
                 }}
               />
 
-              {/* Spine: vertical label */}
+              {/* Spine: vertical label + overdue dot */}
               <div
                 className={cn(
-                  "absolute inset-0 flex items-center justify-center transition-opacity duration-300",
+                  "absolute inset-0 flex flex-col items-center justify-center gap-2 transition-opacity duration-300",
                   isExpanded ? "opacity-0" : "opacity-100"
                 )}
               >
+                {stats.overdue > 0 && (
+                  <div className="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.6)]" />
+                )}
                 <span
                   className="text-white text-xs font-semibold whitespace-nowrap"
                   style={{
@@ -102,27 +122,90 @@ function SubjectBookshelf({
               {/* Expanded content */}
               <div
                 className={cn(
-                  "absolute inset-0 flex flex-col justify-end p-5 transition-opacity duration-500",
+                  "absolute inset-0 flex flex-col transition-opacity duration-500",
                   isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
                 )}
               >
-                <p className="text-white text-xl font-bold leading-tight">
-                  {sub.label}
-                </p>
-                <div className="flex items-center gap-2 mt-2.5">
-                  <span className="text-white/80 text-sm font-medium">
-                    {stats.pending} pending
-                  </span>
-                  <span className="text-white/40">·</span>
-                  <span className="text-white/80 text-sm font-medium">
-                    {stats.completed} done
-                  </span>
+                {/* Top: quick-add */}
+                <div className="p-4 pb-0 flex justify-end">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onQuickAdd(sub.label);
+                    }}
+                    className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
+                    title={`Add task to ${sub.label}`}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round">
+                      <path d="M7 3v8M3 7h8" />
+                    </svg>
+                  </button>
                 </div>
-                <div className="mt-3 h-1.5 rounded-full bg-white/20 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-white/70 transition-all duration-500"
-                    style={{ width: `${pct}%` }}
-                  />
+
+                {/* Middle: upcoming task previews */}
+                <div className="flex-1 px-4 pt-3 overflow-hidden">
+                  {stats.upcoming.length > 0 ? (
+                    <div className="space-y-1">
+                      <p className="text-white/50 text-[10px] font-semibold uppercase tracking-wider mb-2">
+                        Up next
+                      </p>
+                      {stats.upcoming.map((task) => (
+                        <div
+                          key={task.id}
+                          className="flex items-start gap-2 py-1.5 border-t border-white/10"
+                        >
+                          <div className="w-1 h-1 rounded-full bg-white/50 mt-1.5 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-white/90 text-xs font-medium truncate">
+                              {task.title}
+                            </p>
+                            <p className={cn(
+                              "text-[10px] mt-0.5",
+                              isOverdue(task.dueDate)
+                                ? "text-red-300 font-medium"
+                                : "text-white/50"
+                            )}>
+                              {isOverdue(task.dueDate) ? "Overdue" : formatDate(task.dueDate)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-white/40 text-xs italic mt-4">
+                      No pending tasks
+                    </p>
+                  )}
+                </div>
+
+                {/* Bottom: label + stats + progress */}
+                <div className="p-5 pt-3">
+                  <p className="text-white text-xl font-bold leading-tight">
+                    {sub.label}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-white/80 text-sm font-medium">
+                      {stats.pending} pending
+                    </span>
+                    <span className="text-white/40">·</span>
+                    <span className="text-white/80 text-sm font-medium">
+                      {stats.completed} done
+                    </span>
+                    {stats.overdue > 0 && (
+                      <>
+                        <span className="text-white/40">·</span>
+                        <span className="text-red-300 text-sm font-medium">
+                          {stats.overdue} overdue
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <div className="mt-3 h-1.5 rounded-full bg-white/20 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-white/70 transition-all duration-500"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -140,6 +223,7 @@ export default function TasksPage() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("pending");
   const [filterSubject, setFilterSubject] = useState<string>("all");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [addModalSubject, setAddModalSubject] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const filteredTasks = useMemo(() => {
@@ -404,6 +488,10 @@ export default function TasksPage() {
           <SubjectBookshelf
             activeSubject={filterSubject}
             onSelect={setFilterSubject}
+            onQuickAdd={(subject) => {
+              setAddModalSubject(subject);
+              setShowAddModal(true);
+            }}
           />
         </div>
       </div>
@@ -411,8 +499,12 @@ export default function TasksPage() {
       {/* Modals (outside layout flow) */}
       <AddTaskModal
         open={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={() => {
+          setShowAddModal(false);
+          setAddModalSubject(null);
+        }}
         onAdd={addTask}
+        initialSubject={addModalSubject}
       />
 
       {selectedTask && (
@@ -582,21 +674,30 @@ function AddTaskModal({
   open,
   onClose,
   onAdd,
+  initialSubject,
 }: {
   open: boolean;
   onClose: () => void;
   onAdd: (task: Omit<Task, "id" | "createdAt" | "completed">) => void;
+  initialSubject?: string | null;
 }) {
   const { subjects } = useSubjects();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [subject, setSubject] = useState<string>(subjects[0]?.label || "");
+  const [subject, setSubject] = useState<string>(initialSubject || subjects[0]?.label || "");
   const [priority, setPriority] = useState<"low" | "medium" | "high">(
     "medium"
   );
   const [dueDate, setDueDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+
+  // Sync subject when modal opens with a pre-filled subject
+  useEffect(() => {
+    if (open && initialSubject) {
+      setSubject(initialSubject);
+    }
+  }, [open, initialSubject]);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
