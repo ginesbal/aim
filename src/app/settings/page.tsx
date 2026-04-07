@@ -7,28 +7,42 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
 export default function SettingsPage() {
-  const { name, setName } = usePreferences();
+  const { name, dailyGoal, setName, setDailyGoal } = usePreferences();
   const [localName, setLocalName] = useState(name);
-  const [saved, setSaved] = useState(false);
+  const [localGoal, setLocalGoal] = useState(String(dailyGoal));
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (localName.trim()) {
-      setName(localName.trim());
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+    if (!localName.trim()) {
+      setFeedback({ type: "error", message: "Name cannot be empty" });
+      setTimeout(() => setFeedback(null), 3000);
+      return;
     }
+    const goalNum = parseInt(localGoal, 10);
+    if (!goalNum || goalNum < 1) {
+      setFeedback({ type: "error", message: "Goal must be at least 1 minute" });
+      setTimeout(() => setFeedback(null), 3000);
+      return;
+    }
+    setName(localName.trim());
+    setDailyGoal(goalNum);
+    setFeedback({ type: "success", message: "Saved" });
+    setTimeout(() => setFeedback(null), 2000);
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="relative space-y-6 max-w-2xl mx-auto">
+      {/* Decorative blob */}
+      <div className="absolute -top-8 -right-20 w-36 h-36 blob-2 bg-ash-200/20 dark:bg-ash-700/10 float-slow pointer-events-none" />
+
       <div>
         <h1 className="text-display text-baltic-800 dark:text-baltic-100">Settings</h1>
         <p className="text-sm text-steel-400 mt-1">Manage your preferences</p>
       </div>
 
       {/* Profile */}
-      <Card padding="md">
+      <Card padding="lg">
         <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">Profile</h2>
         <form onSubmit={handleSave} className="space-y-3">
           <Input
@@ -37,17 +51,27 @@ export default function SettingsPage() {
             value={localName}
             onChange={(e) => setLocalName(e.target.value)}
           />
+          <Input
+            id="settings-goal"
+            label="Daily focus goal (minutes)"
+            type="number"
+            min="1"
+            value={localGoal}
+            onChange={(e) => setLocalGoal(e.target.value)}
+          />
           <div className="flex items-center gap-3">
             <Button type="submit" size="sm">Save</Button>
-            {saved && (
-              <span className="text-xs text-ash-600 font-medium">Saved</span>
+            {feedback && (
+              <span className={`text-xs font-medium ${feedback.type === "error" ? "text-red-500" : "text-ash-600"}`}>
+                {feedback.message}
+              </span>
             )}
           </div>
         </form>
       </Card>
 
       {/* Data */}
-      <Card padding="md">
+      <Card padding="lg">
         <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">Data</h2>
         <p className="text-sm text-steel-400 mb-3">
           All data is stored locally in your browser.
@@ -60,6 +84,7 @@ export default function SettingsPage() {
               localStorage.removeItem("aim_tasks");
               localStorage.removeItem("aim_sessions");
               localStorage.removeItem("aim_name");
+              localStorage.removeItem("aim_daily_goal");
               window.location.reload();
             }
           }}

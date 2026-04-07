@@ -70,30 +70,78 @@
     @apply transition-all duration-150 ease-out;
   }
 
-  /* Card — clean, sharp */
+  /* Card — playful, rounded */
   .card-base {
-    @apply bg-white rounded-lg border border-lavender-200 shadow-sm;
+    @apply bg-white rounded-2xl shadow-sm shadow-baltic-200/40;
   }
 
   .dark .card-base {
-    @apply bg-lavender-900 border-lavender-700 shadow-sm;
+    @apply bg-lavender-900 shadow-sm shadow-black/20;
   }
 
   /* Tinted card variants */
   .card-baltic {
-    @apply bg-baltic-50 dark:bg-baltic-900/30 rounded-lg border border-baltic-200 dark:border-baltic-700/50 shadow-sm;
+    @apply bg-baltic-50 dark:bg-baltic-900/30 rounded-2xl shadow-sm;
   }
 
   .card-ash {
-    @apply bg-ash-50 dark:bg-ash-900/30 rounded-lg border border-ash-200 dark:border-ash-700/50 shadow-sm;
+    @apply bg-ash-50 dark:bg-ash-900/30 rounded-2xl shadow-sm;
   }
 
   .card-cream {
-    @apply bg-cream-50 dark:bg-cream-900/30 rounded-lg border border-cream-200 dark:border-cream-700/50 shadow-sm;
+    @apply bg-cream-50 dark:bg-cream-900/30 rounded-2xl shadow-sm;
   }
 
   .card-lavender {
-    @apply bg-lavender-50 dark:bg-lavender-900/30 rounded-lg border border-lavender-200 dark:border-lavender-700/50 shadow-sm;
+    @apply bg-lavender-50 dark:bg-lavender-900/30 rounded-2xl shadow-sm;
+  }
+
+  /* ─── Decorative blobs ─── */
+  .blob-1 {
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  }
+
+  .blob-2 {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+
+  .blob-3 {
+    border-radius: 40% 60% 65% 35% / 55% 45% 55% 45%;
+  }
+
+  /* Dot grid pattern */
+  .dot-pattern {
+    background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
+  /* Wave divider */
+  .wave-divider {
+    position: relative;
+    height: 24px;
+    overflow: hidden;
+  }
+
+  .wave-divider::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 24'%3E%3Cpath d='M0 12c200-12 400 12 600 0s400 12 600 0' fill='none' stroke='%23e2e4e9' stroke-width='1.5'/%3E%3C/svg%3E") repeat-x;
+    background-size: 600px 24px;
+  }
+
+  /* Float animation for decorative elements */
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .float-slow {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .float-medium {
+    animation: float 4s ease-in-out infinite;
   }
 
   /* Progress ring animation */
@@ -199,9 +247,9 @@
 }
 
 @layer utilities {
-  /* Type scale — tighter, sharper */
+  /* Type scale — bolder, more playful */
   .text-display {
-    @apply text-2xl font-semibold tracking-tight;
+    @apply text-3xl font-bold tracking-tight;
   }
 
   .text-title {
@@ -220,8 +268,8 @@
     @apply text-[11px] font-semibold uppercase tracking-wider text-steel-400;
   }
 
-  /* Stats — large but not extra-bold */
+  /* Stats — large and bold */
   .text-stat {
-    @apply text-3xl font-semibold tracking-tight;
+    @apply text-4xl font-bold tracking-tight;
   }
 }

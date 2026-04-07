@@ -13,7 +13,6 @@ import SubjectSelector from "@/components/ui/SubjectSelector";
 
 const TopologyBg = dynamic(() => import("@/components/ui/TopologyBg"), { ssr: false });
 
-// Topology color configs per state (0x hex format)
 const TOPO_STATES = {
   idle:       { color: 0x808eb3, bg: 0xeff1f5 },
   running:    { color: 0x808eb3, bg: 0xeff1f5 },
@@ -46,7 +45,6 @@ export default function FocusPage() {
   const isFullscreen = timerState === "running" || timerState === "paused" || timerState === "done" || timerState === "reflecting";
   const topoColors = TOPO_STATES[timerState];
 
-  // Resolve subject color for display
   const subjectColor = (() => {
     if (!subject) return "#60729f";
     const userSub = getSubject(subject);
@@ -112,19 +110,21 @@ export default function FocusPage() {
     setTimerState("reflecting");
   }, [totalSeconds, secondsLeft]);
 
+  const defaultSubject = subject || "Mathematics";
+
   const saveWithReflection = useCallback(() => {
     addSession(
-      subject || "General",
+      defaultSubject,
       elapsedMinutes,
       reflectionQuality ? { quality: reflectionQuality, ...(reflectionNote.trim() ? { note: reflectionNote.trim() } : {}) } : undefined
     );
     resetTimer();
-  }, [subject, elapsedMinutes, reflectionQuality, reflectionNote, addSession, resetTimer]);
+  }, [defaultSubject, elapsedMinutes, reflectionQuality, reflectionNote, addSession, resetTimer]);
 
   const skipReflection = useCallback(() => {
-    addSession(subject || "General", elapsedMinutes);
+    addSession(defaultSubject, elapsedMinutes);
     resetTimer();
-  }, [subject, elapsedMinutes, addSession, resetTimer]);
+  }, [defaultSubject, elapsedMinutes, addSession, resetTimer]);
 
   useEffect(() => {
     return () => clearTimer();
@@ -141,7 +141,6 @@ export default function FocusPage() {
       {/* Fullscreen focus overlay */}
       {isFullscreen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Vanta topology — fills entire screen */}
           <div className="absolute inset-0">
             <TopologyBg
               color={topoColors.color}
@@ -149,10 +148,10 @@ export default function FocusPage() {
             />
           </div>
 
-          {/* Exit button — top right */}
+          {/* Exit button */}
           <button
             onClick={exitFocus}
-            className="absolute top-6 right-6 z-10 flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-baltic-600 dark:text-baltic-300 bg-white/80 dark:bg-lavender-900/80 backdrop-blur-sm border border-lavender-200 dark:border-lavender-700 hover:bg-white dark:hover:bg-lavender-900 transition-smooth"
+            className="absolute top-6 right-6 z-10 flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium text-baltic-600 dark:text-baltic-300 bg-white/80 dark:bg-lavender-900/80 backdrop-blur-sm shadow-sm hover:bg-white dark:hover:bg-lavender-900 transition-smooth"
           >
             <svg width={14} height={14} viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
               <path d="M10.5 3.5L3.5 10.5M3.5 3.5l7 7" />
@@ -163,7 +162,7 @@ export default function FocusPage() {
           {/* Timer + controls — centered */}
           <div className="relative z-10 flex flex-col items-center">
             {timerState === "reflecting" ? (
-              <div className="flex flex-col items-center reflection-enter bg-white/80 dark:bg-lavender-900/80 backdrop-blur-sm rounded-lg p-8 border border-lavender-200 dark:border-lavender-700">
+              <div className="flex flex-col items-center reflection-enter bg-white/80 dark:bg-lavender-900/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg">
                 <div className="flex items-center gap-2 mb-6">
                   <div
                     className="w-2 h-2 rounded-full"
@@ -191,7 +190,7 @@ export default function FocusPage() {
                     onChange={(e) => setReflectionNote(e.target.value)}
                     maxLength={80}
                     placeholder="What clicked? (optional)"
-                    className="w-full px-3 py-2 text-sm text-center rounded-md border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-400 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth"
+                    className="w-full px-3 py-2 text-sm text-center rounded-xl border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-400 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth"
                   />
                 </div>
 
@@ -206,32 +205,28 @@ export default function FocusPage() {
               </div>
             ) : (
               <>
-                {/* Timer face with tick marks + sweep */}
-                <div className="relative" style={{ width: 264, height: 264 }}>
-                  {/* Tick marks */}
+                {/* Timer face */}
+                <div className="relative" style={{ width: 280, height: 280 }}>
                   <svg
-                    width={264}
-                    height={264}
-                    viewBox="0 0 264 264"
+                    width={280}
+                    height={280}
+                    viewBox="0 0 280 280"
                     className="absolute inset-0"
                   >
                     {Array.from({ length: 60 }).map((_, i) => {
                       const angle = (i * 6 - 90) * (Math.PI / 180);
                       const isMajor = i % 5 === 0;
-                      const outerR = 130;
-                      const innerR = isMajor ? 121 : 124;
-                      const x1 = 132 + innerR * Math.cos(angle);
-                      const y1 = 132 + innerR * Math.sin(angle);
-                      const x2 = 132 + outerR * Math.cos(angle);
-                      const y2 = 132 + outerR * Math.sin(angle);
+                      const outerR = 138;
+                      const innerR = isMajor ? 129 : 132;
+                      const x1 = 140 + innerR * Math.cos(angle);
+                      const y1 = 140 + innerR * Math.sin(angle);
+                      const x2 = 140 + outerR * Math.cos(angle);
+                      const y2 = 140 + outerR * Math.sin(angle);
                       const isActive = timerState === "running" || timerState === "paused";
                       return (
                         <line
                           key={i}
-                          x1={x1}
-                          y1={y1}
-                          x2={x2}
-                          y2={y2}
+                          x1={x1} y1={y1} x2={x2} y2={y2}
                           stroke="currentColor"
                           strokeWidth={isMajor ? 1.5 : 0.75}
                           strokeLinecap="round"
@@ -259,18 +254,9 @@ export default function FocusPage() {
                       transition: "opacity 0.3s ease",
                     }}
                   >
-                    <svg width={264} height={264} viewBox="0 0 264 264">
-                      <line
-                        x1={132}
-                        y1={132}
-                        x2={132}
-                        y2={16}
-                        stroke="#60729f"
-                        strokeWidth={1}
-                        strokeLinecap="round"
-                        opacity={0.5}
-                      />
-                      <circle cx={132} cy={132} r={2} fill="#60729f" opacity={0.5} />
+                    <svg width={280} height={280} viewBox="0 0 280 280">
+                      <line x1={140} y1={140} x2={140} y2={16} stroke="#60729f" strokeWidth={1} strokeLinecap="round" opacity={0.5} />
+                      <circle cx={140} cy={140} r={2} fill="#60729f" opacity={0.5} />
                     </svg>
                   </div>
 
@@ -278,7 +264,7 @@ export default function FocusPage() {
                   <div className="absolute inset-[12px]">
                     <ProgressRing
                       progress={progress}
-                      size={240}
+                      size={256}
                       strokeWidth={10}
                       color={timerState === "done" ? "#76946b" : "#60729f"}
                       trackColor={timerState === "done" ? "#c8d4c4" : "#e2e4e9"}
@@ -323,7 +309,6 @@ export default function FocusPage() {
                   )}
                 </div>
 
-                {/* Subject label */}
                 {subjectLabel && (
                   <div className="flex items-center gap-2 mt-4">
                     <div
@@ -342,102 +327,78 @@ export default function FocusPage() {
       )}
 
       {/* Normal page content — visible when idle */}
-      <div className={cn("max-w-md mx-auto", isFullscreen && "hidden")}>
-        {/* Timer setup dial — centered hero */}
-        <div className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm p-8 flex flex-col items-center">
-          {/* Decorative outer ring with tick marks */}
-          <div className="relative" style={{ width: 300, height: 300 }}>
-            <svg width={300} height={300} viewBox="0 0 300 300" className="absolute inset-0">
-              {/* Outer decorative ring */}
-              <circle
-                cx="150"
-                cy="150"
-                r="146"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="0.5"
-                className="text-lavender-200 dark:text-lavender-700"
-              />
-              {/* Tick marks around the dial */}
-              {Array.from({ length: 60 }).map((_, i) => {
-                const angle = (i * 6 - 90) * (Math.PI / 180);
-                const isMajor = i % 5 === 0;
-                const outerR = 146;
-                const innerR = isMajor ? 136 : 140;
-                const x1 = 150 + innerR * Math.cos(angle);
-                const y1 = 150 + innerR * Math.sin(angle);
-                const x2 = 150 + outerR * Math.cos(angle);
-                const y2 = 150 + outerR * Math.sin(angle);
-                return (
-                  <line
-                    key={i}
-                    x1={x1} y1={y1} x2={x2} y2={y2}
-                    stroke="currentColor"
-                    strokeWidth={isMajor ? 1.5 : 0.5}
-                    strokeLinecap="round"
-                    className={isMajor
-                      ? "text-baltic-300 dark:text-baltic-600"
-                      : "text-lavender-200 dark:text-lavender-700"
-                    }
-                  />
-                );
-              })}
-              {/* Duration arc — visual fill based on selected duration (max 120m) */}
-              {(() => {
-                const pct = Math.min(duration / 120, 1);
-                const r = 126;
-                const circumference = 2 * Math.PI * r;
-                const offset = circumference * (1 - pct);
-                return (
-                  <circle
-                    cx="150"
-                    cy="150"
-                    r={r}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    strokeLinecap="round"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={offset}
-                    className="text-baltic-400/30 dark:text-baltic-500/30 -rotate-90 origin-center transition-all duration-500"
-                  />
-                );
-              })()}
-              {/* Inner ring */}
-              <circle
-                cx="150"
-                cy="150"
-                r="105"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="0.5"
-                className="text-lavender-200 dark:text-lavender-700"
-              />
-            </svg>
+      <div className={cn("relative", isFullscreen && "hidden")}>
+        {/* Decorative blobs */}
+        <div className="absolute -top-8 -left-16 w-40 h-40 blob-3 bg-lavender-200/20 dark:bg-lavender-700/10 float-medium pointer-events-none" />
+        <div className="absolute top-48 -right-20 w-32 h-32 blob-1 bg-baltic-200/15 dark:bg-baltic-700/10 float-slow pointer-events-none" />
 
-            {/* Duration display in center */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <DurationPicker value={duration} onChange={setDuration} />
+        <div className="max-w-lg mx-auto">
+          {/* Timer setup */}
+          <div className="card-base rounded-2xl p-8 flex flex-col items-center">
+            {/* Decorative ring with tick marks */}
+            <div className="relative" style={{ width: 300, height: 300 }}>
+              <svg width={300} height={300} viewBox="0 0 300 300" className="absolute inset-0">
+                <circle cx="150" cy="150" r="146" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-lavender-200 dark:text-lavender-700" />
+                {Array.from({ length: 60 }).map((_, i) => {
+                  const angle = (i * 6 - 90) * (Math.PI / 180);
+                  const isMajor = i % 5 === 0;
+                  const outerR = 146;
+                  const innerR = isMajor ? 136 : 140;
+                  const x1 = 150 + innerR * Math.cos(angle);
+                  const y1 = 150 + innerR * Math.sin(angle);
+                  const x2 = 150 + outerR * Math.cos(angle);
+                  const y2 = 150 + outerR * Math.sin(angle);
+                  return (
+                    <line
+                      key={i}
+                      x1={x1} y1={y1} x2={x2} y2={y2}
+                      stroke="currentColor"
+                      strokeWidth={isMajor ? 1.5 : 0.5}
+                      strokeLinecap="round"
+                      className={isMajor
+                        ? "text-baltic-300 dark:text-baltic-600"
+                        : "text-lavender-200 dark:text-lavender-700"
+                      }
+                    />
+                  );
+                })}
+                {(() => {
+                  const pct = Math.min(duration / 120, 1);
+                  const r = 126;
+                  const circumference = 2 * Math.PI * r;
+                  const offset = circumference * (1 - pct);
+                  return (
+                    <circle
+                      cx="150" cy="150" r={r}
+                      fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round"
+                      strokeDasharray={circumference} strokeDashoffset={offset}
+                      className="text-baltic-400/30 dark:text-baltic-500/30 -rotate-90 origin-center transition-all duration-500"
+                    />
+                  );
+                })()}
+                <circle cx="150" cy="150" r="105" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-lavender-200 dark:text-lavender-700" />
+              </svg>
+
+              <div className="absolute inset-0 flex items-center justify-center">
+                <DurationPicker value={duration} onChange={setDuration} />
+              </div>
             </div>
+
+            <div className="w-16 border-t border-lavender-100 dark:border-lavender-800 my-5" />
+
+            <SubjectSelector value={subject} onChange={setSubject} />
+
+            <button
+              onClick={startTimer}
+              className="mt-6 w-full py-3.5 rounded-2xl bg-baltic-600 hover:bg-baltic-700 dark:bg-baltic-500 dark:hover:bg-baltic-400 text-white font-semibold text-sm shadow-[0_4px_20px_rgba(38,45,64,0.25)] hover:shadow-[0_6px_28px_rgba(38,45,64,0.35)] transition-smooth flex items-center justify-center gap-2"
+            >
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="10" cy="10" r="8" />
+                <path d="M10 6v4l2.5 2.5" />
+              </svg>
+              Start focusing
+            </button>
           </div>
-
-          {/* Divider */}
-          <div className="w-16 border-t border-lavender-100 dark:border-lavender-800 my-5" />
-
-          {/* Subject selector — clean inline layout */}
-          <SubjectSelector value={subject} onChange={setSubject} />
-
-          {/* Start button — prominent */}
-          <button
-            onClick={startTimer}
-            className="mt-6 w-full py-3.5 rounded-xl bg-baltic-600 hover:bg-baltic-700 dark:bg-baltic-500 dark:hover:bg-baltic-400 text-white font-semibold text-sm shadow-[0_4px_20px_rgba(38,45,64,0.25)] hover:shadow-[0_6px_28px_rgba(38,45,64,0.35)] transition-smooth flex items-center justify-center gap-2"
-          >
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="10" cy="10" r="8" />
-              <path d="M10 6v4l2.5 2.5" />
-            </svg>
-            Start focusing
-          </button>
         </div>
       </div>
     </>

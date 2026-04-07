@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   usePreferences,
   useTasks,
@@ -19,69 +19,11 @@ import {
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
-import QualityIndicator from "@/components/ui/QualityIndicator";
 import AimLogo from "@/components/layout/AimLogo";
-import CalendarSidebar from "@/components/dashboard/CalendarSidebar";
 import { useRouter } from "next/navigation";
 
-// Circular progress ring
-function FocusRing({
-  minutes,
-  goal,
-}: {
-  minutes: number;
-  goal: number;
-}) {
-  const size = 96;
-  const stroke = 6;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const progress = Math.min(minutes / goal, 1);
-  const offset = circumference * (1 - progress);
-  const pct = Math.min(Math.round(progress * 100), 100);
-
-  return (
-    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={stroke}
-          className="text-baltic-200 dark:text-baltic-700"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className="text-baltic-500 dark:text-baltic-400 transition-all duration-700"
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-xl font-bold text-baltic-700 dark:text-baltic-200 leading-none">
-          {pct}%
-        </span>
-        {minutes > 0 && (
-          <span className="text-[10px] text-steel-400 leading-none mt-1">
-            {formatTime(minutes)}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-
 export default function DashboardPage() {
-  const { name, isFirstVisit, setName } = usePreferences();
+  const { name, isFirstVisit, dailyGoal, setName } = usePreferences();
   const { tasks, toggleComplete } = useTasks();
   const { todayMinutes, streak, sessions } = useFocus();
   const { getSubject } = useSubjects();
@@ -89,10 +31,8 @@ export default function DashboardPage() {
 
   const [showWelcome, setShowWelcome] = useState(isFirstVisit);
   const [welcomeName, setWelcomeName] = useState("");
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const firstName = name ? name.split(" ")[0] : "there";
-  const dailyGoal = 120;
 
   const pendingTasks = useMemo(
     () =>
@@ -105,56 +45,40 @@ export default function DashboardPage() {
     [tasks]
   );
 
-  const upcomingTasks = useMemo(() => {
-    if (selectedDate) {
-      return pendingTasks.filter((t) => t.dueDate === selectedDate);
-    }
-    return pendingTasks.slice(0, 4);
-  }, [pendingTasks, selectedDate]);
+  const nextTask = pendingTasks[0];
+  const remainingCount = Math.max(pendingTasks.length - 1, 0);
 
-  const recentSessions = useMemo(
+  const lastSession = useMemo(
     () =>
-      [...sessions]
-        .sort(
-          (a, b) =>
-            new Date(b.completedAt).getTime() -
-            new Date(a.completedAt).getTime()
-        )
-        .slice(0, 3),
+      [...sessions].sort(
+        (a, b) =>
+          new Date(b.completedAt).getTime() -
+          new Date(a.completedAt).getTime()
+      )[0],
     [sessions]
   );
 
-  const subjectCards = useMemo(() => {
-    const subjectMap: Record<
-      string,
-      { total: number; completed: number; label: string; color: string }
-    > = {};
+  const focusPct = Math.min(Math.round((todayMinutes / dailyGoal) * 100), 100);
+  const minutesToGoal = Math.max(dailyGoal - todayMinutes, 0);
 
-    for (const task of tasks) {
-      const subKey = task.subject;
-      if (!subjectMap[subKey]) {
-        const sub = getSubject(subKey);
-        subjectMap[subKey] = {
-          total: 0,
-          completed: 0,
-          label: sub?.label || subKey,
-          color: sub?.color || "#60729f",
-        };
-      }
-      subjectMap[subKey].total++;
-      if (task.completed) subjectMap[subKey].completed++;
+  // SVG ring math
+  const ringRadius = 54;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringOffset = ringCircumference * (1 - focusPct / 100);
+
+  // Plain-language guidance copy that adapts to current state
+  const aimGuidance = useMemo(() => {
+    if (todayMinutes === 0) {
+      return `Your goal is ${formatTime(dailyGoal)}. Start whenever you're ready.`;
     }
-
-    return Object.entries(subjectMap)
-      .filter(([, v]) => v.total > 0)
-      .sort((a, b) => b[1].total - a[1].total)
-      .slice(0, 4)
-      .map(([key, val]) => ({
-        key,
-        ...val,
-        progress: Math.round((val.completed / val.total) * 100),
-      }));
-  }, [tasks, getSubject]);
+    if (focusPct >= 100) {
+      return "You hit today's goal. Anything more is a bonus.";
+    }
+    if (focusPct >= 75) {
+      return `Almost there — just ${formatTime(minutesToGoal)} left.`;
+    }
+    return `${formatTime(minutesToGoal)} to go to reach your goal.`;
+  }, [todayMinutes, dailyGoal, focusPct, minutesToGoal]);
 
   function handleWelcomeSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -164,373 +88,514 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex gap-6">
-      {/* Main content */}
-      <div className="flex-1 min-w-0">
-        {/* Welcome modal */}
-        <Modal
-          open={showWelcome}
-          onClose={() => {}}
-          width="sm"
-        >
-          <div className="text-center py-2">
-            <div className="flex justify-center mb-4">
-              <AimLogo size="md" />
-            </div>
-            <h2 className="text-display text-baltic-800 dark:text-baltic-100 mb-1">
-              Welcome to aim
-            </h2>
-            <p className="text-body text-steel-500 dark:text-steel-400 mb-5">
-              A calm space to plan your studies and build focus habits.
-            </p>
-            <form onSubmit={handleWelcomeSubmit} className="space-y-3">
-              <Input
-                id="welcome-name"
-                placeholder="What should we call you?"
-                value={welcomeName}
-                onChange={(e) => setWelcomeName(e.target.value)}
-                autoFocus
-                className="text-center"
-              />
-              <Button type="submit" className="w-full">
-                Get started
-              </Button>
-            </form>
+    <div className="relative">
+      {/* Welcome modal */}
+      <Modal open={showWelcome} onClose={() => {}} width="sm">
+        <div className="text-center py-2">
+          <div className="flex justify-center mb-4">
+            <AimLogo size="md" />
           </div>
-        </Modal>
-
-        {/* Header card with focus ring + stats */}
-        <div className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100">
-                {getGreeting()}, {firstName}
-              </h1>
-              <p className="text-sm text-steel-400 mt-1">
-                {getWeekday()}, {getFormattedDate()}
-              </p>
-
-              {/* Stats row */}
-              <div className="flex items-center gap-6 mt-5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-lg bg-cream-100 dark:bg-cream-900/30 flex items-center justify-center">
-                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-cream-600 dark:text-cream-400">
-                      <path d="M10 2v3M10 15v3M4.93 4.93l2.12 2.12M12.95 12.95l2.12 2.12M2 10h3M15 10h3M4.93 15.07l2.12-2.12M12.95 7.05l2.12-2.12" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
-                      {streak}
-                    </p>
-                    <p className="text-xs font-medium text-steel-400 mt-0.5">
-                      day streak
-                    </p>
-                  </div>
-                </div>
-                <div className="w-px h-10 bg-lavender-200 dark:bg-lavender-700" />
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-lg bg-ash-100 dark:bg-ash-900/30 flex items-center justify-center">
-                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-ash-600 dark:text-ash-400">
-                      <rect x="3" y="4" width="14" height="14" rx="2" />
-                      <path d="M7 9h6M7 13h4" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
-                      {pendingTasks.length}
-                    </p>
-                    <p className="text-xs font-medium text-steel-400 mt-0.5">
-                      task{pendingTasks.length !== 1 ? "s" : ""} left
-                    </p>
-                  </div>
-                </div>
-                <div className="w-px h-10 bg-lavender-200 dark:bg-lavender-700" />
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-lg bg-lavender-100 dark:bg-lavender-800/40 flex items-center justify-center">
-                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-lavender-500 dark:text-lavender-400">
-                      <circle cx="10" cy="10" r="8" />
-                      <path d="M10 6v4l2.5 2.5" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-3xl font-extrabold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
-                      {formatTime(todayMinutes)}
-                    </p>
-                    <p className="text-xs font-medium text-steel-400 mt-0.5">
-                      focused today
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center">
-              <FocusRing minutes={todayMinutes} goal={dailyGoal} />
-              <p className="text-[11px] font-medium text-steel-400 mt-1.5">
-                Daily focus
-              </p>
-            </div>
-          </div>
+          <h2 className="text-display text-baltic-800 dark:text-baltic-100 mb-1">
+            Welcome to aim
+          </h2>
+          <p className="text-body text-steel-500 dark:text-steel-400 mb-5">
+            A calm space to plan your studies and build focus habits.
+          </p>
+          <form onSubmit={handleWelcomeSubmit} className="space-y-3">
+            <Input
+              id="welcome-name"
+              placeholder="What should we call you?"
+              value={welcomeName}
+              onChange={(e) => setWelcomeName(e.target.value)}
+              autoFocus
+              className="text-center"
+            />
+            <Button type="submit" className="w-full">
+              Get started
+            </Button>
+          </form>
         </div>
+      </Modal>
 
-        {/* Subject progress */}
-        {subjectCards.length > 0 && (
-          <div className="mt-6 mb-2">
-            <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">
-              Subjects
-            </h2>
-            <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(subjectCards.length, 4)}, minmax(0, 1fr))` }}>
-              {subjectCards.map((subject) => {
-                const s = 44;
-                const cx = s / 2;
-                const outerR = s / 2 - 1;
-                const innerR = 8;
-                const progress = subject.progress / 100;
-
-                // Build a filled arc path (like the "a" in the aim logo)
-                // Full circle when 100%, arc + lines to center otherwise
-                const startAngle = -Math.PI / 2;
-                const endAngle = startAngle + 2 * Math.PI * Math.min(progress, 0.999);
-                const largeArc = progress > 0.5 ? 1 : 0;
-                const sx = cx + outerR * Math.cos(startAngle);
-                const sy = cx + outerR * Math.sin(startAngle);
-                const ex = cx + outerR * Math.cos(endAngle);
-                const ey = cx + outerR * Math.sin(endAngle);
-
-                const arcPath =
-                  progress >= 1
-                    ? `M${cx},${cx - outerR} A${outerR},${outerR} 0 1,1 ${cx - 0.01},${cx - outerR} A${outerR},${outerR} 0 0,1 ${cx},${cx - outerR}Z`
-                    : `M${cx},${cx} L${sx},${sy} A${outerR},${outerR} 0 ${largeArc},1 ${ex},${ey} Z`;
-
-                return (
-                  <div
-                    key={subject.key}
-                    className="rounded-xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 p-4 flex items-center gap-3"
-                  >
-                    {/* Filled arc with counter dot — aim logo style */}
-                    <div className="flex-shrink-0" style={{ width: s, height: s }}>
-                      <svg width={s} height={s}>
-                        {/* Track circle */}
-                        <circle
-                          cx={cx}
-                          cy={cx}
-                          r={outerR}
-                          className="fill-lavender-100 dark:fill-lavender-800"
-                        />
-                        {/* Filled progress arc */}
-                        {progress > 0 && (
-                          <path
-                            d={arcPath}
-                            fill={subject.color}
-                            style={{ opacity: 0.8 }}
-                            className="transition-all duration-500"
-                          />
-                        )}
-                        {/* White counter dot (like the "a" in aim) */}
-                        <circle
-                          cx={cx}
-                          cy={cx}
-                          r={innerR}
-                          className="fill-white dark:fill-lavender-900"
-                        />
-                      </svg>
-                    </div>
-
-                    {/* Label + count */}
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-baltic-800 dark:text-baltic-100 truncate">
-                        {subject.label}
-                      </p>
-                      <p className="text-xs text-steel-400">
-                        {subject.completed}/{subject.total} done
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Up next — timeline-style task cards */}
-        <div className="mt-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-title text-baltic-800 dark:text-baltic-100">
-              {selectedDate ? `Tasks for ${formatDate(selectedDate)}` : "Up next"}
-            </h2>
-            <button
-              onClick={() => router.push("/tasks")}
-              className="text-xs text-baltic-500 hover:text-baltic-700 dark:hover:text-baltic-300 font-medium transition-smooth"
-            >
-              View all
-            </button>
-          </div>
-
-          {upcomingTasks.length > 0 ? (
-            <div className="relative">
-              {/* Timeline connector line */}
-              <div className="absolute left-[15px] top-4 bottom-4 w-px bg-lavender-200 dark:bg-lavender-700" />
-
-              <div className="space-y-2">
-                {upcomingTasks.map((task, i) => {
-                  const subject = getSubject(task.subject);
-                  const overdue = isOverdue(task.dueDate);
-                  const color = subject?.color || "#60729f";
-                  return (
-                    <div
-                      key={task.id}
-                      className={cn(
-                        "group relative flex items-start gap-4 rounded-xl p-3.5 pl-10 transition-smooth",
-                        "bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700",
-                        "hover:shadow-sm hover:border-lavender-300 dark:hover:border-lavender-600",
-                        i === 0 && "ring-1 ring-baltic-200 dark:ring-baltic-700"
-                      )}
-                    >
-                      {/* Timeline dot / check circle */}
-                      <button
-                        onClick={() => toggleComplete(task.id)}
-                        className="absolute left-2.5 top-1/2 -translate-y-1/2 w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center transition-smooth hover:scale-110 bg-white dark:bg-lavender-900"
-                        style={{ borderColor: color }}
-                        title="Mark complete"
-                      >
-                        <svg
-                          width="12"
-                          height="12"
-                          viewBox="0 0 12 12"
-                          fill="none"
-                          stroke={color}
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <path d="M2 6l3 3 5-5" />
-                        </svg>
-                      </button>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className={cn(
-                            "text-sm font-semibold truncate",
-                            i === 0
-                              ? "text-baltic-800 dark:text-baltic-100"
-                              : "text-baltic-700 dark:text-baltic-200"
-                          )}>
-                            {task.title}
-                          </p>
-                          {i === 0 && (
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-baltic-500 bg-baltic-100 dark:bg-baltic-800 dark:text-baltic-400 px-1.5 py-0.5 rounded flex-shrink-0">
-                              Next
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span
-                            className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: color }}
-                          />
-                          <span className="text-xs text-steel-400 truncate">
-                            {subject?.label || task.subject}
-                          </span>
-                          <span className="text-xs text-steel-300 dark:text-steel-600">
-                            ·
-                          </span>
-                          <span
-                            className={cn(
-                              "text-xs",
-                              overdue
-                                ? "text-red-500 font-medium"
-                                : "text-steel-400"
-                            )}
-                          >
-                            {formatDate(task.dueDate)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-lavender-300 dark:border-lavender-600 py-10 text-center">
-              <div className="flex justify-center mb-3">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-lavender-300 dark:text-lavender-600">
-                  <circle cx="16" cy="16" r="12" />
-                  <path d="M11 16l3 3 7-7" />
-                </svg>
-              </div>
-              <p className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
-                {selectedDate ? "Nothing scheduled" : "All caught up!"}
-              </p>
-              <p className="text-xs text-steel-400 mt-0.5">
-                {selectedDate
-                  ? "Pick a date or add new tasks."
-                  : "Enjoy the calm. You've earned it."}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Recent sessions — compact strip */}
-        {recentSessions.length > 0 && (
-          <div className="mt-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-title text-baltic-800 dark:text-baltic-100">
-                Recent sessions
-              </h2>
-              <button
-                onClick={() => router.push("/journal")}
-                className="text-xs text-baltic-500 hover:text-baltic-700 dark:hover:text-baltic-300 font-medium transition-smooth"
-              >
-                View all
-              </button>
-            </div>
-            <div className="flex gap-3">
-              {recentSessions.map((session) => {
-                const sub = getSubject(session.subject);
-                return (
-                  <div
-                    key={session.id}
-                    className="flex-1 rounded-lg bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 p-3"
-                  >
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span
-                        className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: sub?.color || "#60729f" }}
-                      />
-                      <span className="text-xs font-semibold text-baltic-700 dark:text-baltic-300 truncate">
-                        {sub?.label || session.subject}
-                      </span>
-                      {session.reflection && (
-                        <QualityIndicator
-                          quality={session.reflection.quality}
-                          size={12}
-                        />
-                      )}
-                    </div>
-                    <p className="text-lg font-bold text-baltic-800 dark:text-baltic-100 leading-none">
-                      {formatTime(session.duration)}
-                    </p>
-                    {session.reflection?.note && (
-                      <p className="text-[11px] text-steel-400 mt-1 italic truncate">
-                        &ldquo;{session.reflection.note}&rdquo;
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Calendar sidebar */}
-      <CalendarSidebar
-        selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
+      {/* ─── Decorative blobs (subtle, behind everything) ─── */}
+      <div
+        aria-hidden
+        className="absolute top-32 right-[-80px] w-72 h-72 blob-1 bg-baltic-200/25 dark:bg-baltic-700/15 float-slow pointer-events-none -z-10"
+      />
+      <div
+        aria-hidden
+        className="absolute top-[520px] left-[-60px] w-40 h-40 blob-3 bg-cream-200/30 dark:bg-cream-800/15 float-medium pointer-events-none -z-10"
+      />
+      <div
+        aria-hidden
+        className="absolute bottom-20 right-[8%] w-32 h-32 blob-2 bg-ash-200/30 dark:bg-ash-800/15 float-slow pointer-events-none -z-10"
       />
 
+      {/* ─── 1. Greeting (plain, sets the room) ─── */}
+      <header className="mb-8">
+        <p className="text-xs font-mono uppercase tracking-[0.2em] text-steel-400 mb-2">
+          {getWeekday()} · {getFormattedDate()}
+        </p>
+        <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100 leading-tight">
+          {getGreeting()},{" "}
+          <span className="italic font-light text-baltic-600 dark:text-baltic-300">
+            {firstName}.
+          </span>
+        </h1>
+      </header>
+
+      {/* ─── 2. Your aim today — primary card ─── */}
+      <TapeCard tapeColor="cream" className="mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 md:gap-8 items-center">
+          {/* Target ring */}
+          <div className="relative mx-auto md:mx-0">
+            <div className="absolute inset-0 -m-4 rounded-full bg-baltic-100/50 dark:bg-baltic-800/30 blur-xl" />
+            <svg
+              viewBox="0 0 130 130"
+              className="relative w-44 h-44"
+              aria-label={`${focusPct} percent of daily goal complete`}
+            >
+              {/* Concentric target rings */}
+              <circle
+                cx="65"
+                cy="65"
+                r={ringRadius}
+                stroke="currentColor"
+                className="text-lavender-200 dark:text-lavender-800"
+                strokeWidth="3"
+                fill="none"
+              />
+              <circle
+                cx="65"
+                cy="65"
+                r={ringRadius - 10}
+                stroke="currentColor"
+                className="text-lavender-200/60 dark:text-lavender-800/60"
+                strokeWidth="1"
+                fill="none"
+              />
+              <circle
+                cx="65"
+                cy="65"
+                r={ringRadius - 20}
+                stroke="currentColor"
+                className="text-lavender-200/40 dark:text-lavender-800/40"
+                strokeWidth="1"
+                fill="none"
+              />
+              <circle
+                cx="65"
+                cy="65"
+                r="3"
+                className="fill-baltic-700 dark:fill-baltic-300"
+              />
+              {/* Progress arc */}
+              <circle
+                cx="65"
+                cy="65"
+                r={ringRadius}
+                stroke="currentColor"
+                className="text-baltic-600 dark:text-baltic-400"
+                strokeWidth="6"
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={ringCircumference}
+                strokeDashoffset={ringOffset}
+                transform="rotate(-90 65 65)"
+                style={{ transition: "stroke-dashoffset 1s ease-out" }}
+              />
+              {/* Center text */}
+              <text
+                x="65"
+                y="62"
+                textAnchor="middle"
+                className="fill-baltic-800 dark:fill-baltic-100"
+                style={{ fontSize: "20px", fontWeight: 700 }}
+              >
+                {formatTime(todayMinutes)}
+              </text>
+              <text
+                x="65"
+                y="80"
+                textAnchor="middle"
+                className="fill-steel-400"
+                style={{ fontSize: "9px", letterSpacing: "1.5px", textTransform: "uppercase" }}
+              >
+                of {formatTime(dailyGoal)}
+              </text>
+            </svg>
+          </div>
+
+          {/* Title + guidance + CTA */}
+          <div className="text-center md:text-left">
+            <CardEyebrow>Your aim today</CardEyebrow>
+            <p className="mt-2 text-2xl font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
+              {aimGuidance}
+            </p>
+
+            {/* Progress bar with anchors */}
+            <div className="mt-4">
+              <div className="h-2 rounded-full bg-lavender-100 dark:bg-lavender-800 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-baltic-600 dark:bg-baltic-400 transition-all duration-700"
+                  style={{ width: `${focusPct}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between mt-1.5">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-steel-400">
+                  Start
+                </span>
+                <span className="text-[10px] font-bold text-baltic-600 dark:text-baltic-400 tabular-nums">
+                  {focusPct}%
+                </span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-steel-400">
+                  Goal
+                </span>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <button
+              onClick={() => router.push("/focus")}
+              className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors shadow-sm"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-cream-300 animate-pulse" />
+              {todayMinutes === 0 ? "Begin a focus session" : "Continue focusing"}
+              <span className="text-base leading-none">→</span>
+            </button>
+          </div>
+        </div>
+      </TapeCard>
+
+      {/* ─── Pointer arrow ─── */}
+      <div className="flex justify-center mb-3">
+        <div className="flex flex-col items-center text-steel-400">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
+            Start here
+          </span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M7 2v10M3 8l4 4 4-4" />
+          </svg>
+        </div>
+      </div>
+
+      {/* ─── 3. Next up — guided task card ─── */}
+      <TapeCard tapeColor="baltic" className="mb-6">
+        <CardEyebrow>Next up</CardEyebrow>
+
+        {nextTask ? (
+          <NextTaskBlock
+            task={nextTask}
+            subject={getSubject(nextTask.subject)}
+            onComplete={() => toggleComplete(nextTask.id)}
+            onFocus={() => router.push("/focus")}
+            onViewAll={() => router.push("/tasks")}
+            remainingCount={remainingCount}
+          />
+        ) : (
+          <EmptyBlock
+            title="Nothing on your plate."
+            subtitle="A clear list is a fine place to begin."
+            actionLabel="Add your first task"
+            onAction={() => router.push("/tasks")}
+          />
+        )}
+      </TapeCard>
+
+      {/* ─── 4. Two side-by-side context cards ─── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Streak card */}
+        <TapeCard tapeColor="ash">
+          <CardEyebrow>Your streak</CardEyebrow>
+          <div className="mt-3 flex items-center gap-4">
+            {/* Flame */}
+            <div className="w-14 h-14 rounded-2xl bg-cream-100 dark:bg-cream-900/40 flex items-center justify-center flex-shrink-0">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-cream-600 dark:text-cream-400">
+                <path d="M12 2c2.5 4 5 7 5 11a5 5 0 1 1-10 0c0-4 2.5-7 5-11Z" />
+                <path d="M12 16a2 2 0 0 0 2-2c0-1.5-1-2-2-3.5-1 1.5-2 2-2 3.5a2 2 0 0 0 2 2Z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-baltic-800 dark:text-baltic-100 leading-none tabular-nums">
+                {streak}
+              </p>
+              <p className="text-xs text-steel-500 dark:text-steel-400 mt-1">
+                {streak === 0
+                  ? "Start one today."
+                  : streak === 1
+                  ? "day in a row. Keep it going."
+                  : `days in a row. Don't break it today.`}
+              </p>
+            </div>
+          </div>
+        </TapeCard>
+
+        {/* Pick up where you left off */}
+        <TapeCard tapeColor="lavender">
+          <CardEyebrow>Pick up where you left off</CardEyebrow>
+          {lastSession ? (
+            <LastSessionBlock
+              session={lastSession}
+              subject={getSubject(lastSession.subject)}
+              onContinue={() => router.push("/focus")}
+              onViewJournal={() => router.push("/journal")}
+            />
+          ) : (
+            <div className="mt-3">
+              <p className="text-sm text-steel-500 dark:text-steel-400">
+                No sessions yet. Your first one will live here.
+              </p>
+              <button
+                onClick={() => router.push("/focus")}
+                className="mt-3 text-xs font-semibold text-baltic-600 dark:text-baltic-400 hover:text-baltic-800 dark:hover:text-baltic-200 transition-colors"
+              >
+                Start your first session →
+              </button>
+            </div>
+          )}
+        </TapeCard>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   REUSABLE PIECES — single design language across the page
+   ───────────────────────────────────────────────────────────── */
+
+/* Tape strip color variants */
+const TAPE_VARIANTS = {
+  cream: "bg-cream-300/70 dark:bg-cream-600/50",
+  baltic: "bg-baltic-300/60 dark:bg-baltic-600/50",
+  ash: "bg-ash-300/60 dark:bg-ash-600/50",
+  lavender: "bg-lavender-300/70 dark:bg-lavender-600/50",
+} as const;
+
+type TapeColor = keyof typeof TAPE_VARIANTS;
+
+/* Unified card with tape strip — used for every section */
+function TapeCard({
+  children,
+  tapeColor = "cream",
+  className,
+}: {
+  children: ReactNode;
+  tapeColor?: TapeColor;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "relative rounded-2xl bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-800 px-6 pt-8 pb-6 shadow-sm",
+        className
+      )}
+    >
+      {/* Tape strip */}
+      <div
+        aria-hidden
+        className={cn(
+          "absolute -top-2 left-8 w-16 h-4 rounded-sm shadow-sm",
+          TAPE_VARIANTS[tapeColor]
+        )}
+        style={{ clipPath: "polygon(5% 0, 95% 0, 100% 100%, 0 100%)" }}
+      />
+      {children}
+    </div>
+  );
+}
+
+/* Small uppercase eyebrow used at the top of every card */
+function CardEyebrow({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-steel-500 dark:text-steel-400">
+      {children}
+    </p>
+  );
+}
+
+/* Next task block — guided action */
+function NextTaskBlock({
+  task,
+  subject,
+  onComplete,
+  onFocus,
+  onViewAll,
+  remainingCount,
+}: {
+  task: { id: string; title: string; subject: string; dueDate: string };
+  subject: { label: string; color: string } | undefined;
+  onComplete: () => void;
+  onFocus: () => void;
+  onViewAll: () => void;
+  remainingCount: number;
+}) {
+  const color = subject?.color || "#60729f";
+  const overdue = isOverdue(task.dueDate);
+
+  return (
+    <div className="mt-3">
+      {/* Task headline */}
+      <div className="flex items-start gap-4">
+        <div
+          className="w-1 self-stretch rounded-full flex-shrink-0 mt-1"
+          style={{ backgroundColor: color }}
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-xl font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
+            {task.title}
+          </p>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 text-xs text-steel-500 dark:text-steel-400">
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+              {subject?.label || task.subject}
+            </span>
+            <span className="text-steel-300 dark:text-steel-600">·</span>
+            <span
+              className={cn(
+                "text-xs font-medium",
+                overdue
+                  ? "text-red-500"
+                  : "text-steel-500 dark:text-steel-400"
+              )}
+            >
+              {overdue ? "Overdue" : `Due ${formatDate(task.dueDate)}`}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="mt-5 flex items-center gap-2 flex-wrap">
+        <button
+          onClick={onFocus}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-xs font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors"
+        >
+          Focus on this
+          <span className="text-sm leading-none">→</span>
+        </button>
+        <button
+          onClick={onComplete}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-lavender-200 dark:border-lavender-700 text-baltic-700 dark:text-baltic-300 text-xs font-semibold hover:bg-baltic-50 dark:hover:bg-baltic-900/40 transition-colors"
+        >
+          <svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 5l2.5 2.5L8 3" />
+          </svg>
+          Mark done
+        </button>
+      </div>
+
+      {/* More tasks footer */}
+      {remainingCount > 0 && (
+        <div className="mt-5 pt-4 border-t border-dashed border-lavender-200 dark:border-lavender-800">
+          <button
+            onClick={onViewAll}
+            className="text-xs text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors"
+          >
+            <span className="font-semibold tabular-nums">{remainingCount}</span>{" "}
+            more on your list →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Last session block */
+function LastSessionBlock({
+  session,
+  subject,
+  onContinue,
+  onViewJournal,
+}: {
+  session: { id: string; subject: string; duration: number; completedAt: string };
+  subject: { label: string; color: string } | undefined;
+  onContinue: () => void;
+  onViewJournal: () => void;
+}) {
+  const color = subject?.color || "#60729f";
+  const date = new Date(session.completedAt);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  const whenLabel = isToday
+    ? "Earlier today"
+    : isYesterday
+    ? "Yesterday"
+    : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const timeLabel = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  return (
+    <div className="mt-3">
+      <div className="flex items-center gap-3">
+        <div
+          className="w-1 self-stretch rounded-full flex-shrink-0"
+          style={{ backgroundColor: color }}
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-base font-bold text-baltic-800 dark:text-baltic-100 truncate">
+            {subject?.label || session.subject}
+          </p>
+          <p className="text-xs text-steel-500 dark:text-steel-400 mt-0.5">
+            {formatTime(session.duration)} · {whenLabel} at {timeLabel}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center gap-2">
+        <button
+          onClick={onContinue}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-xs font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors"
+        >
+          Continue
+          <span className="text-sm leading-none">→</span>
+        </button>
+        <button
+          onClick={onViewJournal}
+          className="text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors px-2"
+        >
+          See journal
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* Empty state for next-up */
+function EmptyBlock({
+  title,
+  subtitle,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  subtitle: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  return (
+    <div className="mt-3 py-2">
+      <p className="text-xl font-bold text-baltic-800 dark:text-baltic-100">
+        {title}
+      </p>
+      <p className="text-xs text-steel-500 dark:text-steel-400 italic mt-1">
+        {subtitle}
+      </p>
+      <button
+        onClick={onAction}
+        className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-xs font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors"
+      >
+        {actionLabel}
+        <span className="text-sm leading-none">→</span>
+      </button>
     </div>
   );
 }

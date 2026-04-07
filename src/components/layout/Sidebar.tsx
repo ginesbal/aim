@@ -58,7 +58,7 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[220px] bg-baltic-800 dark:bg-baltic-950 flex flex-col z-40">
       {/* Brand */}
-      <button onClick={() => router.push("/dashboard")} className="px-5 pt-7 pb-8 cursor-pointer">
+      <button onClick={() => router.push("/dashboard")} className="px-5 pt-7 pb-8 cursor-pointer" aria-label="Go to dashboard">
         <AnimatedAimLogo />
       </button>
 

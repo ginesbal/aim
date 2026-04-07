@@ -31,17 +31,21 @@ function save(key: string, value: unknown) {
 interface PreferencesState {
   name: string;
   isFirstVisit: boolean;
+  dailyGoal: number;
   setName: (name: string) => void;
+  setDailyGoal: (minutes: number) => void;
 }
 
 const PreferencesContext = createContext<PreferencesState | null>(null);
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [name, setNameState] = useState("");
+  const [dailyGoal, setDailyGoalState] = useState(120);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setNameState(load<string>("aim_name", ""));
+    setDailyGoalState(load<number>("aim_daily_goal", 120));
     setMounted(true);
   }, []);
 
@@ -50,10 +54,15 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     save("aim_name", n);
   }, []);
 
+  const setDailyGoal = useCallback((m: number) => {
+    setDailyGoalState(m);
+    save("aim_daily_goal", m);
+  }, []);
+
   if (!mounted) return null;
 
   return (
-    <PreferencesContext.Provider value={{ name, isFirstVisit: !name, setName }}>
+    <PreferencesContext.Provider value={{ name, isFirstVisit: !name, dailyGoal, setName, setDailyGoal }}>
       {children}
     </PreferencesContext.Provider>
   );

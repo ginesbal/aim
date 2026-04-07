@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import Sidebar from "./Sidebar";
+import TopNav from "./TopNav";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -17,9 +17,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   if (pathname === "/") return null;
 
   return (
-    <div className="min-h-screen bg-baltic-50 dark:bg-baltic-950 flex">
-      <Sidebar />
-      <main className="flex-1 ml-[220px] py-8 px-8">
+    <div className="min-h-screen bg-baltic-50 dark:bg-baltic-950">
+      <TopNav />
+      <main className="pt-24 pb-12 px-8 max-w-6xl mx-auto">
         {children}
       </main>
     </div>
