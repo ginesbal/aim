@@ -59,10 +59,19 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     save("aim_daily_goal", m);
   }, []);
 
-  if (!mounted) return null;
-
+  // Render children eagerly with safe defaults so the page paints immediately.
+  // `isFirstVisit` is only true once we've actually finished hydrating from localStorage
+  // — this prevents the welcome modal from flashing for returning users.
   return (
-    <PreferencesContext.Provider value={{ name, isFirstVisit: !name, dailyGoal, setName, setDailyGoal }}>
+    <PreferencesContext.Provider
+      value={{
+        name,
+        isFirstVisit: mounted && !name,
+        dailyGoal,
+        setName,
+        setDailyGoal,
+      }}
+    >
       {children}
     </PreferencesContext.Provider>
   );
@@ -85,12 +94,14 @@ interface TasksState {
 
 const TasksContext = createContext<TasksState | null>(null);
 
+// Sample tasks reference DEFAULT_USER_SUBJECTS by id so getSubject() resolves them
+// out of the box (previously used lowercase strings that matched neither id nor label).
 const SAMPLE_TASKS: Task[] = [
   {
     id: "demo1",
     title: "Linear algebra problem set",
     description: "Complete exercises 4.1 through 4.8 on vector spaces and eigenvalues",
-    subject: "mathematics",
+    subject: "math",
     dueDate: new Date(Date.now() + 86400000).toISOString().split("T")[0],
     priority: "high",
     completed: false,
@@ -100,7 +111,7 @@ const SAMPLE_TASKS: Task[] = [
     id: "demo2",
     title: "Read chapter on Romanticism",
     description: "Focus on the transition from Neoclassicism and key authors of the period",
-    subject: "literature",
+    subject: "lit",
     dueDate: new Date(Date.now() + 86400000 * 2).toISOString().split("T")[0],
     priority: "medium",
     completed: false,
@@ -110,7 +121,7 @@ const SAMPLE_TASKS: Task[] = [
     id: "demo3",
     title: "Lab report — Organic compounds",
     description: "Write up findings from Wednesday's spectroscopy lab session",
-    subject: "science",
+    subject: "sci",
     dueDate: new Date().toISOString().split("T")[0],
     priority: "high",
     completed: false,
@@ -118,9 +129,9 @@ const SAMPLE_TASKS: Task[] = [
   },
   {
     id: "demo4",
-    title: "Microeconomics essay outline",
-    description: "Draft thesis and outline for market failure case study essay",
-    subject: "economics",
+    title: "Studio brief — Identity system",
+    description: "Sketch logomark directions and present three concepts",
+    subject: "design",
     dueDate: new Date(Date.now() + 86400000 * 3).toISOString().split("T")[0],
     priority: "low",
     completed: false,
@@ -130,7 +141,7 @@ const SAMPLE_TASKS: Task[] = [
     id: "demo5",
     title: "Spanish verb conjugation practice",
     description: "Subjunctive mood irregular verbs — use flashcard deck",
-    subject: "languages",
+    subject: "lang",
     dueDate: new Date(Date.now() + 86400000).toISOString().split("T")[0],
     priority: "medium",
     completed: false,
@@ -140,7 +151,7 @@ const SAMPLE_TASKS: Task[] = [
     id: "demo6",
     title: "History source analysis",
     description: "Analyze primary sources from the Industrial Revolution for Thursday's seminar",
-    subject: "history",
+    subject: "hist",
     dueDate: new Date(Date.now() + 86400000 * 4).toISOString().split("T")[0],
     priority: "medium",
     completed: true,
@@ -223,14 +234,14 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     } else {
       const now = new Date();
       const sampleSessions: FocusSession[] = [];
-      const subjects = ["mathematics", "science", "literature", "economics", "history"];
+      const subjects = ["math", "sci", "lit", "design", "hist"];
       const durations = [45, 30, 25, 50, 25];
       const qualities = [4, 3, 3, 4, 2] as const;
       const notes = [
         "Eigenvalue decomposition finally clicked",
         "Spectroscopy results were clearer than expected",
         "Romanticism chapter was dense but interesting",
-        "Market failure essay outline is solid now",
+        "Sketch direction for the identity system is taking shape",
         "",
       ];
       for (let i = 0; i < 5; i++) {

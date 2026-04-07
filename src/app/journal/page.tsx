@@ -121,15 +121,15 @@ export default function JournalPage() {
       {/* ─── Decorative blobs ─── */}
       <div
         aria-hidden
-        className="absolute top-10 right-[-50px] w-56 h-56 blob-1 bg-cream-200/25 dark:bg-cream-800/15 float-slow pointer-events-none -z-10"
+        className="hidden sm:block absolute top-10 right-[-50px] w-44 h-44 lg:w-56 lg:h-56 blob-1 bg-cream-200/25 dark:bg-cream-800/20 float-slow pointer-events-none -z-10"
       />
       <div
         aria-hidden
-        className="absolute top-[420px] left-[-70px] w-40 h-40 blob-3 bg-baltic-200/25 dark:bg-baltic-700/15 float-medium pointer-events-none -z-10"
+        className="hidden md:block absolute top-[420px] left-[-70px] w-32 h-32 lg:w-40 lg:h-40 blob-3 bg-baltic-200/25 dark:bg-baltic-700/20 float-medium pointer-events-none -z-10"
       />
       <div
         aria-hidden
-        className="absolute bottom-40 right-[5%] w-28 h-28 blob-2 bg-lavender-200/40 dark:bg-lavender-800/20 float-slow pointer-events-none -z-10"
+        className="hidden lg:block absolute bottom-40 right-[5%] w-28 h-28 blob-2 bg-lavender-200/40 dark:bg-lavender-800/25 float-slow pointer-events-none -z-10"
       />
 
       {/* ─── SECTION 1: Header ─── */}
@@ -170,7 +170,7 @@ export default function JournalPage() {
           {/* Chart area with y-axis labels */}
           <div className="flex gap-3 mb-2">
             {/* Y-axis labels */}
-            <div className="flex flex-col justify-between text-[10px] text-steel-400 font-mono tabular-nums w-10 text-right py-1">
+            <div className="flex flex-col justify-between text-xs text-steel-500 dark:text-steel-400 font-mono tabular-nums w-11 sm:w-12 text-right py-1">
               <span>{formatTime(heatmap.maxMins)}</span>
               <span>{formatTime(Math.round(heatmap.maxMins / 2))}</span>
               <span>0m</span>
@@ -180,18 +180,27 @@ export default function JournalPage() {
             <div className="flex-1 relative">
               {/* Gridlines */}
               <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-                <div className="border-t border-dashed border-lavender-200 dark:border-lavender-800" />
-                <div className="border-t border-dashed border-lavender-200 dark:border-lavender-800" />
-                <div className="border-t-2 border-baltic-300 dark:border-baltic-700" />
+                <div className="border-t border-steel-200/60 dark:border-steel-700/40" />
+                <div className="border-t border-steel-200/60 dark:border-steel-700/40" />
+                <div className="border-t border-steel-300 dark:border-steel-600" />
               </div>
 
               {/* Bars */}
               <div className="relative flex items-end justify-between gap-2 h-32 px-1">
                 {heatmap.days.map((day, idx) => {
                   const heightPct = (day.minutes / heatmap.maxMins) * 100;
+                  const sessionCount = sessions.filter(
+                    (s) =>
+                      new Date(s.completedAt).toDateString() ===
+                      new Date(
+                        Date.now() - (6 - idx) * 86400000
+                      ).toDateString()
+                  ).length;
                   return (
                     <div
                       key={idx}
+                      role="img"
+                      aria-label={`${day.label}: ${day.minutes} minutes across ${sessionCount} session${sessionCount === 1 ? "" : "s"}`}
                       className="flex-1 flex flex-col items-center justify-end h-full group cursor-default"
                     >
                       {/* Always-visible value above bar */}
@@ -234,7 +243,7 @@ export default function JournalPage() {
 
           {/* X-axis labels */}
           <div className="flex gap-3">
-            <div className="w-10" />
+            <div className="w-11 sm:w-12" />
             <div className="flex-1 flex justify-between gap-2 px-1">
               {heatmap.days.map((day, idx) => (
                 <div
@@ -243,17 +252,17 @@ export default function JournalPage() {
                 >
                   <span
                     className={cn(
-                      "text-[11px] font-bold uppercase",
+                      "text-xs font-bold uppercase",
                       day.isToday
                         ? "text-baltic-700 dark:text-baltic-200"
-                        : "text-steel-400"
+                        : "text-steel-500 dark:text-steel-400"
                     )}
                   >
                     {day.label}
                   </span>
                   <span
                     className={cn(
-                      "text-[10px] tabular-nums mt-0.5",
+                      "text-[11px] tabular-nums mt-0.5",
                       day.isToday
                         ? "text-baltic-700 dark:text-baltic-200 font-bold"
                         : "text-steel-400"
@@ -375,7 +384,7 @@ export default function JournalPage() {
                     <div
                       key={session.id}
                       className={cn(
-                        "relative rounded-xl bg-white dark:bg-lavender-900 border-2 border-lavender-200 dark:border-lavender-800 p-5 pt-7 shadow-md hover:shadow-lg hover:rotate-0 hover:z-10 transition-all duration-300",
+                        "relative rounded-xl bg-white dark:bg-lavender-900 border-2 border-lavender-200 dark:border-lavender-800 p-5 pt-7 shadow-md hover:shadow-lg hover:!rotate-0 hover:scale-[1.02] hover:z-10 transition-all duration-300 ease-out",
                         rotation
                       )}
                     >
@@ -458,10 +467,10 @@ export default function JournalPage() {
             <div className="w-4 h-4 rounded-full bg-baltic-200/60 dark:bg-baltic-700/30 mt-0.5" />
           </div>
           <p className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
-            No sessions recorded yet
+            No sessions yet
           </p>
-          <p className="text-xs text-steel-400 mt-1">
-            Complete a focus session to start building your journal.
+          <p className="text-xs text-steel-500 dark:text-steel-400 mt-1">
+            Your reflections will appear here once you finish a focus session.
           </p>
         </section>
       )}

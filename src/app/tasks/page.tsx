@@ -91,11 +91,11 @@ export default function TasksPage() {
       {/* ─── Decorative blobs ─── */}
       <div
         aria-hidden
-        className="absolute top-8 right-[-60px] w-56 h-56 blob-2 bg-ash-200/25 dark:bg-ash-800/15 float-slow pointer-events-none -z-10"
+        className="hidden sm:block absolute top-8 right-[-60px] w-44 h-44 lg:w-56 lg:h-56 blob-2 bg-ash-200/25 dark:bg-ash-800/20 float-slow pointer-events-none -z-10"
       />
       <div
         aria-hidden
-        className="absolute top-[420px] left-[-50px] w-32 h-32 blob-1 bg-baltic-200/25 dark:bg-baltic-700/15 float-medium pointer-events-none -z-10"
+        className="hidden md:block absolute top-[420px] left-[-50px] w-32 h-32 blob-1 bg-baltic-200/25 dark:bg-baltic-700/20 float-medium pointer-events-none -z-10"
       />
 
       {/* Header */}
@@ -135,9 +135,10 @@ export default function TasksPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
+                aria-pressed={isActive}
                 className={cn(
-                  "relative flex items-center gap-2.5 px-5 py-3 text-base font-semibold transition-all duration-200 whitespace-nowrap",
-                  "rounded-t-xl border-2 border-b-0",
+                  "relative flex items-center gap-2 sm:gap-2.5 px-3 py-2 sm:px-5 sm:py-3 text-sm sm:text-base font-semibold transition-all duration-200 whitespace-nowrap",
+                  "rounded-t-xl border-2 border-b-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/50",
                   isActive
                     ? "bg-white dark:bg-lavender-900 z-10 -mb-[2px] shadow-sm"
                     : "hover:bg-white/70 dark:hover:bg-lavender-900/50 cursor-pointer"
@@ -150,6 +151,7 @@ export default function TasksPage() {
               >
                 {/* Colored dot */}
                 <span
+                  aria-label={`${tab.label} subject`}
                   className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                   style={{ backgroundColor: tab.color, opacity: isActive ? 1 : 0.55 }}
                 />
@@ -250,9 +252,10 @@ export default function TasksPage() {
                 setAddModalSubject(activeTab !== "all" ? activeTab : null);
                 setShowAddModal(true);
               }}
-              className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
+              className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/50"
               style={{ color: activeColor, backgroundColor: lighten(activeColor, 0.85) }}
               title="Add task"
+              aria-label="Add task"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M7 3v8M3 7h8" />
@@ -276,8 +279,38 @@ export default function TasksPage() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <p className="text-sm text-steel-400">
-                  {filterStatus !== "all" ? "No matching tasks" : "No tasks yet"}
+                <svg
+                  aria-hidden="true"
+                  width="48"
+                  height="40"
+                  viewBox="0 0 48 40"
+                  fill="none"
+                  className="mb-3"
+                >
+                  <rect
+                    x="6"
+                    y="10"
+                    width="36"
+                    height="24"
+                    rx="3"
+                    stroke={lighten(activeColor, 0.55)}
+                    strokeWidth="1.5"
+                    strokeDasharray="3 3"
+                    fill="none"
+                  />
+                  <path
+                    d="M12 6h10l2 4"
+                    stroke={lighten(activeColor, 0.55)}
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                </svg>
+                <p className="text-sm text-steel-500 dark:text-steel-400">
+                  {filterStatus !== "all"
+                    ? "Nothing matches this filter."
+                    : "This folder is empty."}
                 </p>
                 <button
                   onClick={() => {
@@ -288,10 +321,10 @@ export default function TasksPage() {
                       setShowAddModal(true);
                     }
                   }}
-                  className="text-xs mt-1.5 font-medium underline transition-smooth"
+                  className="text-xs mt-2 font-semibold underline-offset-2 hover:underline transition-smooth focus:outline-none focus-visible:underline"
                   style={{ color: activeColor }}
                 >
-                  {filterStatus !== "all" ? "Show pending" : "Add a task"}
+                  {filterStatus !== "all" ? "Show pending tasks" : "+ New task"}
                 </button>
               </div>
             )}
@@ -389,7 +422,7 @@ function TaskRow({
         <div className="flex items-center gap-2 mt-0.5">
           {showSubject && (
             <>
-              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+              <span aria-label={`${subject?.label || task.subject} subject`} className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
               <span className="text-[11px] text-steel-400 truncate">
                 {subject?.label || task.subject}
               </span>

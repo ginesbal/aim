@@ -34,7 +34,7 @@ export default function SettingsPage() {
   return (
     <div className="relative space-y-6 max-w-2xl mx-auto">
       {/* Decorative blob */}
-      <div className="absolute -top-8 -right-20 w-36 h-36 blob-2 bg-ash-200/20 dark:bg-ash-700/10 float-slow pointer-events-none" />
+      <div aria-hidden className="hidden sm:block absolute -top-8 -right-20 w-28 h-28 lg:w-36 lg:h-36 blob-2 bg-ash-200/25 dark:bg-ash-700/20 float-slow pointer-events-none -z-10" />
 
       <div>
         <h1 className="text-display text-baltic-800 dark:text-baltic-100">Settings</h1>
@@ -44,27 +44,35 @@ export default function SettingsPage() {
       {/* Profile */}
       <Card padding="lg">
         <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">Profile</h2>
-        <form onSubmit={handleSave} className="space-y-3">
+        <form onSubmit={handleSave} className="space-y-4 max-w-md">
           <Input
             id="settings-name"
             label="Name"
             value={localName}
             onChange={(e) => setLocalName(e.target.value)}
           />
-          <Input
-            id="settings-goal"
-            label="Daily focus goal (minutes)"
-            type="number"
-            min="1"
-            value={localGoal}
-            onChange={(e) => setLocalGoal(e.target.value)}
-          />
-          <div className="flex items-center gap-3">
+          <div>
+            <Input
+              id="settings-goal"
+              label="Daily focus target"
+              type="number"
+              min="1"
+              value={localGoal}
+              onChange={(e) => setLocalGoal(e.target.value)}
+            />
+            <p className="mt-1.5 text-xs text-steel-500 dark:text-steel-400">
+              Minutes of deep work you&rsquo;re aiming for each day.
+            </p>
+          </div>
+          <div className="space-y-2">
             <Button type="submit" size="sm">Save</Button>
             {feedback && (
-              <span className={`text-xs font-medium ${feedback.type === "error" ? "text-red-500" : "text-ash-600"}`}>
+              <p
+                role="status"
+                className={`text-xs font-medium ${feedback.type === "error" ? "text-red-600 dark:text-red-400" : "text-ash-600 dark:text-ash-400"}`}
+              >
                 {feedback.message}
-              </span>
+              </p>
             )}
           </div>
         </form>
@@ -73,24 +81,29 @@ export default function SettingsPage() {
       {/* Data */}
       <Card padding="lg">
         <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">Data</h2>
-        <p className="text-sm text-steel-400 mb-3">
+        <p className="text-sm text-steel-500 dark:text-steel-400 mb-4">
           All data is stored locally in your browser.
         </p>
-        <Button
-          variant="danger"
-          size="sm"
-          onClick={() => {
-            if (confirm("This will clear all your data. Are you sure?")) {
-              localStorage.removeItem("aim_tasks");
-              localStorage.removeItem("aim_sessions");
-              localStorage.removeItem("aim_name");
-              localStorage.removeItem("aim_daily_goal");
-              window.location.reload();
-            }
-          }}
-        >
-          Clear all data
-        </Button>
+        <div className="space-y-2">
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => {
+              if (confirm("This will clear all your data. Are you sure?")) {
+                localStorage.removeItem("aim_tasks");
+                localStorage.removeItem("aim_sessions");
+                localStorage.removeItem("aim_name");
+                localStorage.removeItem("aim_daily_goal");
+                window.location.reload();
+              }
+            }}
+          >
+            Clear all data
+          </Button>
+          <p className="text-xs text-steel-500 dark:text-steel-400">
+            This permanently removes your tasks, sessions, and preferences.
+          </p>
+        </div>
       </Card>
     </div>
   );

@@ -72,7 +72,7 @@ export default function DashboardPage() {
       return `Your goal is ${formatTime(dailyGoal)}. Start whenever you're ready.`;
     }
     if (focusPct >= 100) {
-      return "You hit today's goal. Anything more is a bonus.";
+      return "You've hit today's goal — anything more is bonus time.";
     }
     if (focusPct >= 75) {
       return `Almost there — just ${formatTime(minutesToGoal)} left.`;
@@ -120,15 +120,15 @@ export default function DashboardPage() {
       {/* ─── Decorative blobs (subtle, behind everything) ─── */}
       <div
         aria-hidden
-        className="absolute top-32 right-[-80px] w-72 h-72 blob-1 bg-baltic-200/25 dark:bg-baltic-700/15 float-slow pointer-events-none -z-10"
+        className="hidden sm:block absolute top-32 right-[-80px] w-56 h-56 lg:w-72 lg:h-72 blob-1 bg-baltic-200/25 dark:bg-baltic-700/20 float-slow pointer-events-none -z-10"
       />
       <div
         aria-hidden
-        className="absolute top-[520px] left-[-60px] w-40 h-40 blob-3 bg-cream-200/30 dark:bg-cream-800/15 float-medium pointer-events-none -z-10"
+        className="hidden sm:block absolute top-[520px] left-[-60px] w-32 h-32 lg:w-40 lg:h-40 blob-3 bg-cream-200/30 dark:bg-cream-800/20 float-medium pointer-events-none -z-10"
       />
       <div
         aria-hidden
-        className="absolute bottom-20 right-[8%] w-32 h-32 blob-2 bg-ash-200/30 dark:bg-ash-800/15 float-slow pointer-events-none -z-10"
+        className="hidden md:block absolute bottom-20 right-[8%] w-32 h-32 blob-2 bg-ash-200/30 dark:bg-ash-800/20 float-slow pointer-events-none -z-10"
       />
 
       {/* ─── 1. Greeting (plain, sets the room) ─── */}
@@ -152,9 +152,14 @@ export default function DashboardPage() {
             <div className="absolute inset-0 -m-4 rounded-full bg-baltic-100/50 dark:bg-baltic-800/30 blur-xl" />
             <svg
               viewBox="0 0 130 130"
-              className="relative w-44 h-44"
-              aria-label={`${focusPct} percent of daily goal complete`}
+              className="relative w-36 h-36 sm:w-44 sm:h-44"
+              role="img"
+              aria-labelledby="aim-ring-title aim-ring-desc"
             >
+              <title id="aim-ring-title">Daily focus progress</title>
+              <desc id="aim-ring-desc">
+                {`${formatTime(todayMinutes)} of ${formatTime(dailyGoal)} focused today (${focusPct}% of goal).`}
+              </desc>
               {/* Concentric target rings */}
               <circle
                 cx="65"
@@ -241,7 +246,7 @@ export default function DashboardPage() {
                   style={{ width: `${focusPct}%` }}
                 />
               </div>
-              <div className="flex items-center justify-between mt-1.5">
+              <div className="flex items-center justify-between gap-2 mt-1.5 flex-nowrap">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-steel-400">
                   Start
                 </span>
@@ -295,7 +300,7 @@ export default function DashboardPage() {
         ) : (
           <EmptyBlock
             title="Nothing on your plate."
-            subtitle="A clear list is a fine place to begin."
+            subtitle="No tasks yet. Add one to get started."
             actionLabel="Add your first task"
             onAction={() => router.push("/tasks")}
           />
@@ -453,16 +458,15 @@ function NextTaskBlock({
               {subject?.label || task.subject}
             </span>
             <span className="text-steel-300 dark:text-steel-600">·</span>
-            <span
-              className={cn(
-                "text-xs font-medium",
-                overdue
-                  ? "text-red-500"
-                  : "text-steel-500 dark:text-steel-400"
-              )}
-            >
-              {overdue ? "Overdue" : `Due ${formatDate(task.dueDate)}`}
-            </span>
+            {overdue ? (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-red-50 dark:bg-red-950/40 text-red-700/90 dark:text-red-300/90 text-[10px] font-bold uppercase tracking-wider">
+                Overdue
+              </span>
+            ) : (
+              <span className="text-xs font-medium text-steel-500 dark:text-steel-400">
+                Due {formatDate(task.dueDate)}
+              </span>
+            )}
           </div>
         </div>
       </div>

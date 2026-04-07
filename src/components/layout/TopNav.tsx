@@ -13,6 +13,22 @@ const NAV_ITEMS = [
   { href: "/journal", label: "Journal" },
 ];
 
+const AVATAR_TINTS = [
+  "bg-baltic-600 dark:bg-baltic-500",
+  "bg-cream-600 dark:bg-cream-500",
+  "bg-ash-600 dark:bg-ash-500",
+  "bg-lavender-600 dark:bg-lavender-500",
+];
+
+function avatarTintFor(name: string | null | undefined) {
+  if (!name) return AVATAR_TINTS[0];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  }
+  return AVATAR_TINTS[hash % AVATAR_TINTS.length];
+}
+
 export default function TopNav() {
   const pathname = usePathname();
   const router = useRouter();
@@ -20,7 +36,7 @@ export default function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Click-outside to close
+  // Click-outside or Escape to close
   useEffect(() => {
     if (!menuOpen) return;
     function handleClick(e: MouseEvent) {
@@ -28,9 +44,18 @@ export default function TopNav() {
         setMenuOpen(false);
       }
     }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
   }, [menuOpen]);
+
+  const avatarTint = avatarTintFor(name);
 
   return (
     <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 dark:bg-baltic-950/80 backdrop-blur-md border-b border-lavender-200/60 dark:border-lavender-800/40 z-40 flex items-center px-6">
@@ -71,7 +96,8 @@ export default function TopNav() {
         <button
           onClick={() => setMenuOpen((v) => !v)}
           className={cn(
-            "w-9 h-9 rounded-full bg-baltic-600 dark:bg-baltic-500 flex items-center justify-center text-sm font-semibold text-white transition-all duration-150 hover:scale-105 hover:shadow-md",
+            "w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold text-white transition-all duration-150 hover:scale-105 hover:shadow-md",
+            avatarTint,
             menuOpen && "ring-2 ring-baltic-300 dark:ring-baltic-400 ring-offset-2 ring-offset-white dark:ring-offset-baltic-950"
           )}
           aria-label="Open profile menu"
@@ -81,7 +107,10 @@ export default function TopNav() {
         </button>
 
         {menuOpen && (
-          <div className="absolute right-0 top-12 w-56 rounded-2xl bg-white dark:bg-lavender-900 shadow-lg shadow-baltic-900/10 border border-lavender-200 dark:border-lavender-700 py-2 dropdown-enter">
+          <div
+            role="menu"
+            className="absolute right-0 top-[3.25rem] w-56 max-h-[calc(100vh-5rem)] overflow-y-auto rounded-2xl bg-white dark:bg-lavender-900 shadow-lg shadow-baltic-900/10 border border-lavender-200 dark:border-lavender-700 py-2 dropdown-enter"
+          >
             {/* Name header */}
             <div className="px-4 py-2 border-b border-lavender-100 dark:border-lavender-800 mb-1">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-steel-400">
@@ -105,7 +134,7 @@ export default function TopNav() {
                   : "text-steel-600 dark:text-steel-300 hover:bg-baltic-50 dark:hover:bg-baltic-900/30"
               )}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="8" cy="8" r="2" />
                 <path d="M12.5 8a4.5 4.5 0 0 0-.1-.9l1.4-1.1-1.4-2.4-1.7.6a4.5 4.5 0 0 0-1.5-.9L8.9 1.5h-2.8L5.8 3.3a4.5 4.5 0 0 0-1.5.9l-1.7-.6-1.4 2.4 1.4 1.1a4.5 4.5 0 0 0 0 1.8l-1.4 1.1 1.4 2.4 1.7-.6a4.5 4.5 0 0 0 1.5.9l.3 1.8h2.8l.3-1.8a4.5 4.5 0 0 0 1.5-.9l1.7.6 1.4-2.4-1.4-1.1c.07-.3.1-.6.1-.9Z" />
               </svg>

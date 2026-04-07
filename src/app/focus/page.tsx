@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useFocus, useSubjects } from "@/lib/contexts";
 import { SUBJECTS, type SubjectKey, type FocusQuality } from "@/lib/types";
@@ -24,10 +24,28 @@ const TOPO_STATES = {
 type TimerState = "idle" | "running" | "paused" | "done" | "reflecting";
 
 export default function FocusPage() {
-  const { addSession } = useFocus();
+  const { addSession, sessions } = useFocus();
   const { getSubject } = useSubjects();
   const [duration, setDuration] = useState(25);
+
+  // Default subject = most recently used (falls back to null until user picks)
+  const lastUsedSubject = useMemo(() => {
+    if (sessions.length === 0) return null;
+    const latest = [...sessions].sort(
+      (a, b) =>
+        new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
+    )[0];
+    return latest?.subject ?? null;
+  }, [sessions]);
+
   const [subject, setSubject] = useState<string | null>(null);
+
+  // Seed subject from the most recent session once it's available
+  useEffect(() => {
+    if (subject === null && lastUsedSubject) {
+      setSubject(lastUsedSubject);
+    }
+  }, [lastUsedSubject, subject]);
   const [timerState, setTimerState] = useState<TimerState>("idle");
   const [secondsLeft, setSecondsLeft] = useState(25 * 60);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -110,7 +128,8 @@ export default function FocusPage() {
     setTimerState("reflecting");
   }, [totalSeconds, secondsLeft]);
 
-  const defaultSubject = subject || "Mathematics";
+  // Final fallback so a saved session always carries a subject string
+  const defaultSubject = subject || lastUsedSubject || "general";
 
   const saveWithReflection = useCallback(() => {
     addSession(
@@ -194,7 +213,7 @@ export default function FocusPage() {
                   />
                 </div>
 
-                <div className="flex items-center gap-3 mt-6">
+                <div className="flex items-center gap-4 mt-7">
                   <Button onClick={saveWithReflection} disabled={!reflectionQuality}>
                     Save reflection
                   </Button>
@@ -242,16 +261,17 @@ export default function FocusPage() {
                     })}
                   </svg>
 
-                  {/* Sweep hand */}
+                  {/* Sweep hand — driven from React state so it stays in sync after blur */}
                   <div
-                    className={cn(
-                      "absolute inset-0 pointer-events-none",
-                      (timerState === "running" || timerState === "paused") && "sweep-active",
-                    )}
+                    className="absolute inset-0 pointer-events-none"
                     style={{
                       opacity: timerState === "running" || timerState === "paused" ? 1 : 0,
-                      animationPlayState: timerState === "paused" ? "paused" : "running",
-                      transition: "opacity 0.3s ease",
+                      transform: `rotate(${((totalSeconds - secondsLeft) % 60) * 6}deg)`,
+                      transformOrigin: "center",
+                      transition:
+                        timerState === "running"
+                          ? "transform 0.95s linear, opacity 0.3s ease"
+                          : "opacity 0.3s ease",
                     }}
                   >
                     <svg width={280} height={280} viewBox="0 0 280 280">
@@ -261,7 +281,15 @@ export default function FocusPage() {
                   </div>
 
                   {/* Progress ring */}
-                  <div className="absolute inset-[12px]">
+                  <div
+                    className="absolute inset-[12px]"
+                    role="timer"
+                    aria-live="off"
+                    aria-valuemin={0}
+                    aria-valuemax={totalSeconds}
+                    aria-valuenow={secondsLeft}
+                    aria-valuetext={`${minutes} minute${minutes === 1 ? "" : "s"} ${seconds} second${seconds === 1 ? "" : "s"} remaining`}
+                  >
                     <ProgressRing
                       progress={progress}
                       size={256}
@@ -329,10 +357,10 @@ export default function FocusPage() {
       {/* Normal page content — visible when idle */}
       <div className={cn("relative", isFullscreen && "hidden")}>
         {/* Decorative blobs */}
-        <div className="absolute -top-8 -left-16 w-40 h-40 blob-3 bg-lavender-200/20 dark:bg-lavender-700/10 float-medium pointer-events-none" />
-        <div className="absolute top-48 -right-20 w-32 h-32 blob-1 bg-baltic-200/15 dark:bg-baltic-700/10 float-slow pointer-events-none" />
+        <div aria-hidden className="hidden sm:block absolute -top-8 -left-16 w-32 h-32 lg:w-40 lg:h-40 blob-3 bg-lavender-200/25 dark:bg-lavender-700/20 float-medium pointer-events-none -z-10" />
+        <div aria-hidden className="hidden md:block absolute top-48 -right-20 w-28 h-28 lg:w-32 lg:h-32 blob-1 bg-baltic-200/25 dark:bg-baltic-700/20 float-slow pointer-events-none -z-10" />
 
-        <div className="max-w-lg mx-auto">
+        <div className="max-w-lg mx-4 sm:mx-auto">
           {/* Timer setup */}
           <div className="card-base rounded-2xl p-8 flex flex-col items-center">
             {/* Decorative ring with tick marks */}
