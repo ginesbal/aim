@@ -273,3 +273,20 @@
     @apply text-4xl font-bold tracking-tight;
   }
 }
+
+/* ─── Reduced motion ─────────────────────────────────────────
+   Honor OS-level "reduce motion" by stilling looping / decorative
+   animations. Functional transitions (state changes, focus rings)
+   stay on purpose. */
+@media (prefers-reduced-motion: reduce) {
+  .float-slow,
+  .float-medium,
+  .timer-pulse,
+  .sweep-active,
+  .tick-enter,
+  .reflection-enter,
+  .dropdown-enter,
+  .progress-ring-circle {
+    animation: none !important;
+  }
+}

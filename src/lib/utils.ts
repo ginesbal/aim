@@ -60,6 +60,10 @@ export function isOverdue(dateStr: string) {
   return due < new Date();
 }
 
+export function isDueToday(dateStr: string) {
+  return new Date(dateStr).toDateString() === new Date().toDateString();
+}
+
 export function groupByDate(
   tasks: { dueDate: string }[]
 ): Record<string, typeof tasks> {

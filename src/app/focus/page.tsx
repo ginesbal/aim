@@ -40,6 +40,19 @@ export default function FocusPage() {
 
   const [subject, setSubject] = useState<string | null>(null);
 
+  // Read ?subject= from the URL once on mount so deep-links like
+  // `/focus?subject=math` pre-select that subject. Using
+  // `window.location.search` avoids forcing a Suspense boundary around
+  // `useSearchParams`.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("subject");
+    if (q) setSubject(q);
+    // only once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Seed subject from the most recent session once it's available
   useEffect(() => {
     if (subject === null && lastUsedSubject) {

@@ -18,6 +18,25 @@ export default function TasksPage() {
   const [addModalSubject, setAddModalSubject] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
+  // Honor `?task=<id>` deep links (e.g. from the dashboard "Next up" card).
+  // Opens the detail modal once the task is present in the tasks list, then
+  // cleans the query param so reopening the page doesn't re-trigger the modal.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const taskId = params.get("task");
+    if (!taskId) return;
+    const match = tasks.find((t) => t.id === taskId);
+    if (match) {
+      setSelectedTask(match);
+      params.delete("task");
+      const next = params.toString();
+      const url = window.location.pathname + (next ? `?${next}` : "");
+      window.history.replaceState(null, "", url);
+    }
+    // Depend on tasks so we pick up the id once tasks are hydrated from storage.
+  }, [tasks]);
+
   // Stats per subject
   const subjectStats = useMemo(() => {
     const stats: Record<string, { pending: number; completed: number; overdue: number; total: number }> = {

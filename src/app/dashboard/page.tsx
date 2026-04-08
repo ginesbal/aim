@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   usePreferences,
   useTasks,
@@ -14,13 +14,32 @@ import {
   formatTime,
   formatDate,
   isOverdue,
+  isDueToday,
   cn,
 } from "@/lib/utils";
+import { PRIORITIES, type Task, type FocusSession } from "@/lib/types";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 import AimLogo from "@/components/layout/AimLogo";
 import { useRouter } from "next/navigation";
+
+/**
+ * Re-render the component at the next local midnight so greeting, streak,
+ * and "due today" stay accurate if the tab is left open overnight. Each tick
+ * schedules the next one, so it keeps working across multiple midnights.
+ */
+function useMidnightTick() {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(24, 0, 0, 0);
+    const ms = next.getTime() - now.getTime();
+    const id = setTimeout(() => setTick((n) => n + 1), ms + 500);
+    return () => clearTimeout(id);
+  }, [tick]);
+}
 
 export default function DashboardPage() {
   const { name, isFirstVisit, dailyGoal, setName } = usePreferences();
@@ -28,6 +47,7 @@ export default function DashboardPage() {
   const { todayMinutes, streak, sessions } = useFocus();
   const { getSubject } = useSubjects();
   const router = useRouter();
+  useMidnightTick();
 
   const [showWelcome, setShowWelcome] = useState(isFirstVisit);
   const [welcomeName, setWelcomeName] = useState("");
@@ -64,7 +84,54 @@ export default function DashboardPage() {
   // SVG ring math
   const ringRadius = 54;
   const ringCircumference = 2 * Math.PI * ringRadius;
-  const ringOffset = ringCircumference * (1 - focusPct / 100);
+
+  // Today's minutes split by subject, colored by user subjects.
+  // Used to render the hero ring as a stacked arc (1.1).
+  const subjectSlices = useMemo(() => {
+    const today = new Date().toDateString();
+    const todaysSessions = sessions.filter(
+      (s) => new Date(s.completedAt).toDateString() === today
+    );
+    const byKey = new Map<string, number>();
+    for (const s of todaysSessions) {
+      byKey.set(s.subject, (byKey.get(s.subject) ?? 0) + s.duration);
+    }
+    return Array.from(byKey.entries()).map(([key, minutes]) => {
+      const sub = getSubject(key);
+      return {
+        key,
+        label: sub?.label ?? key,
+        color: sub?.color ?? "#60729f",
+        minutes,
+      };
+    });
+  }, [sessions, getSubject]);
+
+  // Seven-dot streak row: one entry per day, oldest → newest (1.2).
+  const last7Days = useMemo(() => {
+    const out: {
+      key: string;
+      dayLetter: string;
+      hadSession: boolean;
+      isToday: boolean;
+    }[] = [];
+    const keySet = new Set(
+      sessions.map((s) => new Date(s.completedAt).toDateString())
+    );
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toDateString();
+      out.push({
+        key,
+        dayLetter: d.toLocaleDateString("en-US", { weekday: "narrow" }),
+        hadSession: keySet.has(key),
+        isToday: i === 0,
+      });
+    }
+    return out;
+  }, [sessions]);
 
   // Plain-language guidance copy that adapts to current state
   const aimGuidance = useMemo(() => {
@@ -87,10 +154,21 @@ export default function DashboardPage() {
     setShowWelcome(false);
   }
 
+  function handleWelcomeDismiss() {
+    // ESC / backdrop dismissal: accept the default "there" so the user isn't
+    // trapped in a keyboard dead-end. They can still set their name in Settings.
+    if (welcomeName.trim()) {
+      setName(welcomeName.trim());
+    } else if (!name) {
+      setName("there");
+    }
+    setShowWelcome(false);
+  }
+
   return (
     <div className="relative">
       {/* Welcome modal */}
-      <Modal open={showWelcome} onClose={() => {}} width="sm">
+      <Modal open={showWelcome} onClose={handleWelcomeDismiss} width="sm">
         <div className="text-center py-2">
           <div className="flex justify-center mb-4">
             <AimLogo size="md" />
@@ -113,6 +191,13 @@ export default function DashboardPage() {
             <Button type="submit" className="w-full">
               Get started
             </Button>
+            <button
+              type="button"
+              onClick={handleWelcomeDismiss}
+              className="text-xs text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors"
+            >
+              Skip for now
+            </button>
           </form>
         </div>
       </Modal>
@@ -158,7 +243,7 @@ export default function DashboardPage() {
             >
               <title id="aim-ring-title">Daily focus progress</title>
               <desc id="aim-ring-desc">
-                {`${formatTime(todayMinutes)} of ${formatTime(dailyGoal)} focused today (${focusPct}% of goal).`}
+                {`${formatTime(todayMinutes)} of ${formatTime(dailyGoal)} focused today (${focusPct}% of goal)${subjectSlices.length > 1 ? `, across ${subjectSlices.length} subjects.` : "."}`}
               </desc>
               {/* Concentric target rings */}
               <circle
@@ -194,21 +279,37 @@ export default function DashboardPage() {
                 r="3"
                 className="fill-baltic-700 dark:fill-baltic-300"
               />
-              {/* Progress arc */}
-              <circle
-                cx="65"
-                cy="65"
-                r={ringRadius}
-                stroke="currentColor"
-                className="text-baltic-600 dark:text-baltic-400"
-                strokeWidth="6"
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray={ringCircumference}
-                strokeDashoffset={ringOffset}
-                transform="rotate(-90 65 65)"
-                style={{ transition: "stroke-dashoffset 1s ease-out" }}
-              />
+              {/* Progress arc — stacked by subject */}
+              {(() => {
+                let cumulative = 0;
+                return subjectSlices.map((slice) => {
+                  const remainingBudget = Math.max(dailyGoal - cumulative, 0);
+                  const sliceMinutes = Math.min(slice.minutes, remainingBudget);
+                  if (sliceMinutes <= 0) return null;
+                  const sliceLen = (sliceMinutes / dailyGoal) * ringCircumference;
+                  const offsetLen = (cumulative / dailyGoal) * ringCircumference;
+                  cumulative += sliceMinutes;
+                  return (
+                    <circle
+                      key={slice.key}
+                      cx="65"
+                      cy="65"
+                      r={ringRadius}
+                      stroke={slice.color}
+                      strokeWidth="6"
+                      fill="none"
+                      strokeLinecap={subjectSlices.length === 1 ? "round" : "butt"}
+                      strokeDasharray={`${sliceLen} ${ringCircumference}`}
+                      strokeDashoffset={-offsetLen}
+                      transform="rotate(-90 65 65)"
+                      style={{
+                        transition:
+                          "stroke-dashoffset 1s ease-out, stroke-dasharray 1s ease-out",
+                      }}
+                    />
+                  );
+                });
+              })()}
               {/* Center text */}
               <text
                 x="65"
@@ -224,11 +325,33 @@ export default function DashboardPage() {
                 y="80"
                 textAnchor="middle"
                 className="fill-steel-400"
-                style={{ fontSize: "9px", letterSpacing: "1.5px", textTransform: "uppercase" }}
+                style={{ fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase" }}
               >
                 of {formatTime(dailyGoal)}
               </text>
             </svg>
+
+            {/* Subject legend — only when ≥2 subjects contributed today */}
+            {subjectSlices.length >= 2 && (
+              <ul className="mt-3 flex flex-wrap justify-center md:justify-start gap-x-3 gap-y-1 max-w-[12rem]">
+                {subjectSlices.map((slice) => (
+                  <li
+                    key={slice.key}
+                    className="flex items-center gap-1.5 text-[11px] text-steel-500 dark:text-steel-400"
+                  >
+                    <span
+                      aria-hidden
+                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: slice.color }}
+                    />
+                    <span className="font-medium text-baltic-700 dark:text-baltic-200">
+                      {slice.label}
+                    </span>
+                    <span className="tabular-nums">{formatTime(slice.minutes)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           {/* Title + guidance + CTA */}
@@ -261,10 +384,16 @@ export default function DashboardPage() {
 
             {/* CTA */}
             <button
-              onClick={() => router.push("/focus")}
-              className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors shadow-sm"
+              onClick={() =>
+                router.push(
+                  lastSession
+                    ? `/focus?subject=${encodeURIComponent(lastSession.subject)}`
+                    : "/focus"
+                )
+              }
+              className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-lavender-900"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-cream-300 animate-pulse" />
+              <span aria-hidden className="w-1.5 h-1.5 rounded-full bg-cream-300 motion-safe:animate-pulse" />
               {todayMinutes === 0 ? "Begin a focus session" : "Continue focusing"}
               <span className="text-base leading-none">→</span>
             </button>
@@ -293,8 +422,9 @@ export default function DashboardPage() {
             task={nextTask}
             subject={getSubject(nextTask.subject)}
             onComplete={() => toggleComplete(nextTask.id)}
-            onFocus={() => router.push("/focus")}
+            onFocus={() => router.push(`/focus?subject=${encodeURIComponent(nextTask.subject)}`)}
             onViewAll={() => router.push("/tasks")}
+            onOpen={() => router.push(`/tasks?task=${encodeURIComponent(nextTask.id)}`)}
             remainingCount={remainingCount}
           />
         ) : (
@@ -328,10 +458,49 @@ export default function DashboardPage() {
                 {streak === 0
                   ? "Start one today."
                   : streak === 1
-                  ? "day in a row. Keep it going."
-                  : `days in a row. Don't break it today.`}
+                  ? "day in a row — keep going."
+                  : `days and counting.`}
               </p>
             </div>
+          </div>
+
+          {/* Seven-day rhythm */}
+          <div
+            className="mt-4 pt-4 border-t border-dashed border-lavender-200 dark:border-lavender-800"
+            role="group"
+            aria-label="Last seven days of sessions"
+          >
+            <ul className="flex items-center justify-between gap-1">
+              {last7Days.map((d) => (
+                <li
+                  key={d.key}
+                  className="flex flex-col items-center gap-1.5"
+                  title={`${d.key}${d.hadSession ? " — session" : ""}`}
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "w-2.5 h-2.5 rounded-full transition-colors",
+                      d.hadSession
+                        ? "bg-baltic-600 dark:bg-baltic-400"
+                        : "bg-transparent border border-lavender-300 dark:border-lavender-700",
+                      d.isToday &&
+                        "ring-2 ring-offset-2 ring-offset-white dark:ring-offset-lavender-900 ring-cream-500 dark:ring-cream-400"
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "text-[9px] font-mono uppercase tracking-wider",
+                      d.isToday
+                        ? "text-baltic-700 dark:text-baltic-300 font-bold"
+                        : "text-steel-400"
+                    )}
+                  >
+                    {d.dayLetter}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         </TapeCard>
 
@@ -342,7 +511,9 @@ export default function DashboardPage() {
             <LastSessionBlock
               session={lastSession}
               subject={getSubject(lastSession.subject)}
-              onContinue={() => router.push("/focus")}
+              onContinue={() =>
+                router.push(`/focus?subject=${encodeURIComponent(lastSession.subject)}`)
+              }
               onViewJournal={() => router.push("/journal")}
             />
           ) : (
@@ -425,17 +596,21 @@ function NextTaskBlock({
   onComplete,
   onFocus,
   onViewAll,
+  onOpen,
   remainingCount,
 }: {
-  task: { id: string; title: string; subject: string; dueDate: string };
+  task: Pick<Task, "id" | "title" | "subject" | "dueDate" | "priority">;
   subject: { label: string; color: string } | undefined;
   onComplete: () => void;
   onFocus: () => void;
   onViewAll: () => void;
+  onOpen: () => void;
   remainingCount: number;
 }) {
   const color = subject?.color || "#60729f";
   const overdue = isOverdue(task.dueDate);
+  const dueToday = !overdue && isDueToday(task.dueDate);
+  const priority = PRIORITIES[task.priority];
 
   return (
     <div className="mt-3">
@@ -446,9 +621,13 @@ function NextTaskBlock({
           style={{ backgroundColor: color }}
         />
         <div className="flex-1 min-w-0">
-          <p className="text-xl font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
+          <button
+            type="button"
+            onClick={onOpen}
+            className="text-left rounded-sm text-xl font-bold text-baltic-800 dark:text-baltic-100 leading-snug hover:text-baltic-600 dark:hover:text-baltic-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-lavender-900"
+          >
             {task.title}
-          </p>
+          </button>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <span className="inline-flex items-center gap-1.5 text-xs text-steel-500 dark:text-steel-400">
               <span
@@ -462,11 +641,29 @@ function NextTaskBlock({
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-red-50 dark:bg-red-950/40 text-red-700/90 dark:text-red-300/90 text-[10px] font-bold uppercase tracking-wider">
                 Overdue
               </span>
+            ) : dueToday ? (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-cream-100 dark:bg-cream-900/40 text-cream-800 dark:text-cream-200 text-[10px] font-bold uppercase tracking-wider">
+                Due today
+              </span>
             ) : (
               <span className="text-xs font-medium text-steel-500 dark:text-steel-400">
                 Due {formatDate(task.dueDate)}
               </span>
             )}
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider"
+              style={{
+                backgroundColor: `${priority.color}1a`,
+                color: priority.color,
+              }}
+            >
+              <span
+                aria-hidden
+                className="w-1 h-1 rounded-full"
+                style={{ backgroundColor: priority.color }}
+              />
+              {priority.label}
+            </span>
           </div>
         </div>
       </div>
@@ -475,14 +672,14 @@ function NextTaskBlock({
       <div className="mt-5 flex items-center gap-2 flex-wrap">
         <button
           onClick={onFocus}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-xs font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-xs font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-lavender-900"
         >
           Focus on this
           <span className="text-sm leading-none">→</span>
         </button>
         <button
           onClick={onComplete}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-lavender-200 dark:border-lavender-700 text-baltic-700 dark:text-baltic-300 text-xs font-semibold hover:bg-baltic-50 dark:hover:bg-baltic-900/40 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-lavender-200 dark:border-lavender-700 text-baltic-700 dark:text-baltic-300 text-xs font-semibold hover:bg-baltic-50 dark:hover:bg-baltic-900/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-lavender-900"
         >
           <svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 5l2.5 2.5L8 3" />
@@ -496,7 +693,7 @@ function NextTaskBlock({
         <div className="mt-5 pt-4 border-t border-dashed border-lavender-200 dark:border-lavender-800">
           <button
             onClick={onViewAll}
-            className="text-xs text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors"
+            className="rounded-sm text-xs text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-lavender-900"
           >
             <span className="font-semibold tabular-nums">{remainingCount}</span>{" "}
             more on your list →
@@ -514,7 +711,7 @@ function LastSessionBlock({
   onContinue,
   onViewJournal,
 }: {
-  session: { id: string; subject: string; duration: number; completedAt: string };
+  session: Pick<FocusSession, "id" | "subject" | "duration" | "completedAt">;
   subject: { label: string; color: string } | undefined;
   onContinue: () => void;
   onViewJournal: () => void;
@@ -557,14 +754,14 @@ function LastSessionBlock({
       <div className="mt-4 flex items-center gap-2">
         <button
           onClick={onContinue}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-xs font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-xs font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-lavender-900"
         >
           Continue
           <span className="text-sm leading-none">→</span>
         </button>
         <button
           onClick={onViewJournal}
-          className="text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors px-2"
+          className="rounded-sm text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-lavender-900"
         >
           See journal
         </button>
