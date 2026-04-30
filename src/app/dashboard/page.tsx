@@ -169,23 +169,25 @@ export default function DashboardPage() {
         <ScribbleUnderline className="ml-[8.5rem] mt-1 text-cream-500/70 dark:text-cream-400/50" />
       </header>
 
-      {/* ─── 2. Your aim today — primary sticky note ─── */}
-      <StickyCard
-        tape="cream"
-        tilt="-0.4deg"
-        delay={60}
-        className="mb-7"
-      >
-        <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 md:gap-8 items-center">
+      {/* ─── 2. Your aim today — summary note + guidance card ─── */}
+      <div className="mb-7 grid grid-cols-1 lg:grid-cols-[minmax(15rem,18rem)_1fr] gap-5 lg:gap-6 items-stretch">
+        <StickyCard
+          tape="cream"
+          delay={60}
+          paperclip
+          className="focus-sticky-note border-cream-200/80 dark:border-cream-800/50 bg-cream-50/95 dark:bg-cream-900/25"
+        >
           <FocusSummary
             focusPct={focusPct}
             todayMinutes={todayMinutes}
             dailyGoal={dailyGoal}
             minutesToGoal={minutesToGoal}
           />
+        </StickyCard>
 
+        <StickyCard tape="lavender" delay={100}>
           {/* Title + guidance + CTA */}
-          <div className="text-center md:text-left">
+          <div className="relative text-center md:text-left">
             <CardEyebrow>Your aim today</CardEyebrow>
             <p className="mt-2 text-2xl font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
               {guidance.lead}
@@ -206,9 +208,12 @@ export default function DashboardPage() {
               {todayMinutes === 0 ? "Begin a focus session" : "Continue focusing"}
               <span className="text-base leading-none">→</span>
             </button>
+            <div className="mt-4 hidden sm:flex justify-end" aria-hidden>
+              <StudyToolDoodles className="pointer-events-none text-cream-600/55 dark:text-cream-300/35" />
+            </div>
           </div>
-        </div>
-      </StickyCard>
+        </StickyCard>
+      </div>
 
       {/* ─── Hand-drawn pointer arrow ─── */}
       <div
@@ -226,7 +231,6 @@ export default function DashboardPage() {
       {/* ─── 3. Next up — guided task sticky note ─── */}
       <StickyCard
         tape="baltic"
-        tilt="0.5deg"
         delay={120}
         className="mb-7"
       >
@@ -255,7 +259,6 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <StickyCard
           tape="ash"
-          tilt="-0.6deg"
           delay={180}
         >
           <CardEyebrow>Your streak</CardEyebrow>
@@ -299,7 +302,6 @@ export default function DashboardPage() {
 
         <StickyCard
           tape="lavender"
-          tilt="0.3deg"
           delay={240}
         >
           <CardEyebrow>Pick up where you left off</CardEyebrow>
@@ -343,14 +345,14 @@ type TapeColor = "cream" | "baltic" | "ash" | "lavender";
 function StickyCard({
   children,
   tape = "cream",
-  tilt = "0deg",
   delay = 0,
+  paperclip = false,
   className,
 }: {
   children: ReactNode;
   tape?: TapeColor;
-  tilt?: string;
   delay?: number;
+  paperclip?: boolean;
   className?: string;
 }) {
   return (
@@ -361,7 +363,6 @@ function StickyCard({
       )}
       style={
         {
-          "--tilt": tilt,
           "--delay": `${delay}ms`,
         } as CSSProperties
       }
@@ -371,12 +372,15 @@ function StickyCard({
         aria-hidden
         className={cn("washi-tape", `washi-${tape}`)}
         style={{
-          width: "5.25rem",
-          top: "-0.55rem",
+          width: "5.8rem",
+          top: "-0.62rem",
           left: "1.75rem",
           transform: "rotate(-3.5deg)",
         }}
       />
+      {paperclip && (
+        <PaperclipDoodle className="absolute -top-2 right-5 z-20 text-baltic-500/70 dark:text-baltic-200/55" />
+      )}
 
       <div className="relative">{children}</div>
     </div>
@@ -415,7 +419,7 @@ function FocusSummary({
     : `${formatTime(minutesToGoal)} left today.`;
 
   return (
-    <div className="study-progress-note mx-auto md:mx-0 w-full max-w-[13.5rem] rounded-2xl border border-cream-200/80 dark:border-cream-800/50 bg-cream-50/80 dark:bg-cream-900/20 p-5 text-center">
+    <div className="study-progress-note mx-auto w-full max-w-[13.5rem] text-center">
       <p className="font-script text-lg leading-none text-cream-700 dark:text-cream-300">
         today's focus
       </p>
@@ -448,6 +452,27 @@ function FocusSummary({
 }
 
 /* Doodles: tiny hand-drawn SVG accents */
+function PaperclipDoodle({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      width="31"
+      height="38"
+      viewBox="0 0 31 38"
+      fill="none"
+      className={className}
+    >
+      <path
+        d="M20.5 9.5v17.2c0 5.4-3.4 8.8-8.2 8.8s-8.2-3.4-8.2-8.8V10.8c0-5 3.1-8.3 7.3-8.3s7.3 3.3 7.3 8.3v14.7c0 3.1-2 5.2-4.7 5.2s-4.7-2.1-4.7-5.2V12"
+        stroke="currentColor"
+        strokeWidth="2.15"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function ScribbleUnderline({ className }: { className?: string }) {
   return (
     <svg
@@ -488,6 +513,45 @@ function DoodleArrow({ className }: { className?: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
+      />
+    </svg>
+  );
+}
+
+function StudyToolDoodles({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      width="106"
+      height="36"
+      viewBox="0 0 106 36"
+      fill="none"
+      className={className}
+    >
+      <path
+        d="M10 25 L56 7 L63 14 L17 32 L10 25Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M56 7 L64 4 L63 14"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M74 11 H100 V25 H74 Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M80 11 V16 M87 11 V15 M94 11 V16"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
       />
     </svg>
   );

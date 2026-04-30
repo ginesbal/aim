@@ -256,7 +256,6 @@
       0 1px 1px rgba(38, 45, 64, 0.04),
       0 4px 8px -2px rgba(38, 45, 64, 0.06),
       0 14px 28px -10px rgba(38, 45, 64, 0.10);
-    transform: rotate(var(--tilt, 0deg));
   }
 
   .dark .paper-card {
@@ -289,23 +288,24 @@
   /* Washi-tape strip — translucent stripe with soft micro-shadow */
   .washi-tape {
     position: absolute;
-    height: 1.4rem;
+    z-index: 2;
+    height: 1.5rem;
     border-radius: 1px;
     pointer-events: none;
-    opacity: 0.85;
+    opacity: 0.95;
     background-image:
       repeating-linear-gradient(
         135deg,
         transparent 0 6px,
-        rgba(255, 255, 255, 0.18) 6px 7px
+        rgba(255, 255, 255, 0.24) 6px 7px
       );
     box-shadow:
-      0 1px 2px rgba(38, 45, 64, 0.10),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+      0 2px 5px rgba(38, 45, 64, 0.14),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.22);
   }
 
   .dark .washi-tape {
-    opacity: 0.65;
+    opacity: 0.78;
   }
 
   /* Tape color fills */
@@ -318,6 +318,31 @@
   .dark .washi-baltic   { background-color: #4d5b80; }
   .dark .washi-ash      { background-color: #475940; }
   .dark .washi-lavender { background-color: #586074; }
+
+  /* Focus sticky note — faint ruled lines make the card read as a note */
+  .focus-sticky-note {
+    background-image:
+      linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 2rem,
+        rgba(181, 166, 84, 0.18) 2rem,
+        rgba(181, 166, 84, 0.18) calc(2rem + 1px)
+      );
+    background-size: 100% 2.2rem;
+    background-position: 0 4.8rem;
+  }
+
+  .dark .focus-sticky-note {
+    background-image:
+      linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 2rem,
+        rgba(199, 206, 100, 0.12) 2rem,
+        rgba(199, 206, 100, 0.12) calc(2rem + 1px)
+      );
+  }
 
   /* Highlighter — yellow pen swipe behind a key phrase */
   .highlighter {
@@ -378,11 +403,11 @@
   @keyframes sticky-enter {
     from {
       opacity: 0;
-      transform: translateY(8px) rotate(0deg);
+      transform: translateY(8px);
     }
     to {
       opacity: 1;
-      transform: translateY(0) rotate(var(--tilt, 0deg));
+      transform: translateY(0);
     }
   }
 
