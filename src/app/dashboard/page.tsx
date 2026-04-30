@@ -61,11 +61,6 @@ export default function DashboardPage() {
   const focusPct = Math.min(Math.round((todayMinutes / dailyGoal) * 100), 100);
   const minutesToGoal = Math.max(dailyGoal - todayMinutes, 0);
 
-  // SVG ring math
-  const ringRadius = 54;
-  const ringCircumference = 2 * Math.PI * ringRadius;
-  const ringOffset = ringCircumference * (1 - focusPct / 100);
-
   // Plain-language guidance with the key phrase highlighted separately
   const guidance = useMemo(() => {
     if (todayMinutes === 0) {
@@ -183,85 +178,11 @@ export default function DashboardPage() {
         className="mb-7 paper-card-hover"
       >
         <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 md:gap-8 items-center">
-          {/* Target ring */}
-          <div className="relative mx-auto md:mx-0">
-            <div className="absolute inset-0 -m-4 rounded-full bg-baltic-100/50 dark:bg-baltic-800/30 blur-xl" />
-            <svg
-              viewBox="0 0 130 130"
-              className="relative w-44 h-44"
-              aria-label={`${focusPct} percent of daily goal complete`}
-            >
-              <circle
-                cx="65"
-                cy="65"
-                r={ringRadius}
-                stroke="currentColor"
-                className="text-lavender-200 dark:text-lavender-800"
-                strokeWidth="3"
-                fill="none"
-              />
-              <circle
-                cx="65"
-                cy="65"
-                r={ringRadius - 10}
-                stroke="currentColor"
-                className="text-lavender-200/60 dark:text-lavender-800/60"
-                strokeWidth="1"
-                fill="none"
-              />
-              <circle
-                cx="65"
-                cy="65"
-                r={ringRadius - 20}
-                stroke="currentColor"
-                className="text-lavender-200/40 dark:text-lavender-800/40"
-                strokeWidth="1"
-                fill="none"
-              />
-              <circle
-                cx="65"
-                cy="65"
-                r="3"
-                className="fill-baltic-700 dark:fill-baltic-300"
-              />
-              <circle
-                cx="65"
-                cy="65"
-                r={ringRadius}
-                stroke="currentColor"
-                className="text-baltic-600 dark:text-baltic-400"
-                strokeWidth="6"
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray={ringCircumference}
-                strokeDashoffset={ringOffset}
-                transform="rotate(-90 65 65)"
-                style={{ transition: "stroke-dashoffset 1s var(--ease-out)" }}
-              />
-              <text
-                x="65"
-                y="62"
-                textAnchor="middle"
-                className="fill-baltic-800 dark:fill-baltic-100"
-                style={{ fontSize: "20px", fontWeight: 700 }}
-              >
-                {formatTime(todayMinutes)}
-              </text>
-              <text
-                x="65"
-                y="80"
-                textAnchor="middle"
-                className="fill-steel-400"
-                style={{
-                  fontSize: "9px",
-                  letterSpacing: "1.5px",
-                  textTransform: "uppercase",
-                }}
-              >
-                of {formatTime(dailyGoal)}
-              </text>
-            </svg>
-          </div>
+          <TargetRing
+            focusPct={focusPct}
+            todayMinutes={todayMinutes}
+            dailyGoal={dailyGoal}
+          />
 
           {/* Title + guidance + CTA */}
           <div className="text-center md:text-left">
@@ -459,36 +380,38 @@ function StickyCard({
   accessory?: Accessory;
   className?: string;
 }) {
+  const tiltDegrees = Number.parseFloat(tilt);
+  const hoverTilt = Number.isFinite(tiltDegrees)
+    ? `${tiltDegrees + (tiltDegrees >= 0 ? 0.38 : -0.38)}deg`
+    : tilt;
+
   return (
     <div
       className={cn(
-        "paper-card sticky-enter px-6 pt-9 pb-6 border border-lavender-200/60 dark:border-lavender-800/60",
+        "paper-card sticky-enter px-6 pt-10 pb-6 border border-lavender-200/60 dark:border-lavender-800/60",
         className
       )}
       style={
         {
           "--tilt": tilt,
+          "--hover-tilt": hoverTilt,
           "--delay": `${delay}ms`,
+          "--idle-delay": `${delay + 900}ms`,
+          "--idle-duration": `${8 + delay / 1000}s`,
         } as CSSProperties
       }
     >
-      {/* Washi tape strip — slightly rotated, off-center for authenticity */}
-      <div
-        aria-hidden
-        className={cn("washi-tape", `washi-${tape}`)}
-        style={{
-          width: "5.25rem",
-          top: "-0.55rem",
-          left: "1.75rem",
-          transform: "rotate(-3.5deg)",
-        }}
-      />
+      {/* Washi tape cluster — torn, translucent, and anchored off-center */}
+      <div aria-hidden className={cn("washi-cluster", `washi-${tape}`)}>
+        <span className="washi-tape washi-tape-main" />
+        <span className="washi-tape washi-tape-tab" />
+      </div>
 
       {/* Optional accessory: paperclip top-right or thumbtack top-right */}
       {accessory === "paperclip" && <Paperclip />}
       {accessory === "thumbtack" && <Thumbtack />}
 
-      <div className="relative">{children}</div>
+      <div className="relative z-[1]">{children}</div>
     </div>
   );
 }
@@ -500,6 +423,218 @@ function CardEyebrow({ children }: { children: ReactNode }) {
       {children}
     </p>
   );
+}
+
+function TargetRing({
+  focusPct,
+  todayMinutes,
+  dailyGoal,
+}: {
+  focusPct: number;
+  todayMinutes: number;
+  dailyGoal: number;
+}) {
+  const center = 80;
+  const radius = 58;
+  const progressAngle = -90 + (focusPct / 100) * 360;
+  const marker = getPolarPoint(center, center, radius, progressAngle);
+
+  return (
+    <div className="target-ring-wrap relative mx-auto md:mx-0">
+      <div className="absolute inset-0 -m-4 rounded-full bg-baltic-100/45 dark:bg-baltic-800/25 blur-xl" />
+      <svg
+        viewBox="0 0 160 160"
+        className="target-ring relative w-48 h-48"
+        aria-label={`${focusPct} percent of daily goal complete`}
+      >
+        <defs>
+          <filter
+            id="target-ink-wobble"
+            x="-12%"
+            y="-12%"
+            width="124%"
+            height="124%"
+            colorInterpolationFilters="sRGB"
+          >
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.035"
+              numOctaves="1"
+              seed="6"
+              result="noise"
+            />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="noise"
+              scale="0.28"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+        </defs>
+
+        <circle
+          cx={center}
+          cy={center}
+          r="70"
+          stroke="currentColor"
+          className="text-lavender-300/80 dark:text-lavender-700/80"
+          strokeWidth="1.4"
+          strokeDasharray="0.5 6"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke="currentColor"
+          className="text-lavender-300 dark:text-lavender-700"
+          strokeWidth="2"
+          strokeDasharray="2 7"
+          strokeLinecap="round"
+          fill="none"
+          filter="url(#target-ink-wobble)"
+        />
+        <circle
+          cx={center}
+          cy={center}
+          r="43"
+          stroke="currentColor"
+          className="text-lavender-300/70 dark:text-lavender-700/70"
+          strokeWidth="1.2"
+          strokeDasharray="1 6"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <circle
+          cx={center}
+          cy={center}
+          r="20"
+          stroke="currentColor"
+          className="text-cream-500/70 dark:text-cream-400/45"
+          strokeWidth="1.4"
+          strokeDasharray="1.5 5"
+          strokeLinecap="round"
+          fill="none"
+        />
+
+        <g
+          stroke="currentColor"
+          className="text-baltic-500/55 dark:text-baltic-400/55"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        >
+          <path d="M80 7.5 L80 18" />
+          <path d="M80 142 L80 152.5" />
+          <path d="M7.5 80 L18 80" />
+          <path d="M142 80 L152.5 80" />
+        </g>
+
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke="currentColor"
+          className="target-progress-stroke text-baltic-600 dark:text-baltic-400"
+          strokeWidth="8"
+          strokeLinecap="round"
+          fill="none"
+          pathLength={100}
+          strokeDasharray="100"
+          strokeDashoffset={100 - focusPct}
+          transform={`rotate(-90 ${center} ${center})`}
+          filter="url(#target-ink-wobble)"
+          style={{ transition: "stroke-dashoffset 760ms var(--ease-out)" }}
+        />
+        <circle
+          cx={center}
+          cy={center}
+          r="4"
+          className="fill-baltic-700 dark:fill-baltic-300"
+        />
+        <circle
+          cx={center}
+          cy={center}
+          r="8"
+          stroke="currentColor"
+          className="text-baltic-600/25 dark:text-baltic-300/25"
+          strokeWidth="1"
+          fill="none"
+        />
+
+        {focusPct > 0 && (
+          <g
+            transform={`translate(${marker.x} ${marker.y}) rotate(${
+              progressAngle + 12
+            })`}
+            className="target-pencil-mark"
+          >
+            <path
+              d="M-5 0.5 C-2.5 -1, 2 -1, 5 0.5"
+              stroke="currentColor"
+              className="text-cream-600 dark:text-cream-300"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              fill="none"
+            />
+            <path
+              d="M-3.5 2.5 L3.5 2.5"
+              stroke="currentColor"
+              className="text-baltic-700/45 dark:text-baltic-200/45"
+              strokeWidth="1"
+              strokeLinecap="round"
+              fill="none"
+            />
+          </g>
+        )}
+
+        <text
+          x={center}
+          y="73"
+          textAnchor="middle"
+          className="fill-baltic-800 dark:fill-baltic-100"
+          style={{
+            fontSize: "26px",
+            fontWeight: 800,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {focusPct}%
+        </text>
+        <path
+          d="M63 82 C70 79, 78 84, 87 81 S99 82, 101 80"
+          stroke="currentColor"
+          className="text-cream-500/85 dark:text-cream-400/60"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <text
+          x={center}
+          y="102"
+          textAnchor="middle"
+          className="fill-steel-500 dark:fill-steel-400"
+          style={{
+            fontSize: "9.5px",
+            fontWeight: 700,
+            letterSpacing: "1.2px",
+            textTransform: "uppercase",
+          }}
+        >
+          {formatTime(todayMinutes)} / {formatTime(dailyGoal)}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+function getPolarPoint(cx: number, cy: number, radius: number, angle: number) {
+  const radians = (angle * Math.PI) / 180;
+  return {
+    x: cx + radius * Math.cos(radians),
+    y: cy + radius * Math.sin(radians),
+  };
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -582,18 +717,48 @@ function Paperclip() {
   return (
     <svg
       aria-hidden
-      className="absolute -top-3 right-6 text-steel-400 dark:text-steel-500 drop-shadow-sm"
-      width="22"
-      height="36"
-      viewBox="0 0 22 36"
+      className="paperclip-accessory absolute -top-5 right-5 pointer-events-none"
+      width="34"
+      height="48"
+      viewBox="0 0 34 48"
       fill="none"
     >
+      <defs>
+        <linearGradient
+          id="paperclip-metal"
+          x1="6"
+          y1="4"
+          x2="28"
+          y2="44"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#f7f9fc" />
+          <stop offset="0.34" stopColor="#b9c0cd" />
+          <stop offset="0.67" stopColor="#eef2f7" />
+          <stop offset="1" stopColor="#8f98aa" />
+        </linearGradient>
+      </defs>
       <path
-        d="M11 4 C 6 4, 4 8, 4 13 L 4 27 C 4 31, 7 33, 11 33 C 15 33, 17 31, 17 27 L 17 11 C 17 9, 15.5 8, 14 8 C 12.5 8, 11 9, 11 11 L 11 25"
-        stroke="currentColor"
-        strokeWidth="1.6"
+        d="M18 4.8 C 11.4 4.8, 7 9.5, 7 16.1 L 7 35.5 C 7 41.3, 11.3 44.6, 16.8 44.6 C 22.6 44.6, 27 40.8, 27 35.2 L 27 14.8 C 27 10.6, 23.8 7.8, 19.9 7.8 C 15.8 7.8, 12.7 10.8, 12.7 15.1 L 12.7 34.2 C 12.7 37.1, 14.6 38.8, 17.1 38.8 C 19.7 38.8, 21.4 36.9, 21.4 34.2 L 21.4 16.6"
+        stroke="#1f2937"
+        strokeOpacity="0.18"
+        strokeWidth="6"
         strokeLinecap="round"
-        fill="none"
+        transform="translate(1 1.5)"
+      />
+      <path
+        d="M18 4.8 C 11.4 4.8, 7 9.5, 7 16.1 L 7 35.5 C 7 41.3, 11.3 44.6, 16.8 44.6 C 22.6 44.6, 27 40.8, 27 35.2 L 27 14.8 C 27 10.6, 23.8 7.8, 19.9 7.8 C 15.8 7.8, 12.7 10.8, 12.7 15.1 L 12.7 34.2 C 12.7 37.1, 14.6 38.8, 17.1 38.8 C 19.7 38.8, 21.4 36.9, 21.4 34.2 L 21.4 16.6"
+        stroke="url(#paperclip-metal)"
+        strokeWidth="4.3"
+        strokeLinecap="round"
+      />
+      <path
+        className="paperclip-glint"
+        d="M13.5 9.5 C 9.8 12.1, 9.2 15.6, 9.2 20.1 L 9.2 34.4"
+        stroke="#ffffff"
+        strokeOpacity="0.72"
+        strokeWidth="1.2"
+        strokeLinecap="round"
       />
     </svg>
   );
@@ -601,23 +766,69 @@ function Paperclip() {
 
 function Thumbtack() {
   return (
-    <div
+    <svg
       aria-hidden
-      className="absolute -top-2 right-6 select-none pointer-events-none"
-      style={{ filter: "drop-shadow(0 2px 2px rgba(38,45,64,0.18))" }}
+      className="thumbtack-accessory absolute -top-5 right-5 select-none pointer-events-none"
+      width="36"
+      height="38"
+      viewBox="0 0 36 38"
+      fill="none"
     >
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-        <circle
-          cx="11"
-          cy="11"
-          r="8"
-          fill="#b9c23d"
-          stroke="#6f7425"
-          strokeWidth="0.8"
-        />
-        <circle cx="9" cy="9" r="2.2" fill="#f1f3d8" opacity="0.85" />
-      </svg>
-    </div>
+      <defs>
+        <radialGradient
+          id="thumbtack-dome"
+          cx="0"
+          cy="0"
+          r="1"
+          gradientUnits="userSpaceOnUse"
+          gradientTransform="translate(14 11) rotate(52) scale(15 15)"
+        >
+          <stop stopColor="#f5f7cf" />
+          <stop offset="0.42" stopColor="#c7ce64" />
+          <stop offset="1" stopColor="#7c842d" />
+        </radialGradient>
+        <linearGradient
+          id="thumbtack-pin"
+          x1="13"
+          y1="19"
+          x2="23"
+          y2="34"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#f7f9fc" />
+          <stop offset="0.54" stopColor="#a8b0bd" />
+          <stop offset="1" stopColor="#6f7787" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="19" cy="31" rx="9.5" ry="3.5" fill="#262d40" opacity="0.16" />
+      <path
+        d="M17.2 20.2 L23.6 31.4 L20.1 33.4 L14.7 21.2 Z"
+        fill="url(#thumbtack-pin)"
+      />
+      <path
+        d="M6.8 15.6 C 6.8 9.3 11.7 4.9 18.1 4.9 C 24.5 4.9 29.2 9.3 29.2 15.6 C 29.2 21.6 24.4 25.2 18.1 25.2 C 11.8 25.2 6.8 21.6 6.8 15.6 Z"
+        fill="url(#thumbtack-dome)"
+        stroke="#687021"
+        strokeWidth="0.9"
+      />
+      <path
+        d="M9.8 20.1 C 12.4 23.2 23.3 23.3 26.2 19.8"
+        stroke="#5e641d"
+        strokeOpacity="0.45"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      <ellipse
+        className="thumbtack-gleam"
+        cx="14"
+        cy="11.5"
+        rx="3.4"
+        ry="2.3"
+        fill="#ffffff"
+        opacity="0.74"
+        transform="rotate(-24 14 11.5)"
+      />
+    </svg>
   );
 }
 
