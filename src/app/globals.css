@@ -270,6 +270,7 @@
     content: "";
     position: absolute;
     inset: 0;
+    z-index: 0;
     border-radius: inherit;
     pointer-events: none;
     background-image:
@@ -319,29 +320,46 @@
   .dark .washi-ash      { background-color: #475940; }
   .dark .washi-lavender { background-color: #586074; }
 
-  /* Focus sticky note — faint ruled lines make the card read as a note */
+  /* Focus sticky note — plain, familiar, and slightly warmer than the cards */
   .focus-sticky-note {
-    background-image:
-      linear-gradient(
-        to bottom,
-        transparent 0,
-        transparent 2rem,
-        rgba(181, 166, 84, 0.18) 2rem,
-        rgba(181, 166, 84, 0.18) calc(2rem + 1px)
-      );
-    background-size: 100% 2.2rem;
-    background-position: 0 4.8rem;
+    position: relative;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(213, 218, 139, 0.62);
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.46), transparent 46%),
+      linear-gradient(180deg, #f5f1c9 0%, #f1e9a8 100%);
+    box-shadow:
+      0 1px 1px rgba(38, 45, 64, 0.04),
+      0 8px 18px -8px rgba(91, 82, 28, 0.16),
+      0 18px 34px -18px rgba(91, 82, 28, 0.24);
+  }
+
+  .focus-sticky-note::after {
+    content: "";
+    position: absolute;
+    right: 0.8rem;
+    bottom: 0.8rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 0 0 0.25rem 0;
+    background: linear-gradient(135deg, transparent 50%, rgba(181, 166, 84, 0.28) 50%);
+    opacity: 0.7;
+    pointer-events: none;
   }
 
   .dark .focus-sticky-note {
-    background-image:
-      linear-gradient(
-        to bottom,
-        transparent 0,
-        transparent 2rem,
-        rgba(199, 206, 100, 0.12) 2rem,
-        rgba(199, 206, 100, 0.12) calc(2rem + 1px)
-      );
+    border-color: rgba(111, 116, 37, 0.58);
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 46%),
+      linear-gradient(180deg, rgba(111, 116, 37, 0.40) 0%, rgba(89, 92, 31, 0.32) 100%);
+    box-shadow:
+      0 1px 1px rgba(0, 0, 0, 0.18),
+      0 8px 18px -8px rgba(0, 0, 0, 0.35),
+      0 18px 34px -18px rgba(0, 0, 0, 0.55);
+  }
+
+  .dark .focus-sticky-note::after {
+    background: linear-gradient(135deg, transparent 50%, rgba(199, 206, 100, 0.16) 50%);
   }
 
   /* Highlighter — yellow pen swipe behind a key phrase */

@@ -171,21 +171,16 @@ export default function DashboardPage() {
 
       {/* ─── 2. Your aim today — summary note + guidance card ─── */}
       <div className="mb-7 grid grid-cols-1 lg:grid-cols-[minmax(15rem,18rem)_1fr] gap-5 lg:gap-6 items-stretch">
-        <StickyCard
-          tape="cream"
-          delay={60}
-          paperclip
-          className="focus-sticky-note border-cream-200/80 dark:border-cream-800/50 bg-cream-50/95 dark:bg-cream-900/25"
-        >
+        <FocusStickyNote delay={60}>
           <FocusSummary
             focusPct={focusPct}
             todayMinutes={todayMinutes}
             dailyGoal={dailyGoal}
             minutesToGoal={minutesToGoal}
           />
-        </StickyCard>
+        </FocusStickyNote>
 
-        <StickyCard tape="lavender" delay={100}>
+        <StickyCard tape="lavender" delay={100} paperclip>
           {/* Title + guidance + CTA */}
           <div className="relative text-center md:text-left">
             <CardEyebrow>Your aim today</CardEyebrow>
@@ -208,9 +203,6 @@ export default function DashboardPage() {
               {todayMinutes === 0 ? "Begin a focus session" : "Continue focusing"}
               <span className="text-base leading-none">→</span>
             </button>
-            <div className="mt-4 hidden sm:flex justify-end" aria-hidden>
-              <StudyToolDoodles className="pointer-events-none text-cream-600/55 dark:text-cream-300/35" />
-            </div>
           </div>
         </StickyCard>
       </div>
@@ -342,17 +334,36 @@ export default function DashboardPage() {
 
 type TapeColor = "cream" | "baltic" | "ash" | "lavender";
 
+function FocusStickyNote({
+  children,
+  delay = 0,
+}: {
+  children: ReactNode;
+  delay?: number;
+}) {
+  return (
+    <div
+      className="focus-sticky-note sticky-enter p-6 sm:p-7"
+      style={{ "--delay": `${delay}ms` } as CSSProperties}
+    >
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
+
 function StickyCard({
   children,
   tape = "cream",
   delay = 0,
   paperclip = false,
+  tools = true,
   className,
 }: {
   children: ReactNode;
   tape?: TapeColor;
   delay?: number;
   paperclip?: boolean;
+  tools?: boolean;
   className?: string;
 }) {
   return (
@@ -381,8 +392,11 @@ function StickyCard({
       {paperclip && (
         <PaperclipDoodle className="absolute -top-2 right-5 z-20 text-baltic-500/70 dark:text-baltic-200/55" />
       )}
+      {tools && (
+        <StudyToolDoodles className="pointer-events-none absolute bottom-3 right-3 z-[1] text-cream-600/25 dark:text-cream-300/20" />
+      )}
 
-      <div className="relative">{children}</div>
+      <div className="relative z-10">{children}</div>
     </div>
   );
 }
@@ -522,37 +536,61 @@ function StudyToolDoodles({ className }: { className?: string }) {
   return (
     <svg
       aria-hidden
-      width="106"
-      height="36"
-      viewBox="0 0 106 36"
+      width="118"
+      height="44"
+      viewBox="0 0 118 44"
       fill="none"
       className={className}
     >
-      <path
-        d="M10 25 L56 7 L63 14 L17 32 L10 25Z"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M56 7 L64 4 L63 14"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M74 11 H100 V25 H74 Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M80 11 V16 M87 11 V15 M94 11 V16"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-      />
+      <g transform="rotate(-18 36 24)">
+        <path
+          d="M12 19 H58 L69 24 L58 29 H12 Z"
+          fill="currentColor"
+          opacity="0.12"
+        />
+        <path
+          d="M12 19 H58 L69 24 L58 29 H12 Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M58 19 L69 24 L58 29"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M9 19 H17 V29 H9 Z"
+          fill="currentColor"
+          opacity="0.18"
+        />
+        <path
+          d="M17 19 V29 M54 19 V29"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+        />
+      </g>
+      <g transform="rotate(5 88 25)">
+        <path
+          d="M74 14 H110 V28 H74 Z"
+          fill="currentColor"
+          opacity="0.10"
+        />
+        <path
+          d="M74 14 H110 V28 H74 Z"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M80 14 V20 M86 14 V18 M92 14 V22 M98 14 V18 M104 14 V20"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+        />
+      </g>
     </svg>
   );
 }
