@@ -79,7 +79,7 @@ export default function DashboardPage() {
     }
     if (focusPct >= 75) {
       return {
-        lead: "Almost there — just ",
+        lead: "Almost there - just ",
         accent: `${formatTime(minutesToGoal)} left`,
         tail: ".",
       };
@@ -174,14 +174,14 @@ export default function DashboardPage() {
         tape="cream"
         tilt="-0.4deg"
         delay={60}
-        accessory="paperclip"
-        className="mb-7 paper-card-hover"
+        className="mb-7"
       >
         <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 md:gap-8 items-center">
-          <TargetRing
+          <FocusSummary
             focusPct={focusPct}
             todayMinutes={todayMinutes}
             dailyGoal={dailyGoal}
+            minutesToGoal={minutesToGoal}
           />
 
           {/* Title + guidance + CTA */}
@@ -192,30 +192,9 @@ export default function DashboardPage() {
               <span className="highlighter">{guidance.accent}</span>
               {guidance.tail}
             </p>
-
-            {/* Progress bar with anchors */}
-            <div className="mt-4">
-              <div className="h-2 rounded-full bg-lavender-100 dark:bg-lavender-800 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-baltic-600 dark:bg-baltic-400"
-                  style={{
-                    width: `${focusPct}%`,
-                    transition: "width 700ms var(--ease-out)",
-                  }}
-                />
-              </div>
-              <div className="flex items-center justify-between mt-1.5">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-steel-400">
-                  Start
-                </span>
-                <span className="text-[10px] font-bold text-baltic-600 dark:text-baltic-400 tabular-nums">
-                  {focusPct}%
-                </span>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-steel-400">
-                  Goal
-                </span>
-              </div>
-            </div>
+            <p className="mt-3 text-sm text-steel-500 dark:text-steel-400">
+              Keep it simple: one timer, one task, then a real break.
+            </p>
 
             {/* CTA */}
             <button
@@ -223,7 +202,7 @@ export default function DashboardPage() {
               className="press mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-baltic-400 focus:ring-offset-2 dark:focus:ring-offset-baltic-950"
               style={{ transition: "transform 160ms var(--ease-out), background-color 160ms ease" }}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-cream-300 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-cream-300" />
               {todayMinutes === 0 ? "Begin a focus session" : "Continue focusing"}
               <span className="text-base leading-none">→</span>
             </button>
@@ -238,7 +217,7 @@ export default function DashboardPage() {
       >
         <div className="flex flex-col items-center text-steel-400 dark:text-steel-500">
           <span className="font-script text-base text-cream-700 dark:text-cream-300 -mb-0.5">
-            keep going
+            choose one next
           </span>
           <DoodleArrow className="text-baltic-400 dark:text-baltic-500" />
         </div>
@@ -249,8 +228,7 @@ export default function DashboardPage() {
         tape="baltic"
         tilt="0.5deg"
         delay={120}
-        accessory="thumbtack"
-        className="mb-7 paper-card-hover"
+        className="mb-7"
       >
         <CardEyebrow>Next up</CardEyebrow>
 
@@ -265,9 +243,9 @@ export default function DashboardPage() {
           />
         ) : (
           <EmptyBlock
-            title="Nothing on your plate."
-            subtitle="A clear list is a fine place to begin."
-            actionLabel="Add your first task"
+            title="Nothing due right now."
+            subtitle="Add one small study step so future-you has a place to start."
+            actionLabel="Plan a study step"
             onAction={() => router.push("/tasks")}
           />
         )}
@@ -279,7 +257,6 @@ export default function DashboardPage() {
           tape="ash"
           tilt="-0.6deg"
           delay={180}
-          className="paper-card-hover"
         >
           <CardEyebrow>Your streak</CardEyebrow>
           <div className="mt-3 flex items-center gap-4">
@@ -311,10 +288,10 @@ export default function DashboardPage() {
               </p>
               <p className="text-xs text-steel-500 dark:text-steel-400 mt-1">
                 {streak === 0
-                  ? "Start one today."
+                  ? "Start with one focus block today."
                   : streak === 1
-                  ? "day in a row. Keep it going."
-                  : `days in a row. Don't break it today.`}
+                  ? "day in a row. A small win counts."
+                  : `days in a row. Keep the chain gentle.`}
               </p>
             </div>
           </div>
@@ -324,7 +301,6 @@ export default function DashboardPage() {
           tape="lavender"
           tilt="0.3deg"
           delay={240}
-          className="paper-card-hover"
         >
           <CardEyebrow>Pick up where you left off</CardEyebrow>
           {lastSession ? (
@@ -363,55 +339,46 @@ export default function DashboardPage() {
    ───────────────────────────────────────────────────────────── */
 
 type TapeColor = "cream" | "baltic" | "ash" | "lavender";
-type Accessory = "paperclip" | "thumbtack" | "none";
 
 function StickyCard({
   children,
   tape = "cream",
   tilt = "0deg",
   delay = 0,
-  accessory = "none",
   className,
 }: {
   children: ReactNode;
   tape?: TapeColor;
   tilt?: string;
   delay?: number;
-  accessory?: Accessory;
   className?: string;
 }) {
-  const tiltDegrees = Number.parseFloat(tilt);
-  const hoverTilt = Number.isFinite(tiltDegrees)
-    ? `${tiltDegrees + (tiltDegrees >= 0 ? 0.38 : -0.38)}deg`
-    : tilt;
-
   return (
     <div
       className={cn(
-        "paper-card sticky-enter px-6 pt-10 pb-6 border border-lavender-200/60 dark:border-lavender-800/60",
+        "paper-card sticky-enter px-6 pt-9 pb-6 border border-lavender-200/60 dark:border-lavender-800/60",
         className
       )}
       style={
         {
           "--tilt": tilt,
-          "--hover-tilt": hoverTilt,
           "--delay": `${delay}ms`,
-          "--idle-delay": `${delay + 900}ms`,
-          "--idle-duration": `${8 + delay / 1000}s`,
         } as CSSProperties
       }
     >
-      {/* Washi tape cluster — torn, translucent, and anchored off-center */}
-      <div aria-hidden className={cn("washi-cluster", `washi-${tape}`)}>
-        <span className="washi-tape washi-tape-main" />
-        <span className="washi-tape washi-tape-tab" />
-      </div>
+      {/* Washi tape strip — slightly rotated, off-center for authenticity */}
+      <div
+        aria-hidden
+        className={cn("washi-tape", `washi-${tape}`)}
+        style={{
+          width: "5.25rem",
+          top: "-0.55rem",
+          left: "1.75rem",
+          transform: "rotate(-3.5deg)",
+        }}
+      />
 
-      {/* Optional accessory: paperclip top-right or thumbtack top-right */}
-      {accessory === "paperclip" && <Paperclip />}
-      {accessory === "thumbtack" && <Thumbtack />}
-
-      <div className="relative z-[1]">{children}</div>
+      <div className="relative">{children}</div>
     </div>
   );
 }
@@ -425,222 +392,62 @@ function CardEyebrow({ children }: { children: ReactNode }) {
   );
 }
 
-function TargetRing({
+/* ─────────────────────────────────────────────────────────────
+   FOCUS SUMMARY
+   ───────────────────────────────────────────────────────────── */
+
+function FocusSummary({
   focusPct,
   todayMinutes,
   dailyGoal,
+  minutesToGoal,
 }: {
   focusPct: number;
   todayMinutes: number;
   dailyGoal: number;
+  minutesToGoal: number;
 }) {
-  const center = 80;
-  const radius = 58;
-  const progressAngle = -90 + (focusPct / 100) * 360;
-  const marker = getPolarPoint(center, center, radius, progressAngle);
+  const isDone = focusPct >= 100;
+  const helperText = isDone
+    ? "Goal met. Nice work."
+    : todayMinutes === 0
+    ? "Try one small focus block."
+    : `${formatTime(minutesToGoal)} left today.`;
 
   return (
-    <div className="target-ring-wrap relative mx-auto md:mx-0">
-      <div className="absolute inset-0 -m-4 rounded-full bg-baltic-100/45 dark:bg-baltic-800/25 blur-xl" />
-      <svg
-        viewBox="0 0 160 160"
-        className="target-ring relative w-48 h-48"
-        aria-label={`${focusPct} percent of daily goal complete`}
-      >
-        <defs>
-          <filter
-            id="target-ink-wobble"
-            x="-12%"
-            y="-12%"
-            width="124%"
-            height="124%"
-            colorInterpolationFilters="sRGB"
-          >
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.035"
-              numOctaves="1"
-              seed="6"
-              result="noise"
-            />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="noise"
-              scale="0.28"
-              xChannelSelector="R"
-              yChannelSelector="G"
-            />
-          </filter>
-        </defs>
-
-        <circle
-          cx={center}
-          cy={center}
-          r="70"
-          stroke="currentColor"
-          className="text-lavender-300/80 dark:text-lavender-700/80"
-          strokeWidth="1.4"
-          strokeDasharray="0.5 6"
-          strokeLinecap="round"
-          fill="none"
-        />
-        <circle
-          cx={center}
-          cy={center}
-          r={radius}
-          stroke="currentColor"
-          className="text-lavender-300 dark:text-lavender-700"
-          strokeWidth="2"
-          strokeDasharray="2 7"
-          strokeLinecap="round"
-          fill="none"
-          filter="url(#target-ink-wobble)"
-        />
-        <circle
-          cx={center}
-          cy={center}
-          r="43"
-          stroke="currentColor"
-          className="text-lavender-300/70 dark:text-lavender-700/70"
-          strokeWidth="1.2"
-          strokeDasharray="1 6"
-          strokeLinecap="round"
-          fill="none"
-        />
-        <circle
-          cx={center}
-          cy={center}
-          r="20"
-          stroke="currentColor"
-          className="text-cream-500/70 dark:text-cream-400/45"
-          strokeWidth="1.4"
-          strokeDasharray="1.5 5"
-          strokeLinecap="round"
-          fill="none"
-        />
-
-        <g
-          stroke="currentColor"
-          className="text-baltic-500/55 dark:text-baltic-400/55"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        >
-          <path d="M80 7.5 L80 18" />
-          <path d="M80 142 L80 152.5" />
-          <path d="M7.5 80 L18 80" />
-          <path d="M142 80 L152.5 80" />
-        </g>
-
-        <circle
-          cx={center}
-          cy={center}
-          r={radius}
-          stroke="currentColor"
-          className="target-progress-stroke text-baltic-600 dark:text-baltic-400"
-          strokeWidth="8"
-          strokeLinecap="round"
-          fill="none"
-          pathLength={100}
-          strokeDasharray="100"
-          strokeDashoffset={100 - focusPct}
-          transform={`rotate(-90 ${center} ${center})`}
-          filter="url(#target-ink-wobble)"
-          style={{ transition: "stroke-dashoffset 760ms var(--ease-out)" }}
-        />
-        <circle
-          cx={center}
-          cy={center}
-          r="4"
-          className="fill-baltic-700 dark:fill-baltic-300"
-        />
-        <circle
-          cx={center}
-          cy={center}
-          r="8"
-          stroke="currentColor"
-          className="text-baltic-600/25 dark:text-baltic-300/25"
-          strokeWidth="1"
-          fill="none"
-        />
-
-        {focusPct > 0 && (
-          <g
-            transform={`translate(${marker.x} ${marker.y}) rotate(${
-              progressAngle + 12
-            })`}
-            className="target-pencil-mark"
-          >
-            <path
-              d="M-5 0.5 C-2.5 -1, 2 -1, 5 0.5"
-              stroke="currentColor"
-              className="text-cream-600 dark:text-cream-300"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              fill="none"
-            />
-            <path
-              d="M-3.5 2.5 L3.5 2.5"
-              stroke="currentColor"
-              className="text-baltic-700/45 dark:text-baltic-200/45"
-              strokeWidth="1"
-              strokeLinecap="round"
-              fill="none"
-            />
-          </g>
-        )}
-
-        <text
-          x={center}
-          y="73"
-          textAnchor="middle"
-          className="fill-baltic-800 dark:fill-baltic-100"
+    <div className="study-progress-note mx-auto md:mx-0 w-full max-w-[13.5rem] rounded-2xl border border-cream-200/80 dark:border-cream-800/50 bg-cream-50/80 dark:bg-cream-900/20 p-5 text-center">
+      <p className="font-script text-lg leading-none text-cream-700 dark:text-cream-300">
+        today's focus
+      </p>
+      <p className="mt-2 text-4xl font-bold tabular-nums tracking-tight text-baltic-800 dark:text-baltic-100">
+        {focusPct}%
+      </p>
+      <div className="mt-3 h-2 rounded-full bg-white/80 dark:bg-lavender-900/70 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-baltic-600 dark:bg-baltic-400"
           style={{
-            fontSize: "26px",
-            fontWeight: 800,
-            fontVariantNumeric: "tabular-nums",
+            width: `${focusPct}%`,
+            transition: "width 700ms var(--ease-out)",
           }}
-        >
-          {focusPct}%
-        </text>
-        <path
-          d="M63 82 C70 79, 78 84, 87 81 S99 82, 101 80"
-          stroke="currentColor"
-          className="text-cream-500/85 dark:text-cream-400/60"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          fill="none"
         />
-        <text
-          x={center}
-          y="102"
-          textAnchor="middle"
-          className="fill-steel-500 dark:fill-steel-400"
-          style={{
-            fontSize: "9.5px",
-            fontWeight: 700,
-            letterSpacing: "1.2px",
-            textTransform: "uppercase",
-          }}
-        >
-          {formatTime(todayMinutes)} / {formatTime(dailyGoal)}
-        </text>
-      </svg>
+      </div>
+      <p className="mt-3 text-xs text-steel-500 dark:text-steel-400">
+        <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
+          {formatTime(todayMinutes)}
+        </span>{" "}
+        done of{" "}
+        <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
+          {formatTime(dailyGoal)}
+        </span>
+      </p>
+      <p className="mt-2 text-xs font-semibold text-ash-700 dark:text-ash-300">
+        {helperText}
+      </p>
     </div>
   );
 }
 
-function getPolarPoint(cx: number, cy: number, radius: number, angle: number) {
-  const radians = (angle * Math.PI) / 180;
-  return {
-    x: cx + radius * Math.cos(radians),
-    y: cy + radius * Math.sin(radians),
-  };
-}
-
-/* ─────────────────────────────────────────────────────────────
-   DOODLES — hand-drawn SVG accents
-   ───────────────────────────────────────────────────────────── */
-
+/* Doodles: tiny hand-drawn SVG accents */
 function ScribbleUnderline({ className }: { className?: string }) {
   return (
     <svg
@@ -713,125 +520,6 @@ function DoodleStar({
   );
 }
 
-function Paperclip() {
-  return (
-    <svg
-      aria-hidden
-      className="paperclip-accessory absolute -top-5 right-5 pointer-events-none"
-      width="34"
-      height="48"
-      viewBox="0 0 34 48"
-      fill="none"
-    >
-      <defs>
-        <linearGradient
-          id="paperclip-metal"
-          x1="6"
-          y1="4"
-          x2="28"
-          y2="44"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#f7f9fc" />
-          <stop offset="0.34" stopColor="#b9c0cd" />
-          <stop offset="0.67" stopColor="#eef2f7" />
-          <stop offset="1" stopColor="#8f98aa" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M18 4.8 C 11.4 4.8, 7 9.5, 7 16.1 L 7 35.5 C 7 41.3, 11.3 44.6, 16.8 44.6 C 22.6 44.6, 27 40.8, 27 35.2 L 27 14.8 C 27 10.6, 23.8 7.8, 19.9 7.8 C 15.8 7.8, 12.7 10.8, 12.7 15.1 L 12.7 34.2 C 12.7 37.1, 14.6 38.8, 17.1 38.8 C 19.7 38.8, 21.4 36.9, 21.4 34.2 L 21.4 16.6"
-        stroke="#1f2937"
-        strokeOpacity="0.18"
-        strokeWidth="6"
-        strokeLinecap="round"
-        transform="translate(1 1.5)"
-      />
-      <path
-        d="M18 4.8 C 11.4 4.8, 7 9.5, 7 16.1 L 7 35.5 C 7 41.3, 11.3 44.6, 16.8 44.6 C 22.6 44.6, 27 40.8, 27 35.2 L 27 14.8 C 27 10.6, 23.8 7.8, 19.9 7.8 C 15.8 7.8, 12.7 10.8, 12.7 15.1 L 12.7 34.2 C 12.7 37.1, 14.6 38.8, 17.1 38.8 C 19.7 38.8, 21.4 36.9, 21.4 34.2 L 21.4 16.6"
-        stroke="url(#paperclip-metal)"
-        strokeWidth="4.3"
-        strokeLinecap="round"
-      />
-      <path
-        className="paperclip-glint"
-        d="M13.5 9.5 C 9.8 12.1, 9.2 15.6, 9.2 20.1 L 9.2 34.4"
-        stroke="#ffffff"
-        strokeOpacity="0.72"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function Thumbtack() {
-  return (
-    <svg
-      aria-hidden
-      className="thumbtack-accessory absolute -top-5 right-5 select-none pointer-events-none"
-      width="36"
-      height="38"
-      viewBox="0 0 36 38"
-      fill="none"
-    >
-      <defs>
-        <radialGradient
-          id="thumbtack-dome"
-          cx="0"
-          cy="0"
-          r="1"
-          gradientUnits="userSpaceOnUse"
-          gradientTransform="translate(14 11) rotate(52) scale(15 15)"
-        >
-          <stop stopColor="#f5f7cf" />
-          <stop offset="0.42" stopColor="#c7ce64" />
-          <stop offset="1" stopColor="#7c842d" />
-        </radialGradient>
-        <linearGradient
-          id="thumbtack-pin"
-          x1="13"
-          y1="19"
-          x2="23"
-          y2="34"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#f7f9fc" />
-          <stop offset="0.54" stopColor="#a8b0bd" />
-          <stop offset="1" stopColor="#6f7787" />
-        </linearGradient>
-      </defs>
-      <ellipse cx="19" cy="31" rx="9.5" ry="3.5" fill="#262d40" opacity="0.16" />
-      <path
-        d="M17.2 20.2 L23.6 31.4 L20.1 33.4 L14.7 21.2 Z"
-        fill="url(#thumbtack-pin)"
-      />
-      <path
-        d="M6.8 15.6 C 6.8 9.3 11.7 4.9 18.1 4.9 C 24.5 4.9 29.2 9.3 29.2 15.6 C 29.2 21.6 24.4 25.2 18.1 25.2 C 11.8 25.2 6.8 21.6 6.8 15.6 Z"
-        fill="url(#thumbtack-dome)"
-        stroke="#687021"
-        strokeWidth="0.9"
-      />
-      <path
-        d="M9.8 20.1 C 12.4 23.2 23.3 23.3 26.2 19.8"
-        stroke="#5e641d"
-        strokeOpacity="0.45"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
-      <ellipse
-        className="thumbtack-gleam"
-        cx="14"
-        cy="11.5"
-        rx="3.4"
-        ry="2.3"
-        fill="#ffffff"
-        opacity="0.74"
-        transform="rotate(-24 14 11.5)"
-      />
-    </svg>
-  );
-}
-
 /* ─────────────────────────────────────────────────────────────
    CONTENT BLOCKS
    ───────────────────────────────────────────────────────────── */
@@ -888,13 +576,20 @@ function NextTaskBlock({
         </div>
       </div>
 
+      <p className="mt-4 text-sm text-steel-500 dark:text-steel-400">
+        <span className="font-script text-lg text-ash-700 dark:text-ash-300">
+          tiny next step:
+        </span>{" "}
+        open a focus block, work until the timer ends, then come back to mark it done.
+      </p>
+
       <div className="mt-5 flex items-center gap-2 flex-wrap">
         <button
           onClick={onFocus}
           className="press inline-flex items-center gap-2 px-4 py-2 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-xs font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 focus:outline-none focus:ring-2 focus:ring-baltic-400 focus:ring-offset-2 dark:focus:ring-offset-baltic-950"
           style={{ transition: "transform 160ms var(--ease-out), background-color 160ms ease" }}
         >
-          Focus on this
+          Start a focus block
           <span className="text-sm leading-none">→</span>
         </button>
         <button

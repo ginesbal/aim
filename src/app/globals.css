@@ -11,12 +11,6 @@
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-@property --idle-sway {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
-}
-
 @layer base {
   * {
     margin: 0;
@@ -258,17 +252,11 @@
   /* Paper-card — sticky note feel: layered shadow, soft warmth */
   .paper-card {
     @apply relative bg-white dark:bg-lavender-900 rounded-2xl;
-    overflow: visible;
-    transform-origin: 3rem 0.2rem;
     box-shadow:
       0 1px 1px rgba(38, 45, 64, 0.04),
       0 4px 8px -2px rgba(38, 45, 64, 0.06),
       0 14px 28px -10px rgba(38, 45, 64, 0.10);
-    transition:
-      transform 640ms cubic-bezier(0.16, 1, 0.3, 1),
-      box-shadow 260ms var(--ease-out);
-    transform: translate3d(0, 0, 0) rotate(calc(var(--tilt, 0deg) + var(--idle-sway, 0deg)));
-    will-change: transform;
+    transform: rotate(var(--tilt, 0deg));
   }
 
   .dark .paper-card {
@@ -285,7 +273,6 @@
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    z-index: 0;
     background-image:
       radial-gradient(circle at 30% 20%, rgba(199, 206, 100, 0.04), transparent 60%),
       radial-gradient(circle at 80% 80%, rgba(96, 114, 159, 0.03), transparent 55%);
@@ -299,233 +286,40 @@
     mix-blend-mode: screen;
   }
 
-  @keyframes paper-idle-sway {
-    0%, 100% { --idle-sway: -0.08deg; }
-    50% { --idle-sway: 0.08deg; }
-  }
-
-  .paper-card.sticky-enter {
-    animation-name: sticky-enter, paper-idle-sway;
-    animation-duration: 320ms, var(--idle-duration, 8s);
-    animation-timing-function: var(--ease-out), var(--ease-in-out);
-    animation-delay: var(--delay, 0ms), var(--idle-delay, 900ms);
-    animation-fill-mode: backwards, none;
-    animation-iteration-count: 1, infinite;
-  }
-
-  /* Card sway: the note pivots from the taped corner. */
-  @media (hover: hover) and (pointer: fine) {
-    .paper-card-hover:hover {
-      --idle-sway: 0deg;
-      transform: translate3d(0, -2px, 0) rotate(var(--hover-tilt, 0.35deg));
-      box-shadow:
-        0 2px 2px rgba(38, 45, 64, 0.05),
-        0 8px 16px -4px rgba(38, 45, 64, 0.08),
-        0 24px 40px -12px rgba(38, 45, 64, 0.14);
-    }
-
-    .dark .paper-card-hover:hover {
-      box-shadow:
-        0 2px 3px rgba(0, 0, 0, 0.28),
-        0 10px 18px -5px rgba(0, 0, 0, 0.36),
-        0 28px 44px -16px rgba(0, 0, 0, 0.52);
-    }
-  }
-
   /* Washi-tape strip — translucent stripe with soft micro-shadow */
-  .washi-cluster {
+  .washi-tape {
     position: absolute;
-    top: -0.78rem;
-    left: 1.45rem;
-    width: 6.6rem;
-    height: 2.15rem;
+    height: 1.4rem;
+    border-radius: 1px;
     pointer-events: none;
-    z-index: 3;
-    background-color: transparent;
-    transform: translate3d(0, 0, 0) rotate(-3.6deg);
-    transform-origin: 16% 72%;
-    filter: drop-shadow(0 5px 4px rgba(38, 45, 64, 0.12));
-    transition:
-      transform 560ms cubic-bezier(0.16, 1, 0.3, 1),
-      filter 260ms var(--ease-out);
-    will-change: transform;
-  }
-
-  .washi-cluster::before {
-    content: "";
-    position: absolute;
-    left: 0.35rem;
-    right: 0.05rem;
-    top: 0.72rem;
-    height: 1.1rem;
-    border-radius: 999px;
-    background: rgba(38, 45, 64, 0.24);
-    filter: blur(8px);
-    opacity: 0.24;
-    transform: translate3d(0.1rem, 0.28rem, 0);
-  }
-
-  .washi-cluster .washi-tape {
-    display: block;
-    height: 1.28rem;
-    border-radius: 2px;
-    opacity: 1;
-    background-color: var(--washi-bg);
+    opacity: 0.85;
     background-image:
-      linear-gradient(90deg, rgba(255, 255, 255, 0.34), transparent 20%, rgba(38, 45, 64, 0.045) 58%, transparent),
-      repeating-linear-gradient(12deg, rgba(255, 255, 255, 0.16) 0 1px, transparent 1px 5px),
-      repeating-linear-gradient(96deg, rgba(38, 45, 64, 0.055) 0 1px, transparent 1px 8px);
-    background-blend-mode: screen, overlay, multiply;
+      repeating-linear-gradient(
+        135deg,
+        transparent 0 6px,
+        rgba(255, 255, 255, 0.18) 6px 7px
+      );
     box-shadow:
-      0 1px 1px rgba(255, 255, 255, 0.32) inset,
-      0 -1px 0 rgba(38, 45, 64, 0.07) inset,
-      0 2px 3px rgba(38, 45, 64, 0.10);
-    clip-path: polygon(0 18%, 3% 5%, 7% 14%, 11% 8%, 16% 12%, 91% 9%, 96% 18%, 100% 10%, 98% 88%, 94% 82%, 90% 94%, 83% 87%, 8% 91%, 4% 82%, 0 90%);
-    mix-blend-mode: multiply;
-    transition:
-      transform 560ms cubic-bezier(0.16, 1, 0.3, 1),
-      opacity 220ms var(--ease-out);
+      0 1px 2px rgba(38, 45, 64, 0.10),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.18);
   }
 
-  .washi-cluster .washi-tape::after {
-    content: "";
-    position: absolute;
-    inset: 2px 3px;
-    border-radius: inherit;
-    background-image:
-      radial-gradient(circle at 18% 40%, rgba(255, 255, 255, 0.28) 0 1px, transparent 1.2px),
-      radial-gradient(circle at 66% 62%, rgba(38, 45, 64, 0.10) 0 0.8px, transparent 1px);
-    background-size: 10px 8px, 13px 9px;
-    opacity: 0.42;
+  .dark .washi-tape {
+    opacity: 0.65;
   }
 
-  .washi-tape-main {
-    left: 0.4rem;
-    top: 0.35rem;
-    width: 5.9rem;
-    transform: rotate(0.8deg);
-  }
+  /* Tape color fills */
+  .washi-cream    { background-color: #e3e7b1; }
+  .washi-baltic   { background-color: #9faac6; }
+  .washi-ash      { background-color: #c8d4c4; }
+  .washi-lavender { background-color: #c5c9d3; }
 
-  .washi-tape-tab {
-    left: 0.08rem;
-    top: 0.68rem;
-    width: 2.7rem;
-    height: 1.1rem;
-    opacity: 0.72;
-    transform: rotate(-8deg);
-    clip-path: polygon(0 13%, 5% 3%, 14% 11%, 24% 6%, 84% 10%, 94% 3%, 100% 14%, 96% 90%, 88% 82%, 78% 93%, 10% 87%, 4% 96%);
-  }
+  .dark .washi-cream    { background-color: #6f7425; }
+  .dark .washi-baltic   { background-color: #4d5b80; }
+  .dark .washi-ash      { background-color: #475940; }
+  .dark .washi-lavender { background-color: #586074; }
 
-  .dark .washi-cluster .washi-tape {
-    mix-blend-mode: screen;
-    box-shadow:
-      0 1px 1px rgba(255, 255, 255, 0.12) inset,
-      0 -1px 0 rgba(0, 0, 0, 0.18) inset,
-      0 2px 4px rgba(0, 0, 0, 0.22);
-  }
-
-  .dark .washi-cluster {
-    filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.30));
-  }
-
-  .washi-cream    { background-color: transparent; --washi-bg: rgba(227, 231, 177, 0.78); }
-  .washi-baltic   { background-color: transparent; --washi-bg: rgba(159, 170, 198, 0.76); }
-  .washi-ash      { background-color: transparent; --washi-bg: rgba(200, 212, 196, 0.78); }
-  .washi-lavender { background-color: transparent; --washi-bg: rgba(197, 201, 211, 0.78); }
-
-  .dark .washi-cream    { background-color: transparent; --washi-bg: rgba(111, 116, 37, 0.66); }
-  .dark .washi-baltic   { background-color: transparent; --washi-bg: rgba(77, 91, 128, 0.68); }
-  .dark .washi-ash      { background-color: transparent; --washi-bg: rgba(71, 89, 64, 0.68); }
-  .dark .washi-lavender { background-color: transparent; --washi-bg: rgba(88, 96, 116, 0.68); }
-
-  @media (hover: hover) and (pointer: fine) {
-    .paper-card-hover:hover .washi-cluster {
-      transform: translate3d(0.03rem, 0.04rem, 0) rotate(-2.4deg);
-      filter: drop-shadow(0 6px 5px rgba(38, 45, 64, 0.15));
-    }
-
-    .paper-card-hover:hover .washi-tape-main {
-      transform: rotate(0.25deg) skewX(-0.6deg);
-    }
-
-    .paper-card-hover:hover .washi-tape-tab {
-      transform: translate3d(0, 0.03rem, 0) rotate(-7deg);
-    }
-  }
-
-  /* Target ring and desk accessories */
-  .target-ring {
-    overflow: visible;
-  }
-
-  .target-pencil-mark {
-    filter: drop-shadow(0 1px 1px rgba(38, 45, 64, 0.16));
-  }
-
-  .paperclip-accessory {
-    z-index: 4;
-    transform: translate3d(0, 0, 0) rotate(8deg);
-    transform-origin: 52% 16%;
-    filter: drop-shadow(0 3px 2px rgba(38, 45, 64, 0.18));
-    transition:
-      transform 560ms cubic-bezier(0.16, 1, 0.3, 1),
-      filter 260ms var(--ease-out);
-    will-change: transform;
-  }
-
-  .paperclip-glint {
-    opacity: 0.68;
-    transform-origin: center;
-    transition:
-      opacity 220ms var(--ease-out),
-      transform 260ms var(--ease-out);
-  }
-
-  .thumbtack-accessory {
-    z-index: 4;
-    transform: translate3d(0, 0, 0) rotate(-6deg);
-    transform-origin: 50% 34%;
-    filter: drop-shadow(0 3px 2px rgba(38, 45, 64, 0.18));
-    transition:
-      transform 560ms cubic-bezier(0.16, 1, 0.3, 1),
-      filter 260ms var(--ease-out);
-    will-change: transform;
-  }
-
-  .thumbtack-gleam {
-    transition:
-      opacity 220ms var(--ease-out),
-      transform 260ms var(--ease-out);
-  }
-
-  .dark .paperclip-accessory,
-  .dark .thumbtack-accessory {
-    filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.36));
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .paper-card-hover:hover .paperclip-accessory {
-      transform: translate3d(0.02rem, 0.03rem, 0) rotate(6.5deg);
-      filter: drop-shadow(0 4px 3px rgba(38, 45, 64, 0.22));
-    }
-
-    .paper-card-hover:hover .paperclip-glint {
-      opacity: 0.95;
-      transform: translate3d(0.06rem, -0.03rem, 0);
-    }
-
-    .paper-card-hover:hover .thumbtack-accessory {
-      transform: translate3d(0.02rem, 0.02rem, 0) rotate(-4.5deg);
-      filter: drop-shadow(0 4px 3px rgba(38, 45, 64, 0.22));
-    }
-
-    .paper-card-hover:hover .thumbtack-gleam {
-      opacity: 0.96;
-      transform: translate3d(0.04rem, -0.02rem, 0) rotate(-24deg);
-    }
-  }
-
-  /* Highlighter swipe */
+  /* Highlighter — yellow pen swipe behind a key phrase */
   .highlighter {
     background-image:
       linear-gradient(
@@ -607,23 +401,12 @@
     .doodle-draw polyline,
     .float-slow,
     .float-medium,
-    .paper-card.sticky-enter,
     .progress-ring-circle {
       animation: none !important;
     }
-    .paper-card,
-    .paper-card-hover:hover,
-    .washi-cluster,
-    .paperclip-accessory,
-    .thumbtack-accessory {
+    .paper-card {
       transition: none !important;
       transform: none !important;
-    }
-    .washi-cluster .washi-tape,
-    .paperclip-glint,
-    .thumbtack-gleam,
-    .target-progress-stroke {
-      transition: none !important;
     }
     .press:active {
       transform: none !important;
