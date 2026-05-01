@@ -529,12 +529,11 @@ function Thumbtack({
 }
 
 /* ─────────────────────────────────────────────────────────────
-   FOCUS TARGET — habit-tracker grid: 5×4 = 20 cells, each = 5%
-   of the daily goal. Cells fill bottom-up like rising water; the
-   in-progress cell carries a brighter border to mark "you are here."
+   FOCUS TARGET — the "a" bowl from the aim logo, treated as a
+   vessel that fills with baltic from the bottom up. The white
+   counter dot mirrors the logo's inner counter and displays the
+   percentage. As you focus, you complete the "a" of aim.
    ───────────────────────────────────────────────────────────── */
-
-const HABIT_CELLS = 20;
 
 function FocusTarget({
   focusPct,
@@ -554,50 +553,40 @@ function FocusTarget({
     ? "Try one small focus block."
     : `${formatTime(minutesToGoal)} left today.`;
 
-  const filled = Math.floor(focusPct / 5);
-  const partialFraction = (focusPct - filled * 5) / 5;
-
   return (
     <div className="mx-auto w-full max-w-[15rem] text-center">
-      {/* Header — eyebrow on the left, percentage anchor on the right */}
-      <div className="flex items-baseline justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-steel-500 dark:text-steel-400">
-          Focus
-        </span>
-        <span className="text-base font-bold tabular-nums tracking-tight text-baltic-800 dark:text-baltic-100">
-          {focusPct}
-          <span className="text-xs ml-px text-baltic-600 dark:text-baltic-400">
-            %
-          </span>
-        </span>
-      </div>
+      <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-steel-500 dark:text-steel-400 mb-3">
+        Focus
+      </span>
 
-      {/* Tracker grid — the centerpiece */}
-      <div className="mt-3 mx-auto grid grid-cols-5 gap-1.5 w-full max-w-[11rem]">
-        {Array.from({ length: HABIT_CELLS }).map((_, i) => {
-          const fill =
-            i < filled ? 1 : i === filled ? partialFraction : 0;
-          const isPartial = fill > 0 && fill < 1;
-          return (
-            <div
-              key={i}
-              className={cn(
-                "relative aspect-square rounded-[3px] overflow-hidden border",
-                isPartial
-                  ? "border-baltic-500/80 dark:border-baltic-400/80"
-                  : "border-lavender-300/70 dark:border-lavender-700/60"
-              )}
-            >
-              <div
-                className="absolute inset-x-0 bottom-0 bg-baltic-600 dark:bg-baltic-400"
-                style={{
-                  height: `${fill * 100}%`,
-                  transition: "height 600ms var(--ease-out)",
-                }}
-              />
-            </div>
-          );
-        })}
+      {/* Bowl — the "a" from the logo, filling as you focus */}
+      <div className="relative mx-auto w-44 h-44 rounded-full bg-lavender-200/55 dark:bg-lavender-800/40 overflow-hidden border border-lavender-300/70 dark:border-lavender-700/60">
+        {/* Rising baltic fill — clipped to the circular bowl */}
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 bg-baltic-700 dark:bg-baltic-400"
+          style={{
+            height: `${focusPct}%`,
+            transition: "height 800ms var(--ease-out)",
+          }}
+        />
+
+        {/* White counter dot — direct echo of the logo's inner counter.
+            Sized at ~31% of the bowl diameter to match the logo's ratio. */}
+        <div
+          className="absolute left-1/2 top-1/2 w-[3.4rem] h-[3.4rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white dark:bg-baltic-900 flex items-center justify-center"
+          style={{
+            boxShadow:
+              "0 1px 2px rgba(38, 45, 64, 0.10), 0 0 0 1px rgba(38, 45, 64, 0.04)",
+          }}
+        >
+          <span className="text-base font-bold tabular-nums tracking-tight text-baltic-800 dark:text-baltic-100 leading-none">
+            {focusPct}
+            <span className="text-[0.65em] ml-px text-baltic-600 dark:text-baltic-400">
+              %
+            </span>
+          </span>
+        </div>
       </div>
 
       {/* Footer — minutes counter + status */}
