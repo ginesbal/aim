@@ -286,39 +286,125 @@
     mix-blend-mode: screen;
   }
 
-  /* Washi-tape strip — translucent stripe with soft micro-shadow */
+  /* Washi-tape strip — translucent paper, torn ends, soft adhesion shadow.
+     Height + position + rotation come from inline style + --tape-rot. */
   .washi-tape {
     position: absolute;
     z-index: 2;
-    height: 1.5rem;
-    border-radius: 1px;
+    height: 1.45rem;
     pointer-events: none;
-    opacity: 0.95;
+    opacity: 0.78;
+    /* Layered texture: diagonal weave + soft warmth + faint speckle */
     background-image:
       repeating-linear-gradient(
-        135deg,
-        transparent 0 6px,
-        rgba(255, 255, 255, 0.24) 6px 7px
-      );
-    box-shadow:
-      0 2px 5px rgba(38, 45, 64, 0.14),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+        132deg,
+        transparent 0 5px,
+        rgba(255, 255, 255, 0.18) 5px 6px
+      ),
+      radial-gradient(circle at 28% 36%, rgba(255, 255, 255, 0.22) 0%, transparent 55%),
+      radial-gradient(circle at 72% 68%, rgba(0, 0, 0, 0.05) 0%, transparent 55%);
+    background-blend-mode: normal, soft-light, soft-light;
+    /* Soft adhesion shadow — drop-shadow respects the torn clip-path */
+    filter:
+      drop-shadow(0 1.5px 1.5px rgba(38, 45, 64, 0.16))
+      drop-shadow(0 0.5px 0px rgba(38, 45, 64, 0.08));
+    transform: rotate(var(--tape-rot, 0deg));
+    transform-origin: 50% 50%;
+    /* Slow settle on rest, snap-in on hover (set on parent) */
+    transition: transform 700ms cubic-bezier(0.16, 1, 0.3, 1) 60ms;
+    will-change: transform;
   }
 
   .dark .washi-tape {
-    opacity: 0.78;
+    opacity: 0.7;
+    filter:
+      drop-shadow(0 2px 2px rgba(0, 0, 0, 0.45))
+      drop-shadow(0 0.5px 0 rgba(0, 0, 0, 0.30));
   }
 
-  /* Tape color fills */
-  .washi-cream    { background-color: #e3e7b1; }
-  .washi-baltic   { background-color: #9faac6; }
-  .washi-ash      { background-color: #c8d4c4; }
-  .washi-lavender { background-color: #c5c9d3; }
+  /* Two distinct torn-edge masks so paired pieces don't look identical */
+  .washi-torn-a {
+    clip-path: polygon(
+      2% 6%, 14% 0%, 32% 4%, 54% 1%, 74% 5%, 92% 1%, 100% 8%,
+      97% 28%, 100% 52%, 96% 76%, 99% 96%,
+      86% 100%, 64% 95%, 42% 100%, 22% 96%, 6% 100%,
+      0% 78%, 4% 54%, 0% 30%, 2% 6%
+    );
+  }
 
-  .dark .washi-cream    { background-color: #6f7425; }
-  .dark .washi-baltic   { background-color: #4d5b80; }
-  .dark .washi-ash      { background-color: #475940; }
-  .dark .washi-lavender { background-color: #586074; }
+  .washi-torn-b {
+    clip-path: polygon(
+      0% 4%, 18% 1%, 38% 6%, 58% 0%, 78% 4%, 98% 0%,
+      100% 24%, 96% 48%, 100% 72%, 97% 96%,
+      78% 99%, 58% 95%, 38% 100%, 18% 96%, 2% 100%,
+      4% 76%, 0% 50%, 3% 26%, 0% 4%
+    );
+  }
+
+  /* Tape color fills — translucent so the card faintly shows through */
+  .washi-cream    { background-color: rgba(227, 231, 177, 0.82); }
+  .washi-baltic   { background-color: rgba(159, 170, 198, 0.78); }
+  .washi-ash      { background-color: rgba(200, 212, 196, 0.80); }
+  .washi-lavender { background-color: rgba(197, 201, 211, 0.78); }
+
+  .dark .washi-cream    { background-color: rgba(111, 116, 37, 0.82); }
+  .dark .washi-baltic   { background-color: rgba(77, 91, 128, 0.82); }
+  .dark .washi-ash      { background-color: rgba(71, 89, 64, 0.82); }
+  .dark .washi-lavender { background-color: rgba(88, 96, 116, 0.82); }
+
+  /* Hover-sway — card pivots around the tape anchor.
+     Asymmetric: snaps in fast, settles out slow. */
+  .hover-sway {
+    transform: rotate(var(--tilt, 0deg));
+    transform-origin: var(--sway-origin, 1.75rem -0.4rem);
+    transition:
+      transform 700ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 500ms cubic-bezier(0.23, 1, 0.32, 1);
+    will-change: transform;
+  }
+  .hover-sway:hover {
+    transform: rotate(var(--tilt-hover, 0deg));
+    transition:
+      transform 280ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1);
+    box-shadow:
+      0 2px 3px rgba(38, 45, 64, 0.06),
+      0 8px 18px -4px rgba(38, 45, 64, 0.10),
+      0 24px 42px -14px rgba(38, 45, 64, 0.16);
+  }
+  .dark .hover-sway:hover {
+    box-shadow:
+      0 2px 3px rgba(0, 0, 0, 0.30),
+      0 8px 18px -4px rgba(0, 0, 0, 0.36),
+      0 24px 42px -14px rgba(0, 0, 0, 0.50);
+  }
+
+  /* Tape flex — pieces stretch a touch when the card sways toward upright */
+  .hover-sway:hover .washi-tape {
+    transform: rotate(calc(var(--tape-rot, 0deg) + var(--tape-flex, 0deg)));
+    transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1) 30ms;
+  }
+
+  /* Accessory glint — paperclip / thumbtack catch-light brightens on hover */
+  .accessory-glint {
+    opacity: 0.55;
+    transition: opacity 240ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .hover-sway:hover .accessory-glint {
+    opacity: 1;
+  }
+
+  /* Ambient idle micro-sway — like notes drifting in a still room */
+  @keyframes ambient-sway {
+    0%, 100% { transform: rotate(-0.07deg); }
+    50%      { transform: rotate(0.07deg); }
+  }
+  .ambient-sway {
+    animation: ambient-sway 9s ease-in-out infinite;
+    animation-delay: var(--sway-delay, 0s);
+    transform-origin: var(--sway-origin, 1.75rem 0);
+    will-change: transform;
+  }
 
   /* Highlighter — yellow pen swipe behind a key phrase */
   .highlighter {
@@ -402,12 +488,20 @@
     .doodle-draw polyline,
     .float-slow,
     .float-medium,
-    .progress-ring-circle {
+    .progress-ring-circle,
+    .ambient-sway {
       animation: none !important;
     }
     .paper-card {
       transition: none !important;
       transform: none !important;
+    }
+    .hover-sway,
+    .hover-sway:hover,
+    .hover-sway:hover .washi-tape,
+    .washi-tape,
+    .accessory-glint {
+      transition: none !important;
     }
     .press:active {
       transform: none !important;
