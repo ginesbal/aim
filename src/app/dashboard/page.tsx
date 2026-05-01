@@ -169,20 +169,18 @@ export default function DashboardPage() {
         <ScribbleUnderline className="ml-[8.5rem] mt-1 text-cream-500/70 dark:text-cream-400/50" />
       </header>
 
-      {/* ─── 2. Your aim today — summary note + guidance card ─── */}
-      <div className="mb-7 grid grid-cols-1 lg:grid-cols-[minmax(15rem,18rem)_1fr] gap-5 lg:gap-6 items-stretch">
-        <FocusStickyNote delay={60}>
-          <FocusSummary
+      {/* ─── 2. Your aim today — focused progress card ─── */}
+      <StickyCard tape="cream" delay={60} className="mb-7">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(12rem,15rem)_1fr] gap-6 md:gap-8 items-center">
+          <FocusTarget
             focusPct={focusPct}
             todayMinutes={todayMinutes}
             dailyGoal={dailyGoal}
             minutesToGoal={minutesToGoal}
           />
-        </FocusStickyNote>
 
-        <StickyCard tape="lavender" delay={100} paperclip>
           {/* Title + guidance + CTA */}
-          <div className="relative text-center md:text-left">
+          <div className="text-center md:text-left">
             <CardEyebrow>Your aim today</CardEyebrow>
             <p className="mt-2 text-2xl font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
               {guidance.lead}
@@ -204,8 +202,8 @@ export default function DashboardPage() {
               <span className="text-base leading-none">→</span>
             </button>
           </div>
-        </StickyCard>
-      </div>
+        </div>
+      </StickyCard>
 
       {/* ─── Hand-drawn pointer arrow ─── */}
       <div
@@ -334,36 +332,15 @@ export default function DashboardPage() {
 
 type TapeColor = "cream" | "baltic" | "ash" | "lavender";
 
-function FocusStickyNote({
-  children,
-  delay = 0,
-}: {
-  children: ReactNode;
-  delay?: number;
-}) {
-  return (
-    <div
-      className="focus-sticky-note sticky-enter p-6 sm:p-7"
-      style={{ "--delay": `${delay}ms` } as CSSProperties}
-    >
-      <div className="relative z-10">{children}</div>
-    </div>
-  );
-}
-
 function StickyCard({
   children,
   tape = "cream",
   delay = 0,
-  paperclip = false,
-  tools = true,
   className,
 }: {
   children: ReactNode;
   tape?: TapeColor;
   delay?: number;
-  paperclip?: boolean;
-  tools?: boolean;
   className?: string;
 }) {
   return (
@@ -389,12 +366,6 @@ function StickyCard({
           transform: "rotate(-3.5deg)",
         }}
       />
-      {paperclip && (
-        <PaperclipDoodle className="absolute -top-2 right-5 z-20 text-baltic-500/70 dark:text-baltic-200/55" />
-      )}
-      {tools && (
-        <StudyToolDoodles className="pointer-events-none absolute bottom-3 right-3 z-[1] text-cream-600/25 dark:text-cream-300/20" />
-      )}
 
       <div className="relative z-10">{children}</div>
     </div>
@@ -411,10 +382,10 @@ function CardEyebrow({ children }: { children: ReactNode }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   FOCUS SUMMARY
+   FOCUS TARGET
    ───────────────────────────────────────────────────────────── */
 
-function FocusSummary({
+function FocusTarget({
   focusPct,
   todayMinutes,
   dailyGoal,
@@ -431,23 +402,68 @@ function FocusSummary({
     : todayMinutes === 0
     ? "Try one small focus block."
     : `${formatTime(minutesToGoal)} left today.`;
+  const radius = 60;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (focusPct / 100) * circumference;
 
   return (
-    <div className="study-progress-note mx-auto w-full max-w-[13.5rem] text-center">
-      <p className="font-script text-lg leading-none text-cream-700 dark:text-cream-300">
-        today's focus
-      </p>
-      <p className="mt-2 text-4xl font-bold tabular-nums tracking-tight text-baltic-800 dark:text-baltic-100">
-        {focusPct}%
-      </p>
-      <div className="mt-3 h-2 rounded-full bg-white/80 dark:bg-lavender-900/70 overflow-hidden">
-        <div
-          className="h-full rounded-full bg-baltic-600 dark:bg-baltic-400"
-          style={{
-            width: `${focusPct}%`,
-            transition: "width 700ms var(--ease-out)",
-          }}
-        />
+    <div className="mx-auto w-full max-w-[13.5rem] text-center">
+      <div className="relative mx-auto h-40 w-40">
+        <svg
+          aria-hidden
+          viewBox="0 0 160 160"
+          className="h-full w-full -rotate-90"
+        >
+          <circle
+            cx="80"
+            cy="80"
+            r="60"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1"
+            className="text-lavender-200 dark:text-lavender-700"
+          />
+          <circle
+            cx="80"
+            cy="80"
+            r="42"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1"
+            strokeDasharray="3 7"
+            className="text-cream-400/70 dark:text-cream-600/60"
+          />
+          <circle
+            cx="80"
+            cy="80"
+            r={radius}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            className="text-baltic-600 dark:text-baltic-300"
+            style={{
+              transition: "stroke-dashoffset 700ms var(--ease-out)",
+            }}
+          />
+          <circle
+            cx="80"
+            cy="80"
+            r="8"
+            fill="currentColor"
+            className="text-cream-400 dark:text-cream-500"
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-steel-500 dark:text-steel-400">
+            Focus
+          </span>
+          <span className="mt-1 text-4xl font-bold tabular-nums tracking-tight text-baltic-800 dark:text-baltic-100">
+            {focusPct}%
+          </span>
+        </div>
       </div>
       <p className="mt-3 text-xs text-steel-500 dark:text-steel-400">
         <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
@@ -466,27 +482,6 @@ function FocusSummary({
 }
 
 /* Doodles: tiny hand-drawn SVG accents */
-function PaperclipDoodle({ className }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden
-      width="31"
-      height="38"
-      viewBox="0 0 31 38"
-      fill="none"
-      className={className}
-    >
-      <path
-        d="M20.5 9.5v17.2c0 5.4-3.4 8.8-8.2 8.8s-8.2-3.4-8.2-8.8V10.8c0-5 3.1-8.3 7.3-8.3s7.3 3.3 7.3 8.3v14.7c0 3.1-2 5.2-4.7 5.2s-4.7-2.1-4.7-5.2V12"
-        stroke="currentColor"
-        strokeWidth="2.15"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function ScribbleUnderline({ className }: { className?: string }) {
   return (
     <svg
@@ -528,69 +523,6 @@ function DoodleArrow({ className }: { className?: string }) {
         strokeLinejoin="round"
         fill="none"
       />
-    </svg>
-  );
-}
-
-function StudyToolDoodles({ className }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden
-      width="118"
-      height="44"
-      viewBox="0 0 118 44"
-      fill="none"
-      className={className}
-    >
-      <g transform="rotate(-18 36 24)">
-        <path
-          d="M12 19 H58 L69 24 L58 29 H12 Z"
-          fill="currentColor"
-          opacity="0.12"
-        />
-        <path
-          d="M12 19 H58 L69 24 L58 29 H12 Z"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M58 19 L69 24 L58 29"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M9 19 H17 V29 H9 Z"
-          fill="currentColor"
-          opacity="0.18"
-        />
-        <path
-          d="M17 19 V29 M54 19 V29"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-      </g>
-      <g transform="rotate(5 88 25)">
-        <path
-          d="M74 14 H110 V28 H74 Z"
-          fill="currentColor"
-          opacity="0.10"
-        />
-        <path
-          d="M74 14 H110 V28 H74 Z"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M80 14 V20 M86 14 V18 M92 14 V22 M98 14 V18 M104 14 V20"
-          stroke="currentColor"
-          strokeWidth="1.3"
-          strokeLinecap="round"
-        />
-      </g>
     </svg>
   );
 }
