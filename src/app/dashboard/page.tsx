@@ -529,10 +529,12 @@ function Thumbtack({
 }
 
 /* ─────────────────────────────────────────────────────────────
-   FOCUS TARGET — hand-drawn target: stippled track, cardinal
-   ticks, pen-stroke arc, pencil-mark at the progress end,
-   pen-stroke underline beneath the percentage.
+   FOCUS TARGET — habit-tracker grid: 5×4 = 20 cells, each = 5%
+   of the daily goal. Cells fill bottom-up like rising water; the
+   in-progress cell carries a brighter border to mark "you are here."
    ───────────────────────────────────────────────────────────── */
+
+const HABIT_CELLS = 20;
 
 function FocusTarget({
   focusPct,
@@ -552,141 +554,53 @@ function FocusTarget({
     ? "Try one small focus block."
     : `${formatTime(minutesToGoal)} left today.`;
 
-  const cx = 100;
-  const cy = 100;
-  const radius = 72;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (focusPct / 100) * circumference;
-
-  // Pencil-mark dot at the END of the progress arc.
-  // Arc starts at 12 o'clock and goes clockwise, so:
-  //   x = cx + r * sin(theta), y = cy - r * cos(theta)
-  const theta = (focusPct / 100) * 2 * Math.PI;
-  const markX = cx + radius * Math.sin(theta);
-  const markY = cy - radius * Math.cos(theta);
-  const showMark = focusPct > 1 && focusPct < 99;
+  const filled = Math.floor(focusPct / 5);
+  const partialFraction = (focusPct - filled * 5) / 5;
 
   return (
     <div className="mx-auto w-full max-w-[15rem] text-center">
-      <div className="relative mx-auto h-44 w-44">
-        <svg
-          aria-hidden
-          viewBox="0 0 200 200"
-          className="h-full w-full"
-        >
-          {/* Cardinal tick marks just outside the track */}
-          {[0, 90, 180, 270].map((deg) => {
-            const t = ((deg - 90) * Math.PI) / 180;
-            const r1 = radius + 5;
-            const r2 = radius + 11;
-            return (
-              <line
-                key={deg}
-                x1={cx + r1 * Math.cos(t)}
-                y1={cy + r1 * Math.sin(t)}
-                x2={cx + r2 * Math.cos(t)}
-                y2={cy + r2 * Math.sin(t)}
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                className="text-steel-400/80 dark:text-steel-500/80"
-              />
-            );
-          })}
-
-          {/* Stippled outer track — the "potential" path the pen will trace */}
-          <circle
-            cx={cx}
-            cy={cy}
-            r={radius}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            strokeDasharray="1.6 4.4"
-            strokeLinecap="round"
-            className="text-lavender-300 dark:text-lavender-700"
-          />
-
-          {/* Faint inner bullseye ring — adds depth */}
-          <circle
-            cx={cx}
-            cy={cy}
-            r="40"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1"
-            strokeDasharray="1.4 5"
-            strokeLinecap="round"
-            className="text-cream-500/55 dark:text-cream-500/35"
-          />
-
-          {/* Progress arc — pen-stroke, rotated to start at 12 o'clock */}
-          <g transform={`rotate(-90 ${cx} ${cy})`}>
-            <circle
-              cx={cx}
-              cy={cy}
-              r={radius}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="9"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={offset}
-              className="text-baltic-600 dark:text-baltic-300"
-              style={{
-                transition: "stroke-dashoffset 700ms var(--ease-out)",
-              }}
-            />
-          </g>
-
-          {/* Pencil mark at the progress end — like a graphite tick */}
-          {showMark && (
-            <>
-              <circle
-                cx={markX}
-                cy={markY}
-                r="4"
-                fill="currentColor"
-                className="text-cream-500 dark:text-cream-400"
-              />
-              <circle
-                cx={markX}
-                cy={markY}
-                r="1.5"
-                fill="currentColor"
-                className="text-baltic-700 dark:text-baltic-200"
-              />
-            </>
-          )}
-
-          {/* Bullseye center dot */}
-          <circle
-            cx={cx}
-            cy={cy}
-            r="2.2"
-            fill="currentColor"
-            className="text-baltic-700 dark:text-baltic-300"
-          />
-        </svg>
-
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-steel-500 dark:text-steel-400">
-            Focus
+      {/* Header — eyebrow on the left, percentage anchor on the right */}
+      <div className="flex items-baseline justify-between">
+        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-steel-500 dark:text-steel-400">
+          Focus
+        </span>
+        <span className="text-base font-bold tabular-nums tracking-tight text-baltic-800 dark:text-baltic-100">
+          {focusPct}
+          <span className="text-xs ml-px text-baltic-600 dark:text-baltic-400">
+            %
           </span>
-          <div className="relative mt-0.5">
-            <span className="text-[2.6rem] font-bold tabular-nums tracking-tight text-baltic-800 dark:text-baltic-100 leading-none">
-              {focusPct}
-              <span className="text-2xl ml-0.5">%</span>
-            </span>
-            {/* Pen-stroke underline beneath the number */}
-            <ScribbleUnderline
-              className="absolute left-1/2 -translate-x-1/2 -bottom-2 text-cream-500/80 dark:text-cream-400/60"
-              width={70}
-            />
-          </div>
-        </div>
+        </span>
       </div>
 
+      {/* Tracker grid — the centerpiece */}
+      <div className="mt-3 mx-auto grid grid-cols-5 gap-1.5 w-full max-w-[11rem]">
+        {Array.from({ length: HABIT_CELLS }).map((_, i) => {
+          const fill =
+            i < filled ? 1 : i === filled ? partialFraction : 0;
+          const isPartial = fill > 0 && fill < 1;
+          return (
+            <div
+              key={i}
+              className={cn(
+                "relative aspect-square rounded-[3px] overflow-hidden border",
+                isPartial
+                  ? "border-baltic-500/80 dark:border-baltic-400/80"
+                  : "border-lavender-300/70 dark:border-lavender-700/60"
+              )}
+            >
+              <div
+                className="absolute inset-x-0 bottom-0 bg-baltic-600 dark:bg-baltic-400"
+                style={{
+                  height: `${fill * 100}%`,
+                  transition: "height 600ms var(--ease-out)",
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer — minutes counter + status */}
       <p className="mt-4 text-xs text-steel-500 dark:text-steel-400">
         <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
           {formatTime(todayMinutes)}
