@@ -169,10 +169,8 @@ export default function DashboardPage() {
       {/* Today's aim — centerpiece, no accessory */}
       <StickyCard
         tape="cream"
-        tilt={-0.55}
         delay={60}
         accessory="none"
-        swayDelay="0s"
         className="mb-8"
       >
         <div className="grid grid-cols-1 md:grid-cols-[minmax(13rem,16rem)_1fr] gap-6 md:gap-10 items-center">
@@ -214,10 +212,8 @@ export default function DashboardPage() {
       {/* Next up — clipped task */}
       <StickyCard
         tape="baltic"
-        tilt={0.45}
         delay={120}
         accessory="paperclip"
-        swayDelay="-2.6s"
         className="mb-8"
       >
         <CardEyebrow>Next up</CardEyebrow>
@@ -244,11 +240,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <StickyCard
           tape="ash"
-          tilt={-0.65}
           delay={180}
           accessory="thumbtack"
           accessoryColor="cream"
-          swayDelay="-4.4s"
         >
           <CardEyebrow>Your streak</CardEyebrow>
           <div className="mt-3 flex items-center gap-4">
@@ -285,10 +279,8 @@ export default function DashboardPage() {
 
         <StickyCard
           tape="lavender"
-          tilt={0.55}
           delay={240}
           accessory="none"
-          swayDelay="-6.2s"
         >
           <CardEyebrow>Pick up where you left off</CardEyebrow>
           {lastSession ? (
@@ -318,8 +310,7 @@ export default function DashboardPage() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   STICKY CARD — three nested wrappers so transforms compose:
-   sticky-enter (entrance) → ambient-sway (idle) → hover-sway (interaction)
+   STICKY CARD — flat panel, taped at the top, optional accessory
    ───────────────────────────────────────────────────────────── */
 
 type TapeColor = "cream" | "baltic" | "ash" | "lavender";
@@ -329,79 +320,51 @@ type AccessoryColor = "cream" | "baltic" | "ash";
 function StickyCard({
   children,
   tape = "cream",
-  tilt = 0,
   delay = 0,
   accessory = "none",
   accessoryColor = "cream",
-  swayDelay = "0s",
   className,
 }: {
   children: ReactNode;
   tape?: TapeColor;
-  tilt?: number;
   delay?: number;
   accessory?: Accessory;
   accessoryColor?: AccessoryColor;
-  swayDelay?: string;
   className?: string;
 }) {
-  // Hover settles ~70% toward upright; never fully flat (keeps tape pivot natural)
-  const tiltHover = +(tilt * 0.3).toFixed(3);
-
   return (
     <div
-      className={cn("sticky-enter", className)}
+      className={cn(
+        "paper-card sticky-enter relative px-6 pt-9 pb-6 border border-lavender-200/60 dark:border-lavender-800/60",
+        className
+      )}
       style={{ "--delay": `${delay}ms` } as CSSProperties}
     >
-      <div
-        className="ambient-sway"
-        style={
-          {
-            "--sway-delay": swayDelay,
-            "--sway-origin": "1.75rem 0",
-          } as CSSProperties
-        }
-      >
-        <div
-          className="paper-card hover-sway relative px-6 pt-9 pb-6 border border-lavender-200/60 dark:border-lavender-800/60"
-          style={
-            {
-              "--tilt": `${tilt}deg`,
-              "--tilt-hover": `${tiltHover}deg`,
-              "--sway-origin": "1.75rem -0.4rem",
-            } as CSSProperties
-          }
-        >
-          {/* Two overlapping tape pieces — slight angle disagreement looks
-              like someone added a second strip to make sure it stuck. */}
-          <WashiTape
-            tape={tape}
-            variant="a"
-            rot={-7}
-            flex={1.6}
-            style={{ width: "5.4rem", top: "-0.6rem", left: "1rem" }}
-          />
-          <WashiTape
-            tape={tape}
-            variant="b"
-            rot={3.5}
-            flex={-1.1}
-            style={{ width: "3.2rem", top: "-0.45rem", left: "3.5rem" }}
-          />
+      {/* Two overlapping tape pieces near the top-left */}
+      <WashiTape
+        tape={tape}
+        variant="a"
+        rot={-7}
+        style={{ width: "5.4rem", top: "-0.6rem", left: "1rem" }}
+      />
+      <WashiTape
+        tape={tape}
+        variant="b"
+        rot={3.5}
+        style={{ width: "3.2rem", top: "-0.45rem", left: "3.5rem" }}
+      />
 
-          {accessory === "paperclip" && (
-            <Paperclip className="absolute -top-2.5 right-7" />
-          )}
-          {accessory === "thumbtack" && (
-            <Thumbtack
-              className="absolute -top-1.5 right-7"
-              color={accessoryColor}
-            />
-          )}
+      {accessory === "paperclip" && (
+        <Paperclip className="absolute -top-2.5 right-7" />
+      )}
+      {accessory === "thumbtack" && (
+        <Thumbtack
+          className="absolute -top-1.5 right-7"
+          color={accessoryColor}
+        />
+      )}
 
-          <div className="relative z-10">{children}</div>
-        </div>
-      </div>
+      <div className="relative z-10">{children}</div>
     </div>
   );
 }
@@ -410,13 +373,11 @@ function WashiTape({
   tape,
   variant,
   rot,
-  flex,
   style,
 }: {
   tape: TapeColor;
   variant: "a" | "b";
   rot: number;
-  flex: number;
   style: CSSProperties;
 }) {
   return (
@@ -431,7 +392,6 @@ function WashiTape({
         {
           ...style,
           "--tape-rot": `${rot}deg`,
-          "--tape-flex": `${flex}deg`,
         } as CSSProperties
       }
     />
@@ -485,15 +445,14 @@ function Paperclip({ className }: { className?: string }) {
           fill="none"
           transform="translate(-0.5 -0.5)"
         />
-        {/* Top catch-light — brightens on parent hover */}
+        {/* Top catch-light */}
         <ellipse
           cx="11.2"
           cy="4.6"
           rx="2.6"
           ry="0.6"
           fill="white"
-          opacity="0.5"
-          className="accessory-glint"
+          opacity="0.55"
         />
       </svg>
     </div>
@@ -560,18 +519,10 @@ function Thumbtack({
           rx="3.2"
           ry="1.9"
           fill="white"
-          opacity="0.55"
-          className="accessory-glint"
+          opacity="0.6"
         />
         {/* Secondary tiny glint */}
-        <circle
-          cx="15.2"
-          cy="8.4"
-          r="0.8"
-          fill="white"
-          opacity="0.7"
-          className="accessory-glint"
-        />
+        <circle cx="15.2" cy="8.4" r="0.8" fill="white" opacity="0.75" />
       </svg>
     </div>
   );
