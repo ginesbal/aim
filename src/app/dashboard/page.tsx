@@ -529,11 +529,31 @@ function Thumbtack({
 }
 
 /* ─────────────────────────────────────────────────────────────
-   FOCUS TARGET — the "a" bowl from the aim logo, treated as a
-   vessel that fills with baltic from the bottom up. The white
-   counter dot mirrors the logo's inner counter and displays the
-   percentage. As you focus, you complete the "a" of aim.
+   FOCUS TARGET — the full "a" of aim. Bowl + tail silhouette
+   pulled directly from the AimLogo paths; baltic fills from the
+   bottom of the silhouette upward as focus minutes accrue, so
+   the entire letter (bowl AND tail) paints itself in. The white
+   counter dot sits in the bowl with the percentage inside.
    ───────────────────────────────────────────────────────────── */
+
+// Geometry pulled directly from src/components/layout/AimLogo.tsx so the
+// focus widget renders the same "a" the logo does.
+const A_BOWL_CX = 241.5;
+const A_BOWL_CY = 293.5;
+const A_BOWL_R = 64.5;
+const A_TAIL_PATH =
+  "M305.782 288.417L306 290V356H233V279H302.256L305.782 288.417Z";
+const A_COUNTER_CX = 242;
+const A_COUNTER_CY = 294.5;
+const A_COUNTER_R = 20;
+
+// Square viewBox padded around the "a" silhouette (~6 units each side).
+const A_VB_X = 170;
+const A_VB_Y = 222;
+const A_VB_SIZE = 142;
+// Tight y-extent of the silhouette: bowl top (cy-r) to bowl bottom (cy+r).
+const A_TOP = A_BOWL_CY - A_BOWL_R; // 229
+const A_HEIGHT = 2 * A_BOWL_R; // 129
 
 function FocusTarget({
   focusPct,
@@ -559,25 +579,63 @@ function FocusTarget({
         Focus
       </span>
 
-      {/* Bowl — the "a" from the logo, filling as you focus */}
-      <div className="relative mx-auto w-44 h-44 rounded-full bg-lavender-200/55 dark:bg-lavender-800/40 overflow-hidden border border-lavender-300/70 dark:border-lavender-700/60">
-        {/* Rising baltic fill — clipped to the circular bowl */}
-        <div
+      <div className="relative mx-auto w-44 h-44">
+        <svg
           aria-hidden
-          className="absolute inset-x-0 bottom-0 bg-baltic-700 dark:bg-baltic-400"
-          style={{
-            height: `${focusPct}%`,
-            transition: "height 800ms var(--ease-out)",
-          }}
-        />
+          viewBox={`${A_VB_X} ${A_VB_Y} ${A_VB_SIZE} ${A_VB_SIZE}`}
+          className="absolute inset-0 w-full h-full"
+        >
+          <defs>
+            <clipPath id="aim-a-silhouette">
+              {/* Bowl */}
+              <circle cx={A_BOWL_CX} cy={A_BOWL_CY} r={A_BOWL_R} />
+              {/* Tail (right stem of the "a") */}
+              <path d={A_TAIL_PATH} />
+            </clipPath>
+          </defs>
 
-        {/* White counter dot — direct echo of the logo's inner counter.
-            Sized at ~31% of the bowl diameter to match the logo's ratio. */}
+          <g clipPath="url(#aim-a-silhouette)">
+            {/* Empty silhouette — ghost of the "a" waiting to be filled */}
+            <rect
+              x={A_VB_X}
+              y={A_VB_Y}
+              width={A_VB_SIZE}
+              height={A_VB_SIZE}
+              className="fill-lavender-200/55 dark:fill-lavender-800/40"
+            />
+
+            {/* Rising baltic — translates from below back into place.
+                Sized exactly to the silhouette's y-extent so 50% reads as
+                the bottom half, 100% as the full letter. */}
+            <rect
+              x={A_VB_X}
+              y={A_TOP}
+              width={A_VB_SIZE}
+              height={A_HEIGHT}
+              className="fill-baltic-700 dark:fill-baltic-400"
+              style={{
+                transform: `translateY(${100 - Math.max(0, Math.min(100, focusPct))}%)`,
+                transformBox: "fill-box",
+                transition: "transform 800ms var(--ease-out)",
+              }}
+            />
+          </g>
+
+          {/* Counter dot — exact logo geometry, drawn on top of the fill */}
+          <circle
+            cx={A_COUNTER_CX}
+            cy={A_COUNTER_CY}
+            r={A_COUNTER_R}
+            className="fill-white dark:fill-baltic-900"
+          />
+        </svg>
+
+        {/* Percentage label — positioned dead-center on the counter dot */}
         <div
-          className="absolute left-1/2 top-1/2 w-[3.4rem] h-[3.4rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white dark:bg-baltic-900 flex items-center justify-center"
+          className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2"
           style={{
-            boxShadow:
-              "0 1px 2px rgba(38, 45, 64, 0.10), 0 0 0 1px rgba(38, 45, 64, 0.04)",
+            left: `${((A_COUNTER_CX - A_VB_X) / A_VB_SIZE) * 100}%`,
+            top: `${((A_COUNTER_CY - A_VB_Y) / A_VB_SIZE) * 100}%`,
           }}
         >
           <span className="text-base font-bold tabular-nums tracking-tight text-baltic-800 dark:text-baltic-100 leading-none">
