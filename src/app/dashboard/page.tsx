@@ -349,105 +349,106 @@ function HeroBody({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[minmax(13rem,16rem)_1fr] gap-7 md:gap-10 items-center">
+    <div
+      className={cn(
+        "grid gap-7 md:gap-10 items-start grid-cols-1",
+        // Three-column layout reads left to right like a sentence:
+        //   FOCUS (where I am)  ·  RIGHT NOW (the headline)  ·  WORKING ON (what to do)
+        // The middle column flexes; the focus column is fixed; the action column
+        // is generous enough to hold a task title without truncation.
+        nextTask
+          ? "lg:grid-cols-[13rem_minmax(0,1fr)_minmax(17rem,21rem)]"
+          : "lg:grid-cols-[13rem_minmax(0,1fr)]"
+      )}
+    >
+      {/* COLUMN 1 — FOCUS: progress visual */}
       <FocusTarget
         focusPct={focusPct}
         todayMinutes={todayMinutes}
         dailyGoal={dailyGoal}
       />
 
-      {/* Right column — single rhythm: heading → next task → CTA.
-          space-y-5 keeps gaps even between every block. */}
-      <div className="text-center md:text-left space-y-5">
-        <div className="space-y-2">
-          <CardEyebrow>Right now</CardEyebrow>
-          <h2 className="text-2xl font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
-            {headline}
-          </h2>
-          {sub && (
-            <p className="text-sm text-steel-500 dark:text-steel-400">
-              {sub}
-            </p>
-          )}
-        </div>
-
-        {nextTask && (
-          <NextTaskPullIn
-            task={nextTask}
-            subjectLabel={subjectLabel}
-            subjectColor={subjectColor}
-          />
+      {/* COLUMN 2 — RIGHT NOW: headline + sub */}
+      <div className="text-center lg:text-left space-y-2">
+        <CardEyebrow>Right now</CardEyebrow>
+        <h2 className="text-2xl font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
+          {headline}
+        </h2>
+        {sub && (
+          <p className="text-sm text-steel-500 dark:text-steel-400">{sub}</p>
         )}
+        {!nextTask && (
+          <div className="pt-3 flex items-center gap-3 flex-wrap justify-center lg:justify-start">
+            <button
+              onClick={ctaAction}
+              className="press inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-baltic-400 focus:ring-offset-2 dark:focus:ring-offset-baltic-950"
+              style={{
+                transition:
+                  "transform 160ms var(--ease-out), background-color 160ms ease",
+              }}
+            >
+              {ctaLabel}
+              <span className="text-base leading-none">→</span>
+            </button>
+          </div>
+        )}
+      </div>
 
-        <div className="flex items-center gap-3 flex-wrap justify-center md:justify-start">
-          <button
-            onClick={ctaAction}
-            className="press inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-baltic-400 focus:ring-offset-2 dark:focus:ring-offset-baltic-950"
-            style={{
-              transition:
-                "transform 160ms var(--ease-out), background-color 160ms ease",
-            }}
-          >
-            {ctaLabel}
-            <span className="text-base leading-none">→</span>
-          </button>
+      {/* COLUMN 3 — WORKING ON: task + primary action.
+          Lives in the same column as the CTA so "the task you're starting"
+          and "the button that starts it" are visually linked. */}
+      {nextTask && (
+        <div className="text-center lg:text-left space-y-3 lg:border-l lg:border-lavender-200/60 lg:dark:border-lavender-800/60 lg:pl-7">
+          <CardEyebrow>Working on</CardEyebrow>
+          <div className="space-y-1">
+            <p className="text-sm font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
+              {nextTask.title}
+            </p>
+            <p className="inline-flex items-center gap-1.5 text-xs text-steel-500 dark:text-steel-400">
+              <span
+                aria-hidden
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ backgroundColor: subjectColor }}
+              />
+              <span>{subjectLabel}</span>
+              <span aria-hidden className="text-steel-300 dark:text-steel-600">
+                ·
+              </span>
+              <span
+                className={cn(
+                  "font-medium",
+                  isOverdue(nextTask.dueDate) &&
+                    "text-red-500 dark:text-red-400"
+                )}
+              >
+                {isOverdue(nextTask.dueDate)
+                  ? "Overdue"
+                  : dayLabel(nextTask.dueDate)}
+              </span>
+            </p>
+          </div>
 
-          {nextTask && (
+          <div className="pt-1 flex items-center gap-3 flex-wrap justify-center lg:justify-start">
+            <button
+              onClick={ctaAction}
+              className="press inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-baltic-400 focus:ring-offset-2 dark:focus:ring-offset-baltic-950"
+              style={{
+                transition:
+                  "transform 160ms var(--ease-out), background-color 160ms ease",
+              }}
+            >
+              {ctaLabel}
+              <span className="text-base leading-none">→</span>
+            </button>
             <button
               onClick={onComplete}
               className="press text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors px-1"
             >
               Mark done
             </button>
-          )}
+          </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-/* Next-task block — labelled, clean meta line with a subject-color dot.
-   No more "pick another" inline link; one canonical task entry point
-   lives in the week card below. */
-function NextTaskPullIn({
-  task,
-  subjectLabel,
-  subjectColor,
-}: {
-  task: Task;
-  subjectLabel: string;
-  subjectColor: string;
-}) {
-  const overdue = isOverdue(task.dueDate);
-  const due = overdue ? "Overdue" : dayLabel(task.dueDate);
-
-  return (
-    <div className="max-w-md mx-auto md:mx-0">
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-steel-500 dark:text-steel-400">
-        Working on
-      </p>
-      <p className="mt-1.5 text-sm font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
-        {task.title}
-      </p>
-      <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-steel-500 dark:text-steel-400">
-        <span
-          aria-hidden
-          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-          style={{ backgroundColor: subjectColor }}
-        />
-        <span>{subjectLabel}</span>
-        <span aria-hidden className="text-steel-300 dark:text-steel-600">
-          ·
-        </span>
-        <span
-          className={cn(
-            "font-medium",
-            overdue && "text-red-500 dark:text-red-400"
-          )}
-        >
-          {due}
-        </span>
-      </p>
+      )}
     </div>
   );
 }
