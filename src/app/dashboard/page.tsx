@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import {
   usePreferences,
   useTasks,
@@ -26,12 +32,26 @@ import type { Task, FocusSession, UserSubject } from "@/lib/types";
 
 const FOCUS_BLOCK_MIN = 25;
 
+/* Tick the dashboard once a minute so the header date / weekday and any
+   time-of-day-derived copy ("Hit your goal by 4:30 PM", "First 25 min
+   ends at 12:50 AM") stay current when the page is left open past a
+   day or hour boundary. Cheap; the work inside is cached by useMemo. */
+function useMinuteTick() {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => force((n) => n + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+}
+
 export default function DashboardPage() {
   const { name, isFirstVisit, dailyGoal, setName } = usePreferences();
   const { tasks, toggleComplete } = useTasks();
   const { todayMinutes, streak, sessions } = useFocus();
   const { getSubject } = useSubjects();
   const router = useRouter();
+
+  useMinuteTick();
 
   const [showWelcome, setShowWelcome] = useState(isFirstVisit);
   const [welcomeName, setWelcomeName] = useState("");
@@ -381,14 +401,16 @@ function HeroBody({
           <div className="pt-3 flex items-center gap-3 flex-wrap justify-center lg:justify-start">
             <button
               onClick={ctaAction}
-              className="press inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-baltic-400 focus:ring-offset-2 dark:focus:ring-offset-baltic-950"
+              className="press inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
               style={{
                 transition:
                   "transform 160ms var(--ease-out), background-color 160ms ease",
               }}
             >
               {ctaLabel}
-              <span className="text-base leading-none">→</span>
+              <span className="text-base leading-none" aria-hidden>
+                →
+              </span>
             </button>
           </div>
         )}
@@ -396,53 +418,59 @@ function HeroBody({
 
       {/* COLUMN 3 — WORKING ON: task + primary action.
           Lives in the same column as the CTA so "the task you're starting"
-          and "the button that starts it" are visually linked. */}
+          and "the button that starts it" are visually linked.
+          Explicit margins (not space-y) so the eyebrow→title gap matches
+          col 2's, then meta hugs the title, then the action breathes. */}
       {nextTask && (
-        <div className="text-center lg:text-left space-y-3 lg:border-l lg:border-lavender-200/60 lg:dark:border-lavender-800/60 lg:pl-7">
+        <div className="text-center lg:text-left lg:border-l lg:border-lavender-200/60 lg:dark:border-lavender-800/60 lg:pl-7">
           <CardEyebrow>Working on</CardEyebrow>
-          <div className="space-y-1">
-            <p className="text-sm font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
-              {nextTask.title}
-            </p>
-            <p className="inline-flex items-center gap-1.5 text-xs text-steel-500 dark:text-steel-400">
-              <span
-                aria-hidden
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ backgroundColor: subjectColor }}
-              />
-              <span>{subjectLabel}</span>
-              <span aria-hidden className="text-steel-300 dark:text-steel-600">
-                ·
-              </span>
-              <span
-                className={cn(
-                  "font-medium",
-                  isOverdue(nextTask.dueDate) &&
-                    "text-red-500 dark:text-red-400"
-                )}
-              >
-                {isOverdue(nextTask.dueDate)
-                  ? "Overdue"
-                  : dayLabel(nextTask.dueDate)}
-              </span>
-            </p>
-          </div>
+          <p className="mt-3 text-sm font-bold text-baltic-800 dark:text-baltic-100 leading-snug line-clamp-2">
+            {nextTask.title}
+          </p>
+          <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-steel-500 dark:text-steel-400 max-w-full">
+            <span
+              aria-hidden
+              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+              style={{ backgroundColor: subjectColor }}
+            />
+            <span className="truncate">{subjectLabel}</span>
+            <span aria-hidden className="text-steel-300 dark:text-steel-600">
+              ·
+            </span>
+            <span
+              className={cn(
+                "font-medium flex-shrink-0",
+                isOverdue(nextTask.dueDate) &&
+                  "text-red-500 dark:text-red-400"
+              )}
+            >
+              {isOverdue(nextTask.dueDate)
+                ? "Overdue"
+                : dayLabel(nextTask.dueDate)}
+            </span>
+          </p>
 
-          <div className="pt-1 flex items-center gap-3 flex-wrap justify-center lg:justify-start">
+          <div className="mt-5 flex items-center gap-3 flex-wrap justify-center lg:justify-start">
             <button
               onClick={ctaAction}
-              className="press inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-baltic-400 focus:ring-offset-2 dark:focus:ring-offset-baltic-950"
+              className="press inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
               style={{
                 transition:
                   "transform 160ms var(--ease-out), background-color 160ms ease",
               }}
             >
               {ctaLabel}
-              <span className="text-base leading-none">→</span>
+              <span className="text-base leading-none" aria-hidden>
+                →
+              </span>
             </button>
             <button
               onClick={onComplete}
-              className="press text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors px-1"
+              className="press rounded-md py-2 px-2 -my-2 -mx-2 text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
+              style={{
+                transition:
+                  "color 160ms ease, transform 160ms var(--ease-out)",
+              }}
             >
               Mark done
             </button>
@@ -519,7 +547,10 @@ function WeekBody({
 
           <button
             onClick={onOpenAll}
-            className="press text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors"
+            className="press rounded-md py-1.5 px-2 -mx-2 text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
+            style={{
+              transition: "color 160ms ease, transform 160ms var(--ease-out)",
+            }}
           >
             See all tasks &rarr;
           </button>
@@ -656,7 +687,11 @@ function TaskRow({
   return (
     <button
       onClick={onOpen}
-      className="press group w-full flex items-center gap-3 py-2 px-2 -mx-2 rounded-md text-left hover:bg-baltic-50/60 dark:hover:bg-baltic-900/30 transition-colors focus:outline-none focus:ring-2 focus:ring-baltic-400/50"
+      className="press group w-full flex items-center gap-3 py-2 px-2 -mx-2 rounded-md text-left hover:bg-baltic-50/60 dark:hover:bg-baltic-900/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-baltic-950"
+      style={{
+        transition:
+          "background-color 160ms ease, transform 160ms var(--ease-out)",
+      }}
     >
       <span
         className="w-1.5 h-1.5 rounded-full flex-shrink-0"
@@ -680,11 +715,14 @@ function WeekEmpty({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="mt-4">
       <p className="text-sm text-steel-500 dark:text-steel-400">
-        Nothing on the wall yet. Add what's next so you have a place to start.
+        Your week is empty. Add what&rsquo;s next so you have a place to start.
       </p>
       <button
         onClick={onAdd}
-        className="press mt-3 text-xs font-semibold text-baltic-700 dark:text-baltic-300 hover:text-baltic-900 dark:hover:text-baltic-100 transition-colors"
+        className="press mt-3 rounded-md py-1.5 px-2 -mx-2 text-xs font-semibold text-baltic-700 dark:text-baltic-300 hover:text-baltic-900 dark:hover:text-baltic-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
+        style={{
+          transition: "color 160ms ease, transform 160ms var(--ease-out)",
+        }}
       >
         Plan a study step →
       </button>
@@ -790,11 +828,9 @@ function FocusTarget({
 }) {
   return (
     <div className="mx-auto w-full max-w-[15rem] text-center">
-      <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-steel-500 dark:text-steel-400 mb-3">
-        Focus
-      </span>
+      <CardEyebrow>Focus</CardEyebrow>
 
-      <div className="relative mx-auto w-44 h-44">
+      <div className="relative mx-auto mt-3 w-44 h-44">
         <svg
           aria-hidden
           viewBox={`${A_VB_X} ${A_VB_Y} ${A_VB_SIZE} ${A_VB_SIZE}`}
