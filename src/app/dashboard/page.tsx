@@ -175,13 +175,8 @@ export default function DashboardPage() {
         </h1>
       </header>
 
-      {/* ── HERO — "Right now" — single dominant CTA ── */}
-      <StickyCard
-        tackColor="cream"
-        tilt={-0.6}
-        delay={80}
-        className="mb-6"
-      >
+      {/* ── HERO — "Right now" — single dominant CTA, cream accent ── */}
+      <StickyCard accent="cream" delay={80} className="mb-6">
         <HeroBody
           focusPct={focusPct}
           todayMinutes={todayMinutes}
@@ -196,8 +191,8 @@ export default function DashboardPage() {
         />
       </StickyCard>
 
-      {/* ── THIS WEEK — look-ahead, with today's completed sessions inline ── */}
-      <StickyCard tackColor="baltic" tilt={0.5} delay={160}>
+      {/* ── THIS WEEK — look-ahead + today's completed sessions, ash accent ── */}
+      <StickyCard accent="ash" delay={160}>
         <WeekBody
           groups={weekGroups}
           todaySessions={todaySessions}
@@ -354,34 +349,37 @@ function HeroBody({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[minmax(13rem,16rem)_1fr] gap-6 md:gap-10 items-center">
+    <div className="grid grid-cols-1 md:grid-cols-[minmax(13rem,16rem)_1fr] gap-7 md:gap-10 items-center">
       <FocusTarget
         focusPct={focusPct}
         todayMinutes={todayMinutes}
         dailyGoal={dailyGoal}
       />
 
-      <div className="text-center md:text-left">
-        <CardEyebrow>Right now</CardEyebrow>
-        <h2 className="mt-2 text-2xl font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
-          {headline}
-        </h2>
-        {sub && (
-          <p className="mt-2 text-sm text-steel-500 dark:text-steel-400">
-            {sub}
-          </p>
-        )}
+      {/* Right column — single rhythm: heading → next task → CTA.
+          space-y-5 keeps gaps even between every block. */}
+      <div className="text-center md:text-left space-y-5">
+        <div className="space-y-2">
+          <CardEyebrow>Right now</CardEyebrow>
+          <h2 className="text-2xl font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
+            {headline}
+          </h2>
+          {sub && (
+            <p className="text-sm text-steel-500 dark:text-steel-400">
+              {sub}
+            </p>
+          )}
+        </div>
 
         {nextTask && (
           <NextTaskPullIn
             task={nextTask}
             subjectLabel={subjectLabel}
             subjectColor={subjectColor}
-            onPickAnother={onPlanStep}
           />
         )}
 
-        <div className="mt-5 flex items-center gap-3 flex-wrap justify-center md:justify-start">
+        <div className="flex items-center gap-3 flex-wrap justify-center md:justify-start">
           <button
             onClick={ctaAction}
             className="press inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-baltic-400 focus:ring-offset-2 dark:focus:ring-offset-baltic-950"
@@ -408,53 +406,48 @@ function HeroBody({
   );
 }
 
-/* Compact pull-in inside the hero — surfaces the next task with subject
-   color so the CTA's "Start 25 min on X" has visual context. */
+/* Next-task block — labelled, clean meta line with a subject-color dot.
+   No more "pick another" inline link; one canonical task entry point
+   lives in the week card below. */
 function NextTaskPullIn({
   task,
   subjectLabel,
   subjectColor,
-  onPickAnother,
 }: {
   task: Task;
   subjectLabel: string;
   subjectColor: string;
-  onPickAnother: () => void;
 }) {
   const overdue = isOverdue(task.dueDate);
   const due = overdue ? "Overdue" : dayLabel(task.dueDate);
 
   return (
-    <div className="mt-4 flex items-start gap-3 max-w-md mx-auto md:mx-0">
-      <span
-        className="w-1 self-stretch rounded-full flex-shrink-0 mt-1"
-        style={{ backgroundColor: subjectColor }}
-        aria-hidden
-      />
-      <div className="flex-1 min-w-0 text-left">
-        <p className="text-sm font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
-          {task.title}
-        </p>
-        <p className="text-xs text-steel-500 dark:text-steel-400 mt-0.5">
-          <span
-            className={cn(
-              "font-medium",
-              overdue && "text-red-500 dark:text-red-400"
-            )}
-          >
-            {due}
-          </span>
-          <span className="mx-1.5 text-steel-300 dark:text-steel-600">·</span>
-          <span>{subjectLabel}</span>
-          <span className="mx-1.5 text-steel-300 dark:text-steel-600">·</span>
-          <button
-            onClick={onPickAnother}
-            className="press underline-offset-2 hover:underline hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors"
-          >
-            pick another
-          </button>
-        </p>
-      </div>
+    <div className="max-w-md mx-auto md:mx-0">
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-steel-500 dark:text-steel-400">
+        Working on
+      </p>
+      <p className="mt-1.5 text-sm font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
+        {task.title}
+      </p>
+      <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-steel-500 dark:text-steel-400">
+        <span
+          aria-hidden
+          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+          style={{ backgroundColor: subjectColor }}
+        />
+        <span>{subjectLabel}</span>
+        <span aria-hidden className="text-steel-300 dark:text-steel-600">
+          ·
+        </span>
+        <span
+          className={cn(
+            "font-medium",
+            overdue && "text-red-500 dark:text-red-400"
+          )}
+        >
+          {due}
+        </span>
+      </p>
     </div>
   );
 }
@@ -493,7 +486,7 @@ function WeekBody({
       {isEmpty ? (
         <WeekEmpty onAdd={onOpenAll} />
       ) : (
-        <div className="mt-4 space-y-5">
+        <div className="mt-5 space-y-5">
           {/* Today's completed sessions — only shown if today exists in groups
               we'd render the chips inside that group; otherwise prepend a
               today section so the user's done work is acknowledged. */}
@@ -523,14 +516,12 @@ function WeekBody({
             />
           ))}
 
-          <div className="pt-3 border-t border-dashed border-lavender-200 dark:border-lavender-800">
-            <button
-              onClick={onOpenAll}
-              className="press text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors"
-            >
-              Open the full wall →
-            </button>
-          </div>
+          <button
+            onClick={onOpenAll}
+            className="press text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 transition-colors"
+          >
+            See all tasks &rarr;
+          </button>
         </div>
       )}
     </div>
@@ -561,14 +552,14 @@ function DayGroup({
             "text-[10px] font-bold uppercase tracking-[0.2em]",
             isOverdueGroup
               ? "text-red-500 dark:text-red-400"
-              : "text-baltic-700 dark:text-baltic-300"
+              : "text-steel-500 dark:text-steel-400"
           )}
         >
           {label}
         </h3>
         {tasks.length > 0 && (
-          <span className="text-[10px] font-mono text-steel-400 tabular-nums">
-            · {tasks.length}
+          <span className="text-[10px] font-mono text-steel-300 dark:text-steel-600 tabular-nums">
+            {tasks.length}
           </span>
         )}
       </div>
@@ -624,7 +615,7 @@ function CompletedSessionRow({
   });
   const label = subject?.label ?? session.subject;
   return (
-    <div className="flex items-center gap-2.5 py-1.5 px-2 -mx-2 rounded-md text-xs text-ash-700 dark:text-ash-300">
+    <div className="flex items-center gap-2.5 py-1.5 px-2.5 -mx-2 rounded-md text-xs text-ash-700 dark:text-ash-300 bg-ash-50/60 dark:bg-ash-900/25">
       <svg
         width="11"
         height="11"
@@ -639,10 +630,11 @@ function CompletedSessionRow({
         <path d="M2.5 6.5l2.5 2.5L9.5 4" />
       </svg>
       <span className="font-semibold">{label}</span>
-      <span className="text-steel-400">·</span>
+      <span aria-hidden className="text-ash-400/70 dark:text-ash-600/70">
+        ·
+      </span>
       <span className="tabular-nums">{formatTime(session.duration)}</span>
-      <span className="text-steel-400">·</span>
-      <span className="tabular-nums text-steel-500 dark:text-steel-400">
+      <span className="ml-auto tabular-nums text-[10px] font-mono uppercase tracking-[0.14em] text-ash-600/80 dark:text-ash-400/80">
         {time}
       </span>
     </div>
@@ -700,114 +692,67 @@ function WeekEmpty({ onAdd }: { onAdd: () => void }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   STICKY CARD — pinboard treatment: micro-tilted panel pinned at
-   the top with a single thumbtack. One accessory family for the
-   whole board so the visual vocabulary stays consistent.
-   The entry animation runs on an outer wrapper so it doesn't fight
-   the inner tilt transform.
+   STICKY CARD — flat panel with a thin top accent bar. The accent
+   is the only color signal that distinguishes one surface from
+   another; everything else stays uniform so the page reads as a
+   single composition. Cards level — no tilt, no thumbtack, no
+   tape. Visual rhythm comes from the accent palette + content,
+   not from physical-world decoration.
    ───────────────────────────────────────────────────────────── */
 
-type TackColor = "cream" | "baltic" | "ash";
+type Accent = "cream" | "ash" | "baltic";
+
+const ACCENT_FILLS: Record<Accent, { light: string; dark: string }> = {
+  // cream-400 / cream-600 — warm, "active right now" energy
+  cream: { light: "#c7ce64", dark: "#949b31" },
+  // ash-400 / ash-600 — calm, "looking ahead" planning
+  ash: { light: "#91a989", dark: "#5e7656" },
+  // baltic-400 / baltic-600 — primary anchor, used sparingly
+  baltic: { light: "#808eb3", dark: "#4d5b80" },
+};
 
 function StickyCard({
   children,
-  tackColor = "cream",
-  tilt = 0,
+  accent = "cream",
   delay = 0,
   className,
 }: {
   children: ReactNode;
-  tackColor?: TackColor;
-  tilt?: number;
+  accent?: Accent;
   delay?: number;
   className?: string;
 }) {
+  const fill = ACCENT_FILLS[accent];
   return (
     <div
-      className={cn("sticky-enter", className)}
+      className={cn(
+        "paper-card sticky-enter relative px-6 pt-7 pb-6 border border-lavender-200/60 dark:border-lavender-800/60 overflow-hidden",
+        className
+      )}
       style={{ "--delay": `${delay}ms` } as CSSProperties}
     >
+      {/* Top accent — the only color that distinguishes one card
+          from another. Light/dark mode handled inline. */}
       <div
-        className="paper-card pinboard-tilt relative px-6 pt-9 pb-6 border border-lavender-200/60 dark:border-lavender-800/60"
-        style={{ "--tilt": `${tilt}deg` } as CSSProperties}
-      >
-        <Thumbtack
-          color={tackColor}
-          className="absolute left-1/2 -translate-x-1/2"
-          style={{ top: "-19px" }}
-        />
-        <div className="relative z-10">{children}</div>
-      </div>
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-1 dark:hidden"
+        style={{ backgroundColor: fill.light }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-1 hidden dark:block"
+        style={{ backgroundColor: fill.dark }}
+      />
+      <div className="relative z-10">{children}</div>
     </div>
   );
 }
 
 function CardEyebrow({ children }: { children: ReactNode }) {
   return (
-    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-steel-500 dark:text-steel-400">
+    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-steel-500 dark:text-steel-400">
       {children}
     </p>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   THUMBTACK — colored dome with darker rim, soft right-side
-   shading, two catch-lights, visible pin shaft hint, drop shadow.
-   Sits at the top-center of every card, pin embedded into the
-   paper so the dome stands proud above the card edge.
-   ───────────────────────────────────────────────────────────── */
-
-const TACK_FILLS: Record<TackColor, { dome: string; rim: string }> = {
-  cream: { dome: "#c7ce64", rim: "#8a8f3f" },
-  baltic: { dome: "#60729f", rim: "#3e4c70" },
-  ash: { dome: "#7a9477", rim: "#4f644f" },
-};
-
-function Thumbtack({
-  className,
-  color = "cream",
-  style,
-}: {
-  className?: string;
-  color?: TackColor;
-  style?: CSSProperties;
-}) {
-  const fill = TACK_FILLS[color];
-  return (
-    <div
-      aria-hidden
-      className={cn("pointer-events-none", className)}
-      style={{
-        ...style,
-        filter:
-          "drop-shadow(0 2px 2px rgba(38, 45, 64, 0.28)) drop-shadow(0 0.5px 0 rgba(38, 45, 64, 0.12))",
-      }}
-    >
-      <svg width="26" height="30" viewBox="0 0 26 30" fill="none">
-        {/* Pin shaft — hint of the pin going into the paper */}
-        <path d="M11.6 17 L13 23 L14.4 17 Z" fill="#9ba3b3" />
-        <path
-          d="M11.6 17 L13 23 L14.4 17 Z"
-          stroke="#6b7488"
-          strokeWidth="0.4"
-          fill="none"
-        />
-        {/* Dome — main body */}
-        <ellipse cx="13" cy="11" rx="9" ry="8" fill={fill.dome} />
-        {/* Darker bottom rim for volume */}
-        <path
-          d="M4.5 11 A9 8 0 0 0 21.5 11 A9 5 0 0 1 4.5 11 Z"
-          fill={fill.rim}
-          opacity="0.45"
-        />
-        {/* Soft right-side shading */}
-        <ellipse cx="16.5" cy="12.5" rx="4" ry="5" fill="black" opacity="0.10" />
-        {/* Primary catch-light */}
-        <ellipse cx="9.4" cy="7.6" rx="3.2" ry="1.9" fill="white" opacity="0.6" />
-        {/* Secondary tiny glint */}
-        <circle cx="15.2" cy="8.4" r="0.8" fill="white" opacity="0.75" />
-      </svg>
-    </div>
   );
 }
 

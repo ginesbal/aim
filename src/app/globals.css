@@ -249,19 +249,6 @@
       radial-gradient(circle at 1px 1px, rgba(159, 170, 198, 0.06) 1px, transparent 0);
   }
 
-  /* Pinboard tilt — micro-rotation on cards. Set --tilt inline.
-     Capped <=1deg in practice so it reads as casual, not messy.
-     Disabled on small viewports and under reduced-motion. */
-  .pinboard-tilt {
-    transform: rotate(var(--tilt, 0deg));
-  }
-
-  @media (max-width: 768px) {
-    .pinboard-tilt {
-      transform: none;
-    }
-  }
-
   /* Paper-card — sticky note feel: layered shadow, soft warmth */
   .paper-card {
     @apply relative bg-white dark:bg-lavender-900 rounded-2xl;
