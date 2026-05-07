@@ -177,9 +177,9 @@ export default function DashboardPage() {
 
       {/* ── HERO — "Right now" — single dominant CTA ── */}
       <StickyCard
-        tape="cream"
+        tackColor="cream"
+        tilt={-0.6}
         delay={80}
-        accessory="paperclip"
         className="mb-6"
       >
         <HeroBody
@@ -197,7 +197,7 @@ export default function DashboardPage() {
       </StickyCard>
 
       {/* ── THIS WEEK — look-ahead, with today's completed sessions inline ── */}
-      <StickyCard tape="lavender" delay={160} accessory="none">
+      <StickyCard tackColor="baltic" tilt={0.5} delay={160}>
         <WeekBody
           groups={weekGroups}
           todaySessions={todaySessions}
@@ -700,81 +700,45 @@ function WeekEmpty({ onAdd }: { onAdd: () => void }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   STICKY CARD — flat panel, taped at the top, optional accessory
+   STICKY CARD — pinboard treatment: micro-tilted panel pinned at
+   the top with a single thumbtack. One accessory family for the
+   whole board so the visual vocabulary stays consistent.
+   The entry animation runs on an outer wrapper so it doesn't fight
+   the inner tilt transform.
    ───────────────────────────────────────────────────────────── */
 
-type TapeColor = "cream" | "baltic" | "ash" | "lavender";
-type Accessory = "paperclip" | "none";
+type TackColor = "cream" | "baltic" | "ash";
 
 function StickyCard({
   children,
-  tape = "cream",
+  tackColor = "cream",
+  tilt = 0,
   delay = 0,
-  accessory = "none",
   className,
 }: {
   children: ReactNode;
-  tape?: TapeColor;
+  tackColor?: TackColor;
+  tilt?: number;
   delay?: number;
-  accessory?: Accessory;
   className?: string;
 }) {
   return (
     <div
-      className={cn(
-        "paper-card sticky-enter relative px-6 pt-9 pb-6 border border-lavender-200/60 dark:border-lavender-800/60",
-        className
-      )}
+      className={cn("sticky-enter", className)}
       style={{ "--delay": `${delay}ms` } as CSSProperties}
     >
-      <WashiTape
-        tape={tape}
-        variant="a"
-        rot={-7}
-        style={{ width: "5.4rem", top: "-0.6rem", left: "1rem" }}
-      />
-      <WashiTape
-        tape={tape}
-        variant="b"
-        rot={3.5}
-        style={{ width: "3.2rem", top: "-0.45rem", left: "3.5rem" }}
-      />
-
-      {accessory === "paperclip" && (
-        <Paperclip className="absolute -top-2.5 right-7" />
-      )}
-
-      <div className="relative z-10">{children}</div>
+      <div
+        className="paper-card pinboard-tilt relative px-6 pt-9 pb-6 border border-lavender-200/60 dark:border-lavender-800/60"
+        style={{ "--tilt": `${tilt}deg` } as CSSProperties}
+      >
+        <Thumbtack
+          color={tackColor}
+          className="absolute left-1/2 -translate-x-1/2"
+          style={{ top: "-19px" }}
+        />
+        <div className="relative z-10">{children}</div>
+      </div>
     </div>
-  );
-}
-
-function WashiTape({
-  tape,
-  variant,
-  rot,
-  style,
-}: {
-  tape: TapeColor;
-  variant: "a" | "b";
-  rot: number;
-  style: CSSProperties;
-}) {
-  return (
-    <div
-      aria-hidden
-      className={cn(
-        "washi-tape",
-        `washi-${tape}`,
-        variant === "a" ? "washi-torn-a" : "washi-torn-b"
-      )}
-      style={
-        {
-          ...style,
-          "--tape-rot": `${rot}deg`,
-        } as CSSProperties
-      }
-    />
   );
 }
 
@@ -787,44 +751,61 @@ function CardEyebrow({ children }: { children: ReactNode }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   PAPERCLIP — two-tone metal stroke, drop shadow
+   THUMBTACK — colored dome with darker rim, soft right-side
+   shading, two catch-lights, visible pin shaft hint, drop shadow.
+   Sits at the top-center of every card, pin embedded into the
+   paper so the dome stands proud above the card edge.
    ───────────────────────────────────────────────────────────── */
 
-function Paperclip({ className }: { className?: string }) {
+const TACK_FILLS: Record<TackColor, { dome: string; rim: string }> = {
+  cream: { dome: "#c7ce64", rim: "#8a8f3f" },
+  baltic: { dome: "#60729f", rim: "#3e4c70" },
+  ash: { dome: "#7a9477", rim: "#4f644f" },
+};
+
+function Thumbtack({
+  className,
+  color = "cream",
+  style,
+}: {
+  className?: string;
+  color?: TackColor;
+  style?: CSSProperties;
+}) {
+  const fill = TACK_FILLS[color];
   return (
     <div
       aria-hidden
       className={cn("pointer-events-none", className)}
       style={{
+        ...style,
         filter:
-          "drop-shadow(0 1.5px 1.5px rgba(38, 45, 64, 0.22)) drop-shadow(0 0.5px 0 rgba(38, 45, 64, 0.10))",
-        transform: "rotate(8deg)",
+          "drop-shadow(0 2px 2px rgba(38, 45, 64, 0.28)) drop-shadow(0 0.5px 0 rgba(38, 45, 64, 0.12))",
       }}
     >
-      <svg width="22" height="32" viewBox="0 0 22 32" fill="none">
+      <svg width="26" height="30" viewBox="0 0 26 30" fill="none">
+        {/* Pin shaft — hint of the pin going into the paper */}
+        <path d="M11.6 17 L13 23 L14.4 17 Z" fill="#9ba3b3" />
         <path
-          d="M7 30 L7 7 A4.2 4.2 0 0 1 15.4 7 L15.4 24 A2.8 2.8 0 0 1 9.8 24 L9.8 10"
-          stroke="#7a8499"
-          strokeWidth="2.6"
-          strokeLinecap="round"
+          d="M11.6 17 L13 23 L14.4 17 Z"
+          stroke="#6b7488"
+          strokeWidth="0.4"
           fill="none"
         />
+        {/* Dome — main body */}
+        <ellipse cx="13" cy="11" rx="9" ry="8" fill={fill.dome} />
+        {/* Darker bottom rim for volume */}
         <path
-          d="M7 30 L7 7 A4.2 4.2 0 0 1 15.4 7 L15.4 24 A2.8 2.8 0 0 1 9.8 24 L9.8 10"
-          stroke="#dde0e7"
-          strokeWidth="0.9"
-          strokeLinecap="round"
-          fill="none"
-          transform="translate(-0.5 -0.5)"
+          d="M4.5 11 A9 8 0 0 0 21.5 11 A9 5 0 0 1 4.5 11 Z"
+          fill={fill.rim}
+          opacity="0.45"
         />
-        <ellipse
-          cx="11.2"
-          cy="4.6"
-          rx="2.6"
-          ry="0.6"
-          fill="white"
-          opacity="0.55"
-        />
+        {/* Soft right-side shading */}
+        <ellipse cx="16.5" cy="12.5" rx="4" ry="5" fill="black" opacity="0.10" />
+        {/* Primary catch-light */}
+        <ellipse cx="9.4" cy="7.6" rx="3.2" ry="1.9" fill="white" opacity="0.6" />
+        {/* Secondary tiny glint */}
+        <circle cx="15.2" cy="8.4" r="0.8" fill="white" opacity="0.75" />
       </svg>
     </div>
   );
