@@ -490,8 +490,8 @@ export default function TasksPage() {
             <StatusChip pending={stats.all.pending} overdue={stats.all.overdue} />
           )}
         </div>
-        {/* pt-1 gives the cap tops room: Plus Jakarta Sans' natural line
-            box is ~1.27, so leading-[1.1] alone lets the glyph tops sit
+        {/* pt-1 gives the cap tops room: the typeface's natural line box
+            is taller than 1.1, so leading-[1.1] alone lets the glyph tops sit
             above the box and clip. Padding (not a taller line-height)
             keeps the highlighter swipe aligned to the text. */}
         <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100 leading-[1.1] pt-1">

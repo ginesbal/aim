@@ -81,8 +81,9 @@ export function QualitySelector({ value, onChange, size = 32 }: QualitySelectorP
       <div className="flex items-center gap-4">
         {qualities.map((q) => {
           const selected = value === q;
-          const strokeColor = selected ? "#60729f" : "#c5c9d3";
-          const fillColor = selected ? "#4d5b80" : "#c5c9d3";
+          // Unselected: lavender-400, 3:1 against the card (lavender-200 was 1.66:1).
+          const strokeColor = selected ? "#60729f" : "#8b93a7";
+          const fillColor = selected ? "#4d5b80" : "#8b93a7";
           return (
             <button
               key={q}
@@ -121,7 +122,7 @@ export function QualitySelector({ value, onChange, size = 32 }: QualitySelectorP
         {value && (
           <p className="text-xs text-baltic-700 text-center">
             <span className="font-medium">{QUALITY_LEVELS[value].label}</span>
-            <span className="text-steel-400"> · {QUALITY_LEVELS[value].description}</span>
+            <span className="text-steel-600"> · {QUALITY_LEVELS[value].description}</span>
           </p>
         )}
       </div>

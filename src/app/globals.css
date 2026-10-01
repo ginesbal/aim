@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Caveat:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=JetBrains+Mono:wght@400;500&family=Caveat:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -25,7 +25,7 @@
   }
 
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
     background-color: #eff1f5;
     color: #262d40;
     line-height: 1.5;
@@ -44,6 +44,27 @@
   .dark ::selection {
     background-color: #394460;
     color: #dfe3ec;
+  }
+
+  /* Keyboard focus in the palette, for any control that doesn't draw
+     its own ring (those set outline-none and win as utilities). */
+  :focus-visible {
+    outline: 2px solid #60729f; /* baltic-500 */
+    outline-offset: 2px;
+  }
+
+  .dark :focus-visible {
+    outline-color: #9faac6; /* baltic-300 */
+  }
+
+  input,
+  textarea {
+    caret-color: #4d5b80; /* baltic-600 */
+  }
+
+  .dark input,
+  .dark textarea {
+    caret-color: #bfc6d9; /* baltic-200 */
   }
 
   ::-webkit-scrollbar {
@@ -411,9 +432,25 @@
     transform: scale(0.97);
   }
 
+  /* Grows a small control's tap area to at least 44×44px without moving
+     anything: the pseudo-element belongs to the control, so a fingertip
+     landing on it still hits the control. */
+  .tap-target {
+    position: relative;
+  }
+  .tap-target::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+
   /* Handwritten accent font — used sparingly */
   .font-script {
-    font-family: 'Caveat', 'Plus Jakarta Sans', cursive;
+    font-family: 'Caveat', 'Bricolage Grotesque', cursive;
     font-weight: 600;
     letter-spacing: 0.01em;
   }
@@ -469,7 +506,8 @@
     .focus-complete-settle,
     .focus-complete-label,
     .focus-label-swap,
-    .sweep-active {
+    .sweep-active,
+    .meter-band-in {
       animation: none !important;
     }
     .focus-tick-enter { opacity: 1 !important; }
@@ -499,6 +537,21 @@
   .focus-canvas {
     background-color: #eff1f5; /* baltic-50 — the app surface */
     color: #262d40;            /* baltic-800 — app body text */
+  }
+
+  /* Focus stays light in dark mode, so it keeps the light focus ring. */
+  .dark .focus-canvas :focus-visible {
+    outline-color: #60729f; /* baltic-500 */
+  }
+
+  /* Text set straight on the contour canvas gets a map-label halo in
+     the canvas colour: the lines break around the letters instead of
+     running through them, so contrast holds where lines bunch up. */
+  .focus-halo {
+    text-shadow:
+      0 0 2px #eff1f5,
+      0 0 6px #eff1f5,
+      0 0 12px #eff1f5;
   }
 
   /* Canvas entrance — fades in once on mount so navigating in from
@@ -603,6 +656,18 @@
 
   /* Completion moment — the timer settles when a session ends. A calm scale
      "landing" plus the label easing in (blur-bridged). Plays once on done. */
+  /* Dashboard meter: the band of the session just saved grows up into
+     the "a" from its own bottom edge, once, a beat after arrival. */
+  @keyframes meter-band-in {
+    from { transform: scaleY(0); }
+    to   { transform: scaleY(1); }
+  }
+  .meter-band-in {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: meter-band-in 900ms var(--ease-out) 300ms both;
+  }
+
   @keyframes focus-complete-settle {
     0%   { transform: scale(0.97); }
     55%  { transform: scale(1.01); }
@@ -680,7 +745,8 @@
   }
 
   .text-label {
-    @apply text-[11px] font-semibold uppercase tracking-wider text-steel-400;
+    /* No colour here: it overrode the one each label sets (and was 2.75:1). */
+    @apply text-[11px] font-semibold uppercase tracking-wider;
   }
 
   /* Stats — large and bold */

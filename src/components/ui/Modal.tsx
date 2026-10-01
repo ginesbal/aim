@@ -7,6 +7,9 @@ interface ModalProps {
   open: boolean;
   onClose: () => void;
   title?: string;
+  /** Id of a heading inside children that names the dialog, for modals
+   *  that draw their own title instead of passing `title`. */
+  labelledBy?: string;
   children: React.ReactNode;
   width?: "sm" | "md" | "lg";
 }
@@ -31,6 +34,7 @@ export default function Modal({
   open,
   onClose,
   title,
+  labelledBy,
   children,
   width = "md",
 }: ModalProps) {
@@ -122,8 +126,8 @@ export default function Modal({
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={title ? titleId : undefined}
-        aria-label={title ? undefined : "Dialog"}
+        aria-labelledby={title ? titleId : labelledBy}
+        aria-label={title || labelledBy ? undefined : "Dialog"}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
         className={cn(

@@ -131,3 +131,25 @@ export function groupByDate(
   }
   return groups;
 }
+
+/**
+ * A subject colour for a filled button, darkened just enough that white
+ * label text clears WCAG AA (4.5:1). Already-dark colours come back as-is;
+ * pale user-picked colours step darker until the label is readable.
+ */
+export function readableFill(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  let rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const channel = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const contrastWithWhite = () =>
+    1.05 / (0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2]) + 0.05);
+  for (let i = 0; i < 16 && contrastWithWhite() < 4.5; i++) {
+    rgb = rgb.map((c) => Math.round(c * 0.92));
+  }
+  return `#${rgb.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}

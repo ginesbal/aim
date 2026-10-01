@@ -60,21 +60,52 @@ export interface UserSubject {
   color: string;
 }
 
+/* Subject colours: muted, but spread by both hue and lightness so
+   neighbouring bands in the dashboard's "a" read as different subjects,
+   including with red-green colour blindness. Measured in OKLab, the
+   seven defaults (first seven) are at least 10 apart; the old set had
+   pairs at 3, which read as the same colour. Baltic, sage and mustard
+   carry over from the app's own palette. */
 export const SUBJECT_COLORS = [
-  "#60729f", "#76946b", "#6e7891", "#b9a23d",
-  "#4d5b80", "#91a989", "#586074", "#9b7b6b",
-  "#7b6b9b", "#6b8f9b",
+  "#60729f", // baltic blue
+  "#76946b", // sage
+  "#b47692", // dusty rose
+  "#b9a23d", // mustard
+  "#6ba9bd", // soft teal
+  "#a96249", // terracotta
+  "#4e4d78", // ink violet
+  "#676e3d", // olive
+  "#91a989", // pale sage
+  "#586074", // slate
 ] as const;
+
+/* What a screen reader says for each swatch in the new-subject picker
+   ("Sage", not "#76946b"). Swatches without a name here fall back to
+   "Colour 1", "Colour 2"… by position. */
+export const SUBJECT_COLOR_NAMES: Partial<Record<(typeof SUBJECT_COLORS)[number], string>> = {
+  // TODO(you): name the palette, one short word each, in your voice.
+};
 
 export const DEFAULT_USER_SUBJECTS: UserSubject[] = [
   { id: "math", label: "Mathematics", color: "#60729f" },
   { id: "sci", label: "Science", color: "#76946b" },
-  { id: "lit", label: "Literature", color: "#6e7891" },
+  { id: "lit", label: "Literature", color: "#b47692" },
   { id: "hist", label: "History", color: "#b9a23d" },
-  { id: "lang", label: "Languages", color: "#4d5b80" },
-  { id: "econ", label: "Economics", color: "#586074" },
-  { id: "design", label: "Design", color: "#91a989" },
+  { id: "lang", label: "Languages", color: "#6ba9bd" },
+  { id: "econ", label: "Economics", color: "#a96249" },
+  { id: "design", label: "Design", color: "#4e4d78" },
 ];
+
+/* The colours the default subjects shipped with before the palette was
+   spread out. A saved default subject still wearing its old colour was
+   never recoloured by its owner, so it moves to the new one; anything
+   the owner changed is left alone. */
+export const PREVIOUS_DEFAULT_COLORS: Record<string, string> = {
+  lit: "#6e7891",
+  lang: "#4d5b80",
+  econ: "#586074",
+  design: "#91a989",
+};
 
 export const PRIORITIES = {
   low: { label: "Low", color: "#76946b" },

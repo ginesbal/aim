@@ -8,7 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { Task, FocusSession, Reflection, UserSubject, DEFAULT_USER_SUBJECTS } from "./types";
+import { Task, FocusSession, Reflection, UserSubject, DEFAULT_USER_SUBJECTS, PREVIOUS_DEFAULT_COLORS } from "./types";
 import { generateId } from "./utils";
 
 // ─── Storage helpers ───
@@ -19,6 +19,14 @@ function load<T>(key: string, fallback: T): T {
     return raw ? JSON.parse(raw) : fallback;
   } catch {
     return fallback;
+  }
+}
+
+function hasStored(key: string) {
+  try {
+    return localStorage.getItem(key) !== null;
+  } catch {
+    return false;
   }
 }
 
@@ -110,13 +118,21 @@ interface TasksState {
 
 const TasksContext = createContext<TasksState | null>(null);
 
+// A due date N days from today, as a local calendar date. (toISOString()
+// is UTC: in the evening west of Greenwich, "today" came out as tomorrow.)
+function dueIn(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 const SAMPLE_TASKS: Task[] = [
   {
     id: "demo1",
     title: "Linear algebra problem set",
     description: "Complete exercises 4.1 through 4.8 on vector spaces and eigenvalues",
     subject: "Mathematics",
-    dueDate: new Date(Date.now() + 86400000).toISOString().split("T")[0],
+    dueDate: dueIn(1),
     priority: "high",
     completed: false,
     createdAt: new Date().toISOString(),
@@ -126,7 +142,7 @@ const SAMPLE_TASKS: Task[] = [
     title: "Read chapter on Romanticism",
     description: "Focus on the transition from Neoclassicism and key authors of the period",
     subject: "Literature",
-    dueDate: new Date(Date.now() + 86400000 * 2).toISOString().split("T")[0],
+    dueDate: dueIn(2),
     priority: "medium",
     completed: false,
     createdAt: new Date().toISOString(),
@@ -136,7 +152,7 @@ const SAMPLE_TASKS: Task[] = [
     title: "Lab report — Organic compounds",
     description: "Write up findings from Wednesday's spectroscopy lab session",
     subject: "Science",
-    dueDate: new Date().toISOString().split("T")[0],
+    dueDate: dueIn(0),
     priority: "high",
     completed: false,
     createdAt: new Date().toISOString(),
@@ -146,7 +162,7 @@ const SAMPLE_TASKS: Task[] = [
     title: "Microeconomics essay outline",
     description: "Draft thesis and outline for market failure case study essay",
     subject: "Economics",
-    dueDate: new Date(Date.now() + 86400000 * 3).toISOString().split("T")[0],
+    dueDate: dueIn(3),
     priority: "low",
     completed: false,
     createdAt: new Date().toISOString(),
@@ -156,7 +172,7 @@ const SAMPLE_TASKS: Task[] = [
     title: "Spanish verb conjugation practice",
     description: "Subjunctive mood irregular verbs — use flashcard deck",
     subject: "Languages",
-    dueDate: new Date(Date.now() + 86400000).toISOString().split("T")[0],
+    dueDate: dueIn(1),
     priority: "medium",
     completed: false,
     createdAt: new Date().toISOString(),
@@ -166,7 +182,7 @@ const SAMPLE_TASKS: Task[] = [
     title: "History source analysis",
     description: "Analyze primary sources from the Industrial Revolution for Thursday's seminar",
     subject: "History",
-    dueDate: new Date(Date.now() + 86400000 * 4).toISOString().split("T")[0],
+    dueDate: dueIn(4),
     priority: "medium",
     completed: true,
     createdAt: new Date().toISOString(),
@@ -178,8 +194,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = load<Task[]>("aim_tasks", []);
-    setTasks(stored.length > 0 ? stored : SAMPLE_TASKS);
+    // Samples are for a first visit only. Once a list has been saved, even
+    // an empty one (every task deleted), what's stored is the truth.
+    setTasks(hasStored("aim_tasks") ? load<Task[]>("aim_tasks", []) : SAMPLE_TASKS);
     setMounted(true);
   }, []);
 
@@ -238,7 +255,8 @@ export function useTasks() {
 // ─── Focus Sessions Context ───
 interface FocusState {
   sessions: FocusSession[];
-  addSession: (subject: string, duration: number, reflection?: Reflection, task?: string) => void;
+  /** Logs a finished session and returns its id. */
+  addSession: (subject: string, duration: number, reflection?: Reflection, task?: string) => string;
   todayMinutes: number;
   weekMinutes: number;
   streak: number;
@@ -251,39 +269,10 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = load<FocusSession[]>("aim_sessions", []);
-    if (stored.length > 0) {
-      setSessions(stored);
-    } else {
-      const now = new Date();
-      const sampleSessions: FocusSession[] = [];
-      const subjects = ["Mathematics", "Science", "Literature", "Economics", "History"];
-      const durations = [45, 30, 25, 50, 25];
-      const qualities = [4, 3, 3, 4, 2] as const;
-      const notes = [
-        "Eigenvalue decomposition finally clicked",
-        "Spectroscopy results were clearer than expected",
-        "Romanticism chapter was dense but interesting",
-        "Market failure essay outline is solid now",
-        "",
-      ];
-      for (let i = 0; i < 5; i++) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i);
-        d.setHours(10 + i, 30, 0, 0);
-        sampleSessions.push({
-          id: generateId(),
-          subject: subjects[i],
-          duration: durations[i],
-          completedAt: d.toISOString(),
-          reflection: {
-            quality: qualities[i],
-            ...(notes[i] ? { note: notes[i] } : {}),
-          },
-        });
-      }
-      setSessions(sampleSessions);
-    }
+    // No sample sessions: a first visit starts with an empty "a", so the
+    // first session a visitor finishes is its first band. (Sample tasks
+    // stay, so there's still something to focus on.)
+    setSessions(load<FocusSession[]>("aim_sessions", []));
     setMounted(true);
   }, []);
 
@@ -292,10 +281,13 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   }, [sessions, mounted]);
 
   const addSession = useCallback((subject: string, duration: number, reflection?: Reflection, task?: string) => {
+    // The id comes back so the dashboard can point at this exact session
+    // (the band that grows into the "a" on the way back from Focus).
+    const id = generateId();
     setSessions((prev) => [
       ...prev,
       {
-        id: generateId(),
+        id,
         subject,
         duration,
         completedAt: new Date().toISOString(),
@@ -303,6 +295,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
         ...(task && task.trim() ? { task: task.trim() } : {}),
       },
     ]);
+    return id;
   }, []);
 
   const today = new Date().toDateString();
@@ -362,7 +355,13 @@ export function SubjectsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const stored = load<UserSubject[]>("aim_user_subjects", []);
-    setSubjects(stored.length > 0 ? stored : DEFAULT_USER_SUBJECTS);
+    // Default subjects still on their original colour move to the new,
+    // more distinct palette (see PREVIOUS_DEFAULT_COLORS).
+    const migrated = stored.map((s) => {
+      const fresh = DEFAULT_USER_SUBJECTS.find((d) => d.id === s.id);
+      return fresh && PREVIOUS_DEFAULT_COLORS[s.id] === s.color ? { ...s, color: fresh.color } : s;
+    });
+    setSubjects(migrated.length > 0 ? migrated : DEFAULT_USER_SUBJECTS);
     setMounted(true);
   }, []);
 
@@ -418,23 +417,32 @@ interface ThemeState {
 
 const ThemeContext = createContext<ThemeState | null>(null);
 
+/* Dark mode is off for now: the app stays light while its foundation
+   settles. Its settings toggle was already removed, which left anyone
+   with a saved "aim_dark: true" stuck in dark mode with no way out, so
+   the saved choice is ignored (kept, not deleted) until this comes back.
+   The dark: styles stay in the code. Flip to true to restore it, along
+   with a toggle to reach it. */
+const DARK_MODE_ENABLED = false;
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [dark, setDark] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setDark(load<boolean>("aim_dark", false));
+    if (DARK_MODE_ENABLED) setDark(load<boolean>("aim_dark", false));
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (mounted) {
-      save("aim_dark", dark);
-      document.documentElement.classList.toggle("dark", dark);
-    }
+    if (!mounted) return;
+    if (DARK_MODE_ENABLED) save("aim_dark", dark);
+    document.documentElement.classList.toggle("dark", DARK_MODE_ENABLED && dark);
   }, [dark, mounted]);
 
-  const toggle = useCallback(() => setDark((d) => !d), []);
+  const toggle = useCallback(() => {
+    if (DARK_MODE_ENABLED) setDark((d) => !d);
+  }, []);
 
   if (!mounted) return null;
 
