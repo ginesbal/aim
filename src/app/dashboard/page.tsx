@@ -42,6 +42,8 @@ import { DURATION_PRESETS } from "@/components/ui/DurationPicker";
    starting a focus session; flip to true to bring them back. */
 const SHOW_DAY_CHIPS = false;
 
+const WELCOME_SKIPPED_KEY = "aim_welcome_skipped";
+
 /* Tick the dashboard once a minute so the header date / weekday and any
    time-of-day-derived copy ("Hit your goal by 4:30 PM") stay current
    when the page is left open across day or hour boundaries. Cheap; the
@@ -75,7 +77,12 @@ export default function DashboardPage() {
 
   useMinuteTick();
 
-  const [showWelcome, setShowWelcome] = useState(isFirstVisit);
+  // The welcome dialog asks for a name but doesn't insist: "Skip for now"
+  // (or Esc) is remembered, so it doesn't come back on every visit. The
+  // name can still be set in Settings; until then the greeting says "there".
+  const [showWelcome, setShowWelcome] = useState(
+    () => isFirstVisit && !(typeof window !== "undefined" && window.localStorage.getItem(WELCOME_SKIPPED_KEY))
+  );
   const [welcomeName, setWelcomeName] = useState("");
   const [welcomeError, setWelcomeError] = useState<string | null>(null);
 
@@ -136,12 +143,18 @@ export default function DashboardPage() {
     const s = justLoggedId ? sessions.find((x) => x.id === justLoggedId) : undefined;
     if (!s) return undefined;
     const sub = getSubject(s.subject);
+    // The planner task this session finished, if "Mark done" was ticked:
+    // matched the way Focus links them, by the session's task text.
+    const done = s.task?.trim()
+      ? tasks.find((t) => t.completed && t.title.slice(0, 60).trim() === s.task?.trim())
+      : undefined;
     return {
       minutes: s.duration,
       label: formatSubjectLabel(sub?.label ?? s.subject),
       color: sub?.color ?? "#60729f",
+      doneTitle: done?.title,
     };
-  }, [justLoggedId, sessions, getSubject]);
+  }, [justLoggedId, sessions, getSubject, tasks]);
 
   // The two tasks after the one the launcher offers, soonest due first.
   const afterThis = useMemo(
@@ -190,12 +203,29 @@ export default function DashboardPage() {
     setShowWelcome(false);
   }
 
+  function skipWelcome() {
+    window.localStorage.setItem(WELCOME_SKIPPED_KEY, "1");
+    setShowWelcome(false);
+  }
+
+  // A session still open in this tab lives only in the tab's storage, so
+  // closing the tab would lose it without a word. Ask first, as Focus does.
+  useEffect(() => {
+    if (!live) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [live]);
+
   return (
     // A narrower column than the app shell's: the headline is ~540px
     // wide, so at the full width the meter sat stranded across a gap and
     // each "After this" row's title and day were a screen-width apart.
     <div className="pb-4 mx-auto max-w-4xl">
-      <Modal open={showWelcome} onClose={() => {}} width="sm" labelledBy="welcome-title">
+      <Modal open={showWelcome} onClose={skipWelcome} width="sm" labelledBy="welcome-title">
         <div className="text-center py-2">
           <div className="flex justify-center mb-4">
             <AimLogo size="md" />
@@ -225,6 +255,13 @@ export default function DashboardPage() {
               Get started
             </Button>
           </form>
+          <button
+            type="button"
+            onClick={skipWelcome}
+            className="tap-target mt-3 rounded-md px-1 text-sm font-medium text-steel-600 underline decoration-steel-300 underline-offset-2 hover:text-baltic-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
+          >
+            Skip for now
+          </button>
         </div>
       </Modal>
 
@@ -262,6 +299,10 @@ export default function DashboardPage() {
           nextTask={nextTask}
           subject={nextTask ? getSubject(nextTask.subject) : undefined}
           hasAnySessions={sessions.length > 0}
+          // Remounted when the welcome dialog closes, so the main button
+          // takes focus then, the same as on any later arrival.
+          key={showWelcome ? "welcome" : "ready"}
+          focusPrimary={!showWelcome}
           segments={segments}
           newSegmentId={justLogged ? justLoggedId ?? undefined : undefined}
           justLogged={justLogged}
@@ -276,7 +317,7 @@ export default function DashboardPage() {
             // restart it).
             router.push(nextTask ? focusHref(nextTask, true) : "/focus")
           }
-          onPlanStep={() => router.push("/tasks")}
+          onPlanStep={() => router.push("/tasks?new=1")}
           onEditGoal={() => router.push("/settings")}
         />
       </StickyCard>
@@ -351,6 +392,7 @@ function HeroBody({
   nextTask,
   subject,
   hasAnySessions,
+  focusPrimary,
   segments,
   newSegmentId,
   justLogged,
@@ -371,10 +413,13 @@ function HeroBody({
   nextTask: Task | undefined;
   subject: UserSubject | undefined;
   hasAnySessions: boolean;
+  /** The main button takes focus on arrival. Off while the welcome
+      dialog is open, so it can't pull focus out from under it. */
+  focusPrimary: boolean;
   segments: MeterSegment[];
   /** The session just saved on Focus, whose band grows into the "a". */
   newSegmentId?: string;
-  justLogged?: { minutes: number; label: string; color: string };
+  justLogged?: { minutes: number; label: string; color: string; doneTitle?: string };
   /** A session still open in this tab (left mid-way on Focus). */
   live: LiveSession | null;
   liveSubject: UserSubject | undefined;
@@ -407,7 +452,7 @@ function HeroBody({
   const focusBlank = (
     <button
       onClick={onFocusBlank}
-      className="press tap-target rounded-md px-1 -mx-1 text-sm font-medium text-steel-600 dark:text-steel-400 underline decoration-steel-300 underline-offset-2 hover:text-baltic-700 dark:hover:text-baltic-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70"
+      className="press tap-target rounded-md px-1 -mx-1 text-sm font-medium text-steel-600 dark:text-steel-400 underline decoration-steel-300 underline-offset-2 hover:text-baltic-700 dark:hover:text-baltic-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
     >
       or focus without a task
     </button>
@@ -417,14 +462,32 @@ function HeroBody({
   // was just done (same shape as the other headlines), and the next task
   // steps back to a quiet line under it. "Done" first, "next" second.
   const loggedHeadline = justLogged && (
-    <h1 className="text-baltic-800 dark:text-baltic-100">
-      <span className="block text-2xl font-semibold leading-tight">
-        <span className="font-script text-[1.25em] text-baltic-500 dark:text-baltic-300 pr-1">just logged</span>
-      </span>{" "}
-      <span className="mt-1 block text-3xl sm:text-4xl font-bold tracking-tight leading-[1.12]">
-        <span className="tabular-nums">{formatTime(justLogged.minutes)}</span> of {justLogged.label}
-      </span>
-    </h1>
+    <>
+      <h1 id="launcher-headline" className="text-baltic-800 dark:text-baltic-100">
+        <span className="block text-2xl font-semibold leading-tight">
+          <span className="font-script text-[1.25em] text-baltic-500 dark:text-baltic-300 pr-1">just logged</span>
+        </span>{" "}
+        <span className="mt-1 block text-3xl sm:text-4xl font-bold tracking-tight leading-[1.12]">
+          <span className="tabular-nums">{formatTime(justLogged.minutes)}</span> of {justLogged.label}
+        </span>
+      </h1>
+      {/* The session that reached the day's goal is the day's biggest
+          moment; it gets a line of its own here, not just the small
+          status line further down. */}
+      {todayMinutes >= dailyGoal && todayMinutes - justLogged.minutes < dailyGoal && (
+        <p className="mt-3 text-base font-semibold text-baltic-700 dark:text-baltic-300">
+          Today&apos;s <span className="tabular-nums">{formatTime(dailyGoal)}</span> goal is done.
+        </p>
+      )}
+      {/* "Mark done" took effect: the task has left the launcher, so say
+          where it went. */}
+      {justLogged.doneTitle && (
+        <p title={justLogged.doneTitle} className="mt-3 truncate text-sm text-steel-600 dark:text-steel-400">
+          Marked done:{" "}
+          <span className="font-semibold text-baltic-700 dark:text-baltic-300">{justLogged.doneTitle}</span>
+        </p>
+      )}
+    </>
   );
 
   // ── A session is still open: offer the way back, not a new one ──
@@ -437,13 +500,13 @@ function HeroBody({
       live.state === "done" || live.state === "reflecting" ||
       (live.state === "running" && live.endTime <= Date.now());
     const lead = finished ? "just finished" : live.state === "paused" ? "paused on" : "still focusing on";
+    // The headline already names the state; this line adds only what's new.
     let detail: ReactNode;
     if (finished) {
-      detail = "Session finished · waiting to be saved";
+      detail = "Waiting to be saved";
     } else if (live.state === "paused") {
       detail = (
         <>
-          Session paused ·{" "}
           <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
             {formatTime(Math.max(1, Math.floor(live.secondsLeft / 60)))}
           </span>{" "}
@@ -454,7 +517,7 @@ function HeroBody({
       const ends = new Date(live.endTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
       detail = (
         <>
-          Session in progress · ends at{" "}
+          Ends at{" "}
           <span className="whitespace-nowrap font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">{ends}</span>
         </>
       );
@@ -462,7 +525,7 @@ function HeroBody({
     return (
       <div className="grid gap-6 lg:gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_13rem]">
         <div className="min-w-0">
-          <h1 className="text-baltic-800 dark:text-baltic-100">
+          <h1 id="launcher-headline" className="text-baltic-800 dark:text-baltic-100">
             <span className="block text-2xl font-semibold leading-tight">
               <span className="font-script text-[1.25em] text-baltic-500 dark:text-baltic-300 pr-1">{lead}</span>
             </span>{" "}
@@ -480,6 +543,8 @@ function HeroBody({
           <div className="mt-7">
             <button
               onClick={onReturnToFocus}
+              autoFocus={focusPrimary}
+              aria-describedby="launcher-headline"
               style={{ backgroundColor: readableFill(color) }}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-medium text-white hover:brightness-[0.94] active:scale-[0.98] shadow-[0_6px_16px_-8px_rgba(38,45,64,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950 transition-[filter,transform] duration-150 ease-out"
             >
@@ -501,7 +566,7 @@ function HeroBody({
       <div className="grid gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_13rem]">
         <div>
           {loggedHeadline ?? (
-            <h1 className="text-3xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100 leading-tight">
+            <h1 id="launcher-headline" className="text-3xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100 leading-tight">
               {fresh ? (
                 <>
                   Set your <span className="highlighter">first aim</span>
@@ -518,6 +583,8 @@ function HeroBody({
           </p>
           <button
             onClick={onPlanStep}
+            autoFocus={focusPrimary}
+            aria-describedby="launcher-headline"
             className="press mt-6 inline-flex items-center gap-2 rounded-full px-6 py-3 bg-baltic-700 dark:bg-baltic-500 text-white text-[15px] font-medium hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
             style={{ transition: "transform 160ms var(--ease-out), background-color 160ms ease" }}
           >
@@ -584,7 +651,7 @@ function HeroBody({
             {loggedHeadline}
             {/* The launcher sentence, one step quieter: still one click
                 from the next session, length menu included. */}
-            <p className="mt-4 text-base text-steel-600 dark:text-steel-400">
+            <p id="launcher-next" className="mt-4 text-base text-steel-600 dark:text-steel-400">
               Next, focus for{" "}
               <span className="font-semibold text-baltic-800 dark:text-baltic-100">
                 <LengthMenu minutes={focusBlockMin} onChange={onSetLength} listParent={columnRef} />
@@ -599,7 +666,7 @@ function HeroBody({
           <>
             {/* The sentence is the headline. It reads the same aloud:
                 "focus for 25m on Lab report — Organic compounds". */}
-            <h1 className="text-baltic-800 dark:text-baltic-100">
+            <h1 id="launcher-headline" className="text-baltic-800 dark:text-baltic-100">
               {/* Real spaces between the words (not margins), so the sentence
                   reads correctly aloud and when copied. */}
               <span className="block text-2xl font-semibold leading-tight">
@@ -629,14 +696,29 @@ function HeroBody({
               <span>{subjectLabel}</span>
               <span aria-hidden className="text-steel-300 dark:text-steel-600">·</span>
               <span className={cn(overdue && "font-semibold text-red-600 dark:text-red-400")}>{due}</span>
+              {/* A new user never created this task: say it's one of the
+                  seeded examples (ids demo1–6 in contexts.tsx). */}
+              {nextTask.id.startsWith("demo") && (
+                <>
+                  <span aria-hidden className="text-steel-300 dark:text-steel-600">·</span>
+                  <span>sample task</span>
+                </>
+              )}
             </p>
           </>
         )}
 
         <div className="mt-7 flex items-center gap-5 flex-wrap">
-          {/* Same button as Focus's Begin: subject colour, play mark. */}
+          {/* Same button as Focus's Begin: subject colour, play mark. The
+              launcher's main button takes focus on arrival (here and in
+              the other two states), so Enter acts on it. It is described by
+              the sentence it starts, so a screen reader landing here still
+              hears it: the headline, or after a save the "Next, focus
+              for…" line (the headline then names what was just logged). */}
           <button
             onClick={onFocus}
+            autoFocus={focusPrimary}
+            aria-describedby={loggedHeadline ? "launcher-next" : "launcher-headline"}
             style={{ backgroundColor: fill }}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-medium text-white hover:brightness-[0.94] active:scale-[0.98] shadow-[0_6px_16px_-8px_rgba(38,45,64,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950 transition-[filter,transform] duration-150 ease-out"
           >
@@ -657,7 +739,7 @@ function HeroBody({
                 onClick={onEditGoal}
                 // Own line on phones (it would otherwise wrap mid-sentence),
                 // inline after the status from sm up.
-                className="press tap-target block w-fit mt-1 sm:inline sm:mt-0 sm:ml-1 rounded-md px-1 -mx-1 text-sm font-medium text-steel-600 dark:text-steel-400 underline decoration-steel-300 underline-offset-2 hover:text-baltic-700 dark:hover:text-baltic-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70"
+                className="press tap-target block w-fit mt-1 sm:inline sm:mt-0 sm:ml-1 rounded-md px-1 -mx-1 text-sm font-medium text-steel-600 dark:text-steel-400 underline decoration-steel-300 underline-offset-2 hover:text-baltic-700 dark:hover:text-baltic-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
               >
                 Adjust goal
               </button>
@@ -728,13 +810,20 @@ function LengthMenu({
     : [...DURATION_PRESETS, minutes].sort((a, b) => a - b);
 
   return (
-    // Keys from the portalled list still bubble here through React.
+    // Keys and focus events from the portalled list still bubble here
+    // through React.
     <span
       onKeyDown={(e) => {
         if (e.key === "Escape" && open) {
           e.stopPropagation();
           close();
         }
+      }}
+      // Tabbing out of the trigger or the list closes it, so it can't be
+      // left open over Begin with focus somewhere else.
+      onBlur={(e) => {
+        const next = e.relatedTarget as Node | null;
+        if (open && !triggerRef.current?.contains(next) && !listRef.current?.contains(next)) setOpen(false);
       }}
     >
       <button
@@ -744,7 +833,7 @@ function LengthMenu({
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
         title="Change session length"
-        className="tap-target inline-flex items-center gap-1 rounded-lg px-1.5 -mx-1.5 tabular-nums hover:bg-lavender-100 dark:hover:bg-lavender-800/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 transition-colors duration-150"
+        className="tap-target inline-flex items-center gap-1 rounded-lg px-1.5 -mx-1.5 tabular-nums hover:bg-lavender-100 dark:hover:bg-lavender-800/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 transition-colors duration-150"
       >
         {formatTime(minutes)}
         <svg
@@ -781,7 +870,7 @@ function LengthMenu({
                   onChange(m);
                   close();
                 }}
-                className="flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-baltic-700 dark:text-baltic-200 hover:bg-lavender-50 dark:hover:bg-lavender-800/60 focus:outline-none focus-visible:bg-lavender-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-baltic-400/70"
+                className="flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-baltic-700 dark:text-baltic-200 hover:bg-lavender-50 dark:hover:bg-lavender-800/60 focus:outline-none focus-visible:bg-lavender-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-baltic-500"
               >
                 <span className="tabular-nums">{formatTime(m)}</span>
                 {m === minutes && (
@@ -824,7 +913,7 @@ function AfterThis({
         </h2>
         <button
           onClick={onOpenAll}
-          className="press tap-target rounded-md px-1 -mx-1 text-sm font-medium text-steel-600 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70"
+          className="press tap-target rounded-md px-1 -mx-1 text-sm font-medium text-steel-600 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
         >
           See all tasks
         </button>
@@ -849,7 +938,7 @@ function AfterThis({
                   // and day (including "overdue") would otherwise be lost
                   // behind a label naming only the title.
                   aria-label={`Set up focus for ${t.title}, ${subjectLabel}, ${overdue ? "overdue" : `due ${day === "Today" || day === "Tomorrow" ? day.toLowerCase() : day}`}`}
-                  className="group w-full flex items-center gap-3 px-1 py-3.5 text-left rounded-lg hover:bg-white dark:hover:bg-baltic-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 transition-colors duration-150"
+                  className="group w-full flex items-center gap-3 px-1 py-3.5 text-left rounded-lg hover:bg-white dark:hover:bg-baltic-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 transition-colors duration-150"
                 >
                   <span
                     aria-hidden
@@ -864,7 +953,7 @@ function AfterThis({
                         title gets the row's full width. */}
                     <span className="sm:hidden mt-0.5 block truncate text-sm text-steel-600 dark:text-steel-400">
                       {subjectLabel} ·{" "}
-                      <span className={cn(overdue && "font-semibold text-red-600 dark:text-red-400")}>{day}</span>
+                      <span className={cn(overdue && "font-semibold text-red-700 dark:text-red-400")}>{day}</span>
                     </span>
                   </span>
                   <span className="hidden sm:inline text-sm text-steel-600 dark:text-steel-400 flex-shrink-0">
@@ -873,7 +962,8 @@ function AfterThis({
                   <span
                     className={cn(
                       "hidden sm:block w-20 text-right text-sm flex-shrink-0",
-                      overdue ? "font-semibold text-red-600 dark:text-red-400" : "text-steel-600 dark:text-steel-400"
+                      // red-700: red-600 is 4.27:1 on the page surface, under 4.5.
+                      overdue ? "font-semibold text-red-700 dark:text-red-400" : "text-steel-600 dark:text-steel-400"
                     )}
                   >
                     {day}

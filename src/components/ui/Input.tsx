@@ -24,10 +24,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           aria-describedby={error && id ? `${id}-error` : undefined}
           className={cn(
             "w-full px-3 py-2 text-sm rounded-md border bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-600 dark:placeholder:text-steel-400 transition-smooth",
-            error
-              ? "border-red-300 focus:ring-red-300 focus:border-red-300"
-              : "border-lavender-400 dark:border-lavender-600 focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400",
-            "outline-none",
+            error ? "border-red-600" : "border-lavender-400 dark:border-lavender-600 focus:border-baltic-400",
             className
           )}
           {...props}

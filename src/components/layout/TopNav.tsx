@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { usePreferences } from "@/lib/contexts";
 import AnimatedAimLogo from "./AnimatedAimLogo";
+import HelpButton from "@/components/ui/HelpButton";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
@@ -19,8 +21,9 @@ export default function TopNav() {
   const { name } = usePreferences();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Click-outside to close
+  // Click outside or Esc closes; Esc hands focus back to the avatar.
   useEffect(() => {
     if (!menuOpen) return;
     function handleClick(e: MouseEvent) {
@@ -28,21 +31,27 @@ export default function TopNav() {
         setMenuOpen(false);
       }
     }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      setMenuOpen(false);
+      menuButtonRef.current?.focus();
+    }
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
   }, [menuOpen]);
 
   return (
     <>
     <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 dark:bg-baltic-950/80 backdrop-blur-md border-b border-lavender-200/60 dark:border-lavender-800/40 z-40 flex items-center px-4 sm:px-6">
-      {/* Logo */}
-      <button
-        onClick={() => router.push("/dashboard")}
-        className="flex-shrink-0 mr-8"
-        aria-label="Go to dashboard"
-      >
+      {/* Logo. Pages are real links (not buttons), so they can be opened
+          in a new tab or copied. */}
+      <Link href="/dashboard" className="tap-target flex-shrink-0 mr-8" aria-label="Go to dashboard">
         <AnimatedAimLogo />
-      </button>
+      </Link>
 
       {/* Nav links — center. On phones they move to the bottom bar. */}
       <nav aria-label="Pages" className="hidden sm:flex flex-1 items-center justify-center">
@@ -50,27 +59,31 @@ export default function TopNav() {
           {NAV_ITEMS.map((item) => {
             const active = pathname === item.href;
             return (
-              <button
+              <Link
                 key={item.href}
-                onClick={() => router.push(item.href)}
+                href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "px-4 py-1.5 rounded-full text-sm font-medium transition-[background-color,color,box-shadow] duration-200",
+                  "tap-target px-4 py-1.5 rounded-full text-sm font-medium transition-[background-color,color,box-shadow] duration-200",
                   active
                     ? "bg-baltic-600 text-white dark:bg-baltic-500 shadow-sm"
                     : "text-steel-600 hover:text-baltic-700 dark:text-steel-400 dark:hover:text-baltic-200"
                 )}
               >
                 {item.label}
-              </button>
+              </Link>
             );
           })}
         </div>
       </nav>
 
-      {/* Profile dropdown — right */}
-      <div className="flex-shrink-0 relative ml-auto" ref={menuRef}>
+      {/* Help, then the profile dropdown — right */}
+      <div className="ml-auto mr-2 flex-shrink-0">
+        <HelpButton className="tap-target w-9 h-9 rounded-full flex items-center justify-center text-steel-600 hover:bg-baltic-50 hover:text-baltic-700 transition-colors duration-150" />
+      </div>
+      <div className="flex-shrink-0 relative" ref={menuRef}>
         <button
+          ref={menuButtonRef}
           onClick={() => setMenuOpen((v) => !v)}
           className={cn(
             "tap-target w-9 h-9 rounded-full bg-baltic-600 dark:bg-baltic-500 flex items-center justify-center text-sm font-semibold text-white transition-[transform,box-shadow] duration-150 [@media(hover:hover)]:hover:scale-105 hover:shadow-md",
@@ -79,16 +92,22 @@ export default function TopNav() {
           aria-label="Open profile menu"
           aria-expanded={menuOpen}
         >
-          {name ? name.charAt(0).toUpperCase() : "?"}
+          {/* No name yet (the welcome can be skipped): a person mark, not
+              "?", which would read as a second help button beside Help. */}
+          {name ? (
+            name.charAt(0).toUpperCase()
+          ) : (
+            <svg aria-hidden width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
+              <circle cx="8" cy="5.5" r="2.75" />
+              <path d="M3 13.5c.8-2.4 2.7-3.75 5-3.75s4.2 1.35 5 3.75" />
+            </svg>
+          )}
         </button>
 
         {menuOpen && (
           <div className="absolute right-0 top-12 w-56 rounded-2xl bg-white dark:bg-lavender-900 shadow-lg shadow-baltic-900/10 border border-lavender-200 dark:border-lavender-700 py-2 dropdown-enter">
             {/* Name header */}
             <div className="px-4 py-2 border-b border-lavender-100 dark:border-lavender-800 mb-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-steel-600 dark:text-steel-400">
-                Signed in as
-              </p>
               <p className="text-sm font-semibold text-baltic-800 dark:text-baltic-100 truncate">
                 {name || "—"}
               </p>
@@ -131,10 +150,10 @@ export default function TopNav() {
           const active = pathname === item.href;
           return (
             <li key={item.href}>
-              <button
-                onClick={() => router.push(item.href)}
+              <Link
+                href={item.href}
                 aria-current={active ? "page" : undefined}
-                className="w-full h-14 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-baltic-400/70"
+                className="w-full h-14 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-baltic-500"
               >
                 <span
                   className={cn(
@@ -152,7 +171,7 @@ export default function TopNav() {
                     />
                   )}
                 </span>
-              </button>
+              </Link>
             </li>
           );
         })}

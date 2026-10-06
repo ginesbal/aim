@@ -69,9 +69,12 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  // Focus input when adding
+  // Focus input when adding, and bring the whole form (down to its Add
+  // button) into view where the page can scroll.
   useEffect(() => {
-    if (adding) inputRef.current?.focus();
+    if (!adding) return;
+    inputRef.current?.focus();
+    inputRef.current?.parentElement?.scrollIntoView({ block: "nearest" });
   }, [adding]);
 
   const handleAdd = () => {
@@ -165,7 +168,7 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
                     data-subject-option
                     aria-pressed={value === sub.label}
                     onClick={() => handleSelect(sub)}
-                    className="flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-md -mx-1 px-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70"
+                    className="flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-md -mx-1 px-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
                   >
                     <span aria-hidden className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: sub.color }} />
                     <span className={cn(
@@ -181,7 +184,7 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
                     type="button"
                     onClick={(e) => { e.stopPropagation(); handleDelete(sub); }}
                     className={cn(
-                      "flex-shrink-0 p-0.5 rounded transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70",
+                      "flex-shrink-0 p-0.5 rounded transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600",
                       confirmDelete === sub.id
                         ? "text-red-500 opacity-100"
                         : "text-steel-500 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500"
@@ -214,10 +217,8 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
                 aria-describedby={addError ? `${listId}-error` : undefined}
                 maxLength={30}
                 className={cn(
-                  "w-full px-3 py-1.5 text-sm rounded-md border bg-white text-baltic-800 placeholder:text-steel-600 outline-none focus:ring-2 transition-colors duration-150",
-                  addError
-                    ? "border-red-400 focus:ring-red-400/20 focus:border-red-500"
-                    : "border-lavender-400 focus:ring-baltic-400/20 focus:border-baltic-400"
+                  "w-full px-3 py-1.5 text-sm rounded-md border bg-white text-baltic-800 placeholder:text-steel-600 transition-colors duration-150",
+                  addError ? "border-red-600" : "border-lavender-400 focus:border-baltic-400"
                 )}
               />
               {addError && (

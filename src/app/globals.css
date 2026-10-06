@@ -517,8 +517,18 @@
       transition: none !important;
       transform: none !important;
     }
-    .press:active {
+    .press:active,
+    .focus-btn:active,
+    [class*="active:scale"]:active {
       transform: none !important;
+    }
+    /* Everything else changes state instantly: hover nudges, the menu
+       chevron, the Focus progress arc and the logo. !important also
+       overrides transitions set inline. */
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0s !important;
     }
     /* Journal entry cards keep their static tilt but drop animated movement */
     .journal-card {

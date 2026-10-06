@@ -9,6 +9,8 @@ import { cn, formatTime, readableFill } from "@/lib/utils";
 import { QualitySelector } from "@/components/ui/QualityIndicator";
 import DurationPicker, { DURATION_MAX, DURATION_MIN } from "@/components/ui/DurationPicker";
 import SubjectSelector from "@/components/ui/SubjectSelector";
+import HelpButton from "@/components/ui/HelpButton";
+import type { VantaEffectName } from "@/components/ui/VantaBg";
 import {
   type TimerState,
   saveLiveSession,
@@ -16,12 +18,13 @@ import {
   clearLiveSession,
 } from "@/lib/liveSession";
 
-const TopologyBg = dynamic(() => import("@/components/ui/TopologyBg"), { ssr: false });
+const VantaBg = dynamic(() => import("@/components/ui/VantaBg"), { ssr: false });
 
-// Topology backdrop presets — the line color is drawn from the shared app
-// palette so the focus page sits cohesively beside the rest of the app.
-// The mesh background stays on baltic-50 (the app surface) for every preset;
-// only the line color changes. The choice persists in localStorage.
+// The backdrop is two separate choices: a pattern and a colour. The colour
+// is drawn from the shared app palette so the focus page sits cohesively
+// beside the rest of the app; the surface stays on baltic-50 (the app
+// surface) for every combination. "Still" turns the animation off and
+// leaves the plain surface. Both choices persist in localStorage.
 type TopoPresetKey = "baltic" | "ash" | "lavender" | "cream";
 
 const TOPO_BG = 0xeff1f5; // baltic-50
@@ -35,6 +38,31 @@ const TOPO_PRESETS: { key: TopoPresetKey; label: string; color: number; hex: str
 
 const TOPO_STORAGE_KEY = "aim_focus_topo";
 
+type PatternKey = "contours" | "fog" | "birds" | "still";
+
+const PATTERNS: { key: PatternKey; label: string; effect?: VantaEffectName }[] = [
+  { key: "contours", label: "Contours", effect: "topology" },
+  { key: "fog",      label: "Fog",      effect: "fog" },
+  { key: "birds",    label: "Birds",    effect: "birds" },
+  { key: "still",    label: "Still · no motion" },
+];
+
+const PATTERN_STORAGE_KEY = "aim_focus_pattern";
+
+// One of a fixed set of keys, remembered in localStorage.
+function useStoredChoice<K extends string>(storageKey: string, keys: readonly K[], fallback: K) {
+  const [value, setValue] = useState<K>(() => {
+    if (typeof window === "undefined") return fallback;
+    const saved = window.localStorage.getItem(storageKey) as K;
+    return keys.includes(saved) ? saved : fallback;
+  });
+  const select = useCallback((key: K) => {
+    setValue(key);
+    window.localStorage.setItem(storageKey, key);
+  }, [storageKey]);
+  return [value, select] as const;
+}
+
 /* Parked, not deleted: the Ambient sound menu, whose options are all
    "Soon". Flip to true when the sounds exist. */
 const SHOW_AMBIENT = false;
@@ -45,6 +73,31 @@ const MUSIC_OPTIONS = [
   { id: "rain",   label: "Rain",         desc: "Wet pavement, soft" },
   { id: "lofi",   label: "Lofi loop",    desc: "Tape, no vocals" },
 ] as const;
+
+// The end-of-session chime: two soft sine notes with a bell-like decay,
+// generated so there is no audio file to ship. Browsers only allow sound
+// once the user has clicked or typed on the page, so a session restored
+// by a reload and then left untouched ends silently.
+function playChime() {
+  try {
+    const ctx = new AudioContext();
+    [659.25, 880].forEach((freq, i) => {
+      const start = ctx.currentTime + i * 0.22;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.18, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 1.1);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 1.1);
+    });
+    setTimeout(() => ctx.close(), 2000);
+  } catch {
+    // No Web Audio: the tab title and the screen still say it's done.
+  }
+}
 
 export default function FocusPage() {
   const router = useRouter();
@@ -93,17 +146,13 @@ export default function FocusPage() {
   const backdropMenuRef = useRef<HTMLDivElement>(null);
   const backdropBtnRef = useRef<HTMLButtonElement>(null);
 
-  const [topoPreset, setTopoPreset] = useState<TopoPresetKey>(() => {
-    if (typeof window === "undefined") return "baltic";
-    const saved = window.localStorage.getItem(TOPO_STORAGE_KEY);
-    return TOPO_PRESETS.some((p) => p.key === saved) ? (saved as TopoPresetKey) : "baltic";
-  });
+  const [topoPreset, selectPreset] = useStoredChoice(TOPO_STORAGE_KEY, TOPO_PRESETS.map((p) => p.key), "baltic");
   const activePreset = TOPO_PRESETS.find((p) => p.key === topoPreset) ?? TOPO_PRESETS[0];
-
-  const selectPreset = useCallback((key: TopoPresetKey) => {
-    setTopoPreset(key);
-    if (typeof window !== "undefined") window.localStorage.setItem(TOPO_STORAGE_KEY, key);
-  }, []);
+  // Fog by default: the calmest moving pattern, and the one that keeps
+  // the timer and its controls clearest (critique, 2026-10-06). A saved
+  // choice still wins.
+  const [pattern, selectPattern] = useStoredChoice(PATTERN_STORAGE_KEY, PATTERNS.map((p) => p.key), "fog");
+  const still = pattern === "still";
 
   const totalSeconds = duration * 60;
   const progress = ((totalSeconds - secondsLeft) / totalSeconds) * 100;
@@ -141,6 +190,7 @@ export default function FocusPage() {
       secondsLeftRef.current = 0;
       setSecondsLeft(0);
       setTimerState("done");
+      playChime();
       return;
     }
     setSecondsLeft(Math.ceil((endTimeRef.current - now) / 1000));
@@ -170,6 +220,7 @@ export default function FocusPage() {
     setSecondsLeft(duration * 60);
     setReflectionQuality(null);
     setReflectionNote("");
+    setMarkDone(false);
   }, [clearTimer, duration]);
 
   const exitToDashboard = useCallback(() => {
@@ -252,6 +303,7 @@ export default function FocusPage() {
   // length starts at the user's default session length from Settings.
   // Read once on mount; after that the setup is the user's to change.
   const prefilled = useRef(false);
+  const [prefilledSubject, setPrefilledSubject] = useState(false);
   const [autoStart, setAutoStart] = useState(false);
   const [resumeRunning, setResumeRunning] = useState(false);
   const resumeEndRef = useRef<number | null>(null);
@@ -302,7 +354,10 @@ export default function FocusPage() {
     setDuration(length);
     const requestedSubject = params.get("subject");
     const match = requestedSubject ? getSubject(requestedSubject) : undefined;
-    if (match) setSubject(match.label);
+    if (match) {
+      setSubject(match.label);
+      setPrefilledSubject(true);
+    }
     const requestedTask = params.get("task")?.trim();
     if (requestedTask) setTask(requestedTask.slice(0, 60));
     const requestedTaskId = params.get("taskId");
@@ -445,6 +500,11 @@ export default function FocusPage() {
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      // This Esc only closes the menu. Stopped here, before it bubbles on
+      // to the window's handler: closing the menu re-renders with it
+      // marked closed, so that handler would otherwise read the same key
+      // as "pause and leave".
+      e.stopPropagation();
       // Focus goes back to the button that opened the menu. Left on the
       // removed menu item it would fall to <body>, and the next Esc
       // would exit Focus from nowhere.
@@ -461,7 +521,7 @@ export default function FocusPage() {
     };
   }, [musicOpen, backdropOpen]);
 
-  // Opening the backdrop list puts focus on the current colour, so a
+  // Opening the backdrop list puts focus on the current pattern, so a
   // keyboard user lands inside it (same as the subject picker).
   useEffect(() => {
     if (!backdropOpen) return;
@@ -469,6 +529,9 @@ export default function FocusPage() {
       ?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')
       ?.focus();
   }, [backdropOpen]);
+
+  // Leaving a running session pauses it, so the button says so up front.
+  const leaveLabel = timerState === "idle" ? "Exit" : timerState === "running" ? "Pause & leave" : "Leave";
 
   const canBegin = subject !== null;
   const pillSubtitle = task.trim() || subjectLabel || "Ready to focus";
@@ -478,8 +541,10 @@ export default function FocusPage() {
   // not seconds: browsers throttle timers in background tabs (to about
   // once a minute after five minutes hidden), so a ticking mm:ss would
   // stall; a minute count stays true.
-  // ponytail: "Done" can lag by up to a minute in a long-hidden tab; a
-  // Web Worker timer or a notification fixes that if it matters.
+  // ponytail: "Done" and the chime can lag by up to a minute in a
+  // long-hidden tab; a one-shot timeout set when the timer starts (not
+  // chained, so not held to once a minute) or a Web Worker timer fixes
+  // that if it matters.
   const minutesLeft = Math.ceil(secondsLeft / 60);
   const pageTitle = useRef<string | null>(null);
   useEffect(() => {
@@ -502,10 +567,19 @@ export default function FocusPage() {
 
   return (
     <div className="fixed inset-0 z-50 focus-canvas focus-canvas-enter overflow-hidden">
-      {/* Animated topology mesh — palette-tinted, light surface. */}
+      {/* Animated backdrop — palette-tinted, light surface. */}
       <div className="absolute inset-0" aria-hidden>
-        <TopologyBg color={activePreset.color} backgroundColor={TOPO_BG} />
+        <VantaBg
+          effect={PATTERNS.find((p) => p.key === pattern)?.effect}
+          color={activePreset.color}
+          backgroundColor={TOPO_BG}
+          still={still}
+        />
       </div>
+
+      {/* The page's heading, for screen readers: the screen itself is a
+          clock, not a document, so it has no visible title. */}
+      <h1 className="sr-only">{timerState === "idle" ? "Set up a focus session" : `Focus session: ${pillSubtitle}`}</h1>
 
       {/* Assistive-tech status — announces state changes only, never the
           per-second countdown (which would flood a screen reader). */}
@@ -527,23 +601,27 @@ export default function FocusPage() {
       {timerState !== "idle" && (
         <header className="absolute top-[5.25rem] inset-x-4 flex justify-center sm:top-6 sm:left-6 sm:right-auto sm:block z-10 focus-stage-enter">
           <div className="focus-panel rounded-full px-4 py-2 flex items-center gap-3 min-w-0">
-            <span className="whitespace-nowrap text-[11px] uppercase tracking-[0.2em] text-steel-600">
-              {/* Keyed so the label re-mounts and blur-fades in on each state
-                  change, bridging the swap instead of snapping. */}
-              <span key={timerState} className="focus-label-swap inline-block">
-                {timerState === "running" && "Focusing on"}
-                {timerState === "paused" && "Paused"}
-                {timerState === "done" && "Session complete"}
-                {timerState === "reflecting" && "Reflecting"}
+            {/* Paused has no word here: the label under the clock and the
+                dimmed ring already say it, and once is enough. */}
+            {timerState !== "paused" && (
+              <span className="whitespace-nowrap text-[11px] uppercase tracking-[0.2em] text-steel-600">
+                {/* Keyed so the label re-mounts and blur-fades in on each state
+                    change, bridging the swap instead of snapping. */}
+                <span key={timerState} className="focus-label-swap inline-block">
+                  {timerState === "running" && "Focusing on"}
+                  {timerState === "done" && "Session complete"}
+                  {timerState === "reflecting" && "Reflecting"}
+                </span>
               </span>
-            </span>
+            )}
             <div className="flex items-center gap-2 min-w-0">
               <div
                 className="w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors duration-300"
                 style={{ backgroundColor: subjectColor }}
                 aria-hidden
               />
-              <span className="text-sm text-baltic-700 truncate max-w-[22ch]">
+              {/* Wider where there's room; the full name on hover when cut. */}
+              <span title={pillSubtitle} className="text-sm text-baltic-700 truncate max-w-[22ch] lg:max-w-[40ch]">
                 {pillSubtitle}
               </span>
             </div>
@@ -553,21 +631,24 @@ export default function FocusPage() {
 
       {/* ── Top-right: backdrop + music + exit ── */}
       <div className="absolute top-6 right-6 z-20 flex items-center gap-2">
-        {/* Backdrop color */}
+        {/* Backdrop: pattern and colour */}
         <div className="relative" ref={backdropMenuRef}>
-          {/* A disclosure (button + list of pressable buttons), not an
+          {/* A disclosure (button + lists of pressable buttons), not an
               ARIA menu: role="menu" promises arrow-key navigation that
-              this short list doesn't need. */}
+              these short lists don't need. It stays open after a pick,
+              so both choices can be made in one visit with the result
+              showing behind; Esc or a click outside closes it. */}
           <button
             ref={backdropBtnRef}
             onClick={() => { setBackdropOpen((v) => !v); setMusicOpen(false); }}
-            aria-label="Backdrop color"
+            aria-label="Backdrop"
             aria-expanded={backdropOpen}
             aria-controls={backdropOpen ? "focus-backdrop-list" : undefined}
-            title="Backdrop color"
+            title="Backdrop"
             className="focus-btn tap-target !p-0 w-10 h-10 !rounded-full"
           >
-            <span className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: activePreset.hex }} />
+            {/* Still has no colour to show, so its swatch is an empty ring. */}
+            <span className={cn("w-4 h-4 rounded-full border", still ? "border-lavender-400" : "border-black/10")} style={{ backgroundColor: still ? "transparent" : activePreset.hex }} />
           </button>
           {backdropOpen && (
             <div
@@ -575,28 +656,23 @@ export default function FocusPage() {
               className="absolute right-0 mt-2 w-52 rounded-2xl overflow-hidden bg-white border border-lavender-200 shadow-[0_16px_36px_-12px_rgba(38,45,64,0.28)] dropdown-enter"
               style={{ transformOrigin: "top right" }}
             >
-              <div className="px-4 pt-3 pb-2 border-b border-lavender-100">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-steel-600">Backdrop</p>
-              </div>
-              <ul className="py-1">
-                {TOPO_PRESETS.map((p) => (
-                  <li key={p.key}>
-                    <button
-                      onClick={() => { selectPreset(p.key); setBackdropOpen(false); backdropBtnRef.current?.focus(); }}
-                      aria-pressed={topoPreset === p.key}
-                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-lavender-50 transition-colors duration-150 focus:outline-none focus-visible:bg-lavender-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-baltic-400/70"
-                    >
-                      <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ backgroundColor: p.hex }} />
-                      <span className="text-sm text-baltic-700 flex-1 text-left">{p.label}</span>
-                      {topoPreset === p.key && (
-                        <svg width={14} height={14} viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="text-baltic-600 flex-shrink-0">
-                          <path d="M2.5 7.5L6 11l5.5-7" />
-                        </svg>
-                      )}
-                    </button>
-                  </li>
+              <p id="focus-backdrop-pattern" className="px-4 pt-3 pb-2 border-b border-lavender-100 text-[11px] uppercase tracking-[0.18em] text-steel-600">Pattern</p>
+              <ul className="py-1" aria-labelledby="focus-backdrop-pattern">
+                {PATTERNS.map((p) => (
+                  <BackdropOption key={p.key} label={p.label} pressed={pattern === p.key} onSelect={() => selectPattern(p.key)} />
                 ))}
               </ul>
+              {/* Still has nothing to colour. */}
+              {!still && (
+                <>
+                  <p id="focus-backdrop-colour" className="px-4 pt-3 pb-2 border-y border-lavender-100 text-[11px] uppercase tracking-[0.18em] text-steel-600">Colour</p>
+                  <ul className="py-1" aria-labelledby="focus-backdrop-colour">
+                    {TOPO_PRESETS.map((p) => (
+                      <BackdropOption key={p.key} label={p.label} swatch={p.hex} pressed={topoPreset === p.key} onSelect={() => selectPreset(p.key)} />
+                    ))}
+                  </ul>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -653,23 +729,31 @@ export default function FocusPage() {
           </div>
         )}
 
+        {/* Help — Focus covers the top bar, so it carries its own. */}
+        <HelpButton className="focus-btn tap-target !p-0 w-10 h-10 !rounded-full" />
+
         {/* Exit */}
         <button
           onClick={handleExit}
-          title={timerState === "idle" ? "Exit (Esc)" : "Leave (Esc) — your session is kept"}
+          title={timerState === "idle" ? "Exit (Esc)" : `${leaveLabel} (Esc) — your session is kept`}
           aria-keyshortcuts="Escape"
-          aria-label={timerState === "idle" ? "Exit focus mode" : "Leave focus mode, your session is kept"}
+          aria-label={timerState === "idle" ? "Exit focus mode" : `${leaveLabel} focus mode, your session is kept`}
           className="focus-btn tap-target !px-3 !py-2"
         >
           <svg width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
             <path d="M3 3l6 6M9 3l-6 6" />
           </svg>
-          <span className="text-sm whitespace-nowrap">{timerState === "idle" ? "Exit" : "Leave"}</span>
+          <span className="text-sm whitespace-nowrap">{leaveLabel}</span>
         </button>
       </div>
 
-      {/* ── Center stage ── */}
-      <main className="absolute inset-0 flex items-center justify-center px-6">
+      {/* ── Center stage ── A grid, not flex centring: when the stage is
+          taller than the window (a short laptop, 200% zoom, the subject
+          list open) the row grows downward and scrolls, where flex would
+          push the top out of reach. */}
+      {/* A div, not <main>: the app shell's <main> already wraps this page,
+          and a second, nested main landmark confuses screen readers. */}
+      <div className="absolute inset-0 grid place-items-center overflow-y-auto overflow-x-hidden px-6 py-6">
         {timerState === "idle" && (
           <SetupStage
             duration={duration}
@@ -679,6 +763,7 @@ export default function FocusPage() {
             task={task}
             onTaskChange={setTask}
             canBegin={canBegin}
+            prefilled={prefilledSubject}
             accentColor={subjectColor}
             onBegin={startTimer}
           />
@@ -705,26 +790,19 @@ export default function FocusPage() {
             elapsedMinutes={elapsedMinutes}
             subjectLabel={subjectLabel}
             subjectColor={subjectColor}
-            task={task}
             quality={reflectionQuality}
             onQualityChange={setReflectionQuality}
             note={reflectionNote}
             onNoteChange={setReflectionNote}
             onSave={saveSession}
             onKeepGoing={secondsLeft > 0 ? startTimer : undefined}
+            onDiscard={resetToIdle}
             doneTaskTitle={doneCandidate?.title}
             markDone={markDone}
             onMarkDoneChange={setMarkDone}
           />
         )}
-      </main>
-
-      {/* ── Bottom-center: mantra ── */}
-      <footer className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-        <p className="font-script text-base text-baltic-600 focus-halo select-none">
-          no tabs, no shortcuts, one thing
-        </p>
-      </footer>
+      </div>
     </div>
   );
 }
@@ -741,6 +819,8 @@ interface SetupStageProps {
   task: string;
   onTaskChange: (s: string) => void;
   canBegin: boolean;
+  /** The subject arrived filled in from the dashboard. */
+  prefilled: boolean;
   accentColor: string;
   onBegin: () => void;
 }
@@ -749,10 +829,19 @@ function SetupStage({
   duration, onDurationChange,
   subject, onSubjectChange,
   task, onTaskChange,
-  canBegin, accentColor, onBegin,
+  canBegin, prefilled, accentColor, onBegin,
 }: SetupStageProps) {
   const [showTask, setShowTask] = useState(false);
   const showTaskInput = showTask || task.length > 0;
+
+  // With the sentence already complete, Begin is the next step, so it
+  // takes focus and Enter starts. Runs when the setup appears (also after
+  // a discard) and when the prefill lands; never when a subject is picked
+  // by hand, which would pull focus away from the picker.
+  const beginRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (canBegin) beginRef.current?.focus();
+  }, [prefilled]);
 
   return (
     <div className="focus-stage-enter w-full max-w-sm">
@@ -796,8 +885,9 @@ function SetupStage({
                 value={task}
                 onChange={(e) => onTaskChange(e.target.value)}
                 placeholder="What are you working on?"
+                aria-label="What are you working on?"
                 maxLength={60}
-                className="w-full px-4 py-2 text-sm rounded-full bg-white border border-lavender-400 text-baltic-800 placeholder:text-steel-600 outline-none focus:border-baltic-400 focus:ring-2 focus:ring-baltic-400/20 transition-colors duration-150"
+                className="w-full px-4 py-2 text-sm rounded-full bg-white border border-lavender-400 text-baltic-800 placeholder:text-steel-600 focus:border-baltic-400 transition-colors duration-150"
               />
             ) : (
               <button
@@ -815,6 +905,7 @@ function SetupStage({
 
           {/* Begin — fills with the subject's colour once a subject is set. */}
           <button
+            ref={beginRef}
             onClick={onBegin}
             disabled={!canBegin}
             style={
@@ -962,6 +1053,7 @@ function SessionStage({
           {isActive && (
             <button
               onClick={onAddFive}
+              aria-label="Add 5 minutes"
               className="tap-target mt-3.5 inline-flex items-center gap-1 rounded-full border border-lavender-200 bg-white/60 px-2.5 py-1 text-xs font-medium text-steel-600 hover:border-baltic-300 hover:text-baltic-600 transition-colors duration-150 press"
             >
               <svg width={10} height={10} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round">
@@ -975,26 +1067,32 @@ function SessionStage({
 
       {/* Controls — one primary toggle plus Finish; Discard tucked beneath. */}
       <div className="flex items-center gap-2.5 mt-9">
-        {timerState === "running" && (
-          <button onClick={onPause} title="Pause (Space)" aria-keyshortcuts="Space" className="focus-btn focus-btn-primary tap-target !px-6">
+        {/* One button for both states, so keyboard focus stays on it
+            across a toggle instead of being dropped with a swapped-out
+            element. */}
+        {isActive && (
+          <button
+            onClick={timerState === "paused" ? onResume : onPause}
+            title={timerState === "paused" ? "Resume (Space)" : "Pause (Space)"}
+            aria-keyshortcuts="Space"
+            className="focus-btn focus-btn-primary tap-target !px-6"
+          >
             <svg width={12} height={12} viewBox="0 0 12 12" fill="currentColor">
-              <rect x="2.5" y="2" width="2.5" height="8" rx="0.5" />
-              <rect x="7" y="2" width="2.5" height="8" rx="0.5" />
+              {timerState === "paused" ? (
+                <polygon points="3,2 10,6 3,10" />
+              ) : (
+                <>
+                  <rect x="2.5" y="2" width="2.5" height="8" rx="0.5" />
+                  <rect x="7" y="2" width="2.5" height="8" rx="0.5" />
+                </>
+              )}
             </svg>
-            Pause
-          </button>
-        )}
-        {timerState === "paused" && (
-          <button onClick={onResume} title="Resume (Space)" aria-keyshortcuts="Space" className="focus-btn focus-btn-primary tap-target !px-6">
-            <svg width={12} height={12} viewBox="0 0 12 12" fill="currentColor">
-              <polygon points="3,2 10,6 3,10" />
-            </svg>
-            Resume
+            {timerState === "paused" ? "Resume" : "Pause"}
           </button>
         )}
         {isActive && (
-          <button onClick={onFinish} className="focus-btn tap-target">
-            Finish
+          <button onClick={onFinish} title="Stop the timer now; save or discard on the next screen" className="focus-btn tap-target">
+            Finish early
           </button>
         )}
         {/* Done: no buttons. The completion moment plays, then the page
@@ -1011,6 +1109,33 @@ function SessionStage({
   );
 }
 
+// One row of the backdrop menu: a pattern (text only) or a colour (with
+// its swatch).
+function BackdropOption({ label, swatch, pressed, onSelect }: {
+  label: string;
+  swatch?: string;
+  pressed: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <li>
+      <button
+        onClick={onSelect}
+        aria-pressed={pressed}
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-lavender-50 transition-colors duration-150 focus:outline-none focus-visible:bg-lavender-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-baltic-500"
+      >
+        {swatch && <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ backgroundColor: swatch }} />}
+        <span className="text-sm text-baltic-700 flex-1 text-left">{label}</span>
+        {pressed && (
+          <svg width={14} height={14} viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="text-baltic-600 flex-shrink-0">
+            <path d="M2.5 7.5L6 11l5.5-7" />
+          </svg>
+        )}
+      </button>
+    </li>
+  );
+}
+
 // Discard control — a two-step confirm so a misclick can't throw away an
 // in-progress session. Disarms itself after a few seconds.
 function DiscardButton({ onConfirm }: { onConfirm: () => void }) {
@@ -1023,6 +1148,7 @@ function DiscardButton({ onConfirm }: { onConfirm: () => void }) {
   return (
     <button
       onClick={() => { if (armed) onConfirm(); else setArmed(true); }}
+      title="Throw this session away. Nothing is logged."
       className={cn(
         "tap-target px-3 py-2 rounded-full text-sm transition-colors duration-150 press",
         armed ? "text-red-700 font-medium focus-halo" : "text-steel-600 hover:text-red-600 focus-halo"
@@ -1041,44 +1167,38 @@ interface ReflectionStageProps {
   elapsedMinutes: number;
   subjectLabel: string | null;
   subjectColor: string;
-  task: string;
   quality: FocusQuality | null;
-  onQualityChange: (q: FocusQuality) => void;
+  onQualityChange: (q: FocusQuality | null) => void;
   note: string;
   onNoteChange: (s: string) => void;
   onSave: () => void;
   /** Present when the session was finished early: back to the timer. */
   onKeepGoing?: () => void;
+  onDiscard: () => void;
   /** Title of the planner task this session belongs to, if any. */
   doneTaskTitle?: string;
   markDone: boolean;
   onMarkDoneChange: (v: boolean) => void;
 }
 
-// The one ending screen. Everything on it is optional except saving:
-// rate it or don't, note it or don't, and "Save session" logs it either
-// way. (Leaving without logging is Exit, with its own confirm.)
+// The one ending screen. Rate it or don't, note it or don't, and "Save
+// session" logs it either way. Discard is the way out for a session that
+// shouldn't count: one that ran to zero has no "Keep going" to fall back on.
 function ReflectionStage({
-  elapsedMinutes, subjectLabel, subjectColor, task,
+  elapsedMinutes, subjectLabel, subjectColor,
   quality, onQualityChange, note, onNoteChange,
-  onSave, onKeepGoing, doneTaskTitle, markDone, onMarkDoneChange,
+  onSave, onKeepGoing, onDiscard, doneTaskTitle, markDone, onMarkDoneChange,
 }: ReflectionStageProps) {
   return (
     <div className="focus-stage-enter rounded-3xl bg-white border border-lavender-200 shadow-[0_18px_44px_-14px_rgba(38,45,64,0.22)] p-8 w-full max-w-sm flex flex-col items-center">
-      {/* Session summary */}
-      <div className="flex items-center gap-2 mb-1">
+      {/* Session summary. The task isn't repeated here: the pill at the
+          top of the screen already names it. */}
+      <div className="flex items-center gap-2 mb-6">
         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: subjectColor }} />
         <span className="text-xs text-steel-600 tabular-nums">
           {formatTime(elapsedMinutes)}{subjectLabel ? ` · ${subjectLabel}` : ""}
         </span>
       </div>
-      {task.trim() ? (
-        <p className="text-sm text-baltic-700 mb-5 truncate max-w-full">
-          {task.trim()}
-        </p>
-      ) : (
-        <div className="mb-5" />
-      )}
 
       <h2 className="text-lg font-medium text-baltic-800 tracking-tight">
         How focused were you?
@@ -1096,10 +1216,11 @@ function ReflectionStage({
             type="text"
             value={note}
             onChange={(e) => onNoteChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") onSave(); }}
             maxLength={80}
             placeholder="What clicked? (optional)"
             aria-label="What clicked? (optional)"
-            className="w-full px-4 py-2 text-sm text-center rounded-full bg-white border border-lavender-400 text-baltic-800 placeholder:text-steel-600 outline-none focus:border-baltic-400 focus:ring-2 focus:ring-baltic-400/20 transition-colors duration-150"
+            className="w-full px-4 py-2 text-sm text-center rounded-full bg-white border border-lavender-400 text-baltic-800 placeholder:text-steel-600 focus:border-baltic-400 transition-colors duration-150"
           />
         </div>
       )}
@@ -1120,17 +1241,23 @@ function ReflectionStage({
         </label>
       )}
 
-      <button onClick={onSave} className="focus-btn focus-btn-primary !px-6 mt-6">
+      {/* Focused on arrival, so Enter saves straight away; rating stays
+          optional (Shift+Tab reaches it, and 1–4 work there). Focusing
+          the scale instead made Enter record "Scattered" by accident. */}
+      <button onClick={onSave} autoFocus className="focus-btn focus-btn-primary tap-target !px-6 mt-6">
         Save session
       </button>
       {onKeepGoing && (
         <button
           onClick={onKeepGoing}
-          className="tap-target mt-3 rounded-md px-1 text-sm font-medium text-steel-600 underline decoration-steel-300 underline-offset-2 hover:text-baltic-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70"
+          className="tap-target mt-3 rounded-md px-1 text-sm font-medium text-steel-600 underline decoration-steel-300 underline-offset-2 hover:text-baltic-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
         >
           Keep going
         </button>
       )}
+      <div className="mt-1">
+        <DiscardButton onConfirm={onDiscard} />
+      </div>
     </div>
   );
 }

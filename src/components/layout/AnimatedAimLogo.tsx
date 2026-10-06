@@ -23,6 +23,11 @@ export default function AnimatedAimLogo({
   >("full");
 
   useEffect(() => {
+    // Reduced motion: no wordmark sequence, straight to the mark.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setPhase("icon");
+      return;
+    }
     const timers = [
       setTimeout(() => setPhase("sliding-right"), 1500),
       setTimeout(() => setPhase("sliding-back"), 2300),
@@ -40,16 +45,12 @@ export default function AnimatedAimLogo({
   const isIcon = phase === "icon";
 
   return (
+    // One fixed slot for both the wordmark and the mark. The slot used to
+    // shrink from 64px to 32px when the mark took over, which slid the
+    // centred page navigation 16px sideways a few seconds after every load.
     <div
       className="relative"
-      style={{
-        width: isIcon ? 32 : 64,
-        height: isIcon ? 32 : 31,
-        transition: isIcon
-          ? "width 400ms ease-in-out, height 400ms ease-in-out"
-          : "none",
-        overflow: "hidden",
-      }}
+      style={{ width: 64, height: 32, overflow: "hidden" }}
     >
       {/* Wordmark layer — visible during slide phases */}
       {!isIcon && (

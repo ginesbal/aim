@@ -459,6 +459,15 @@ export default function TasksPage() {
     setShowAddModal(true);
   }, [activeSubjectLabel]);
 
+  // The dashboard's "Add your first task" arrives with ?new=1: open the
+  // form straight away instead of leaving the student to find "New task".
+  // The flag is dropped so a reload doesn't reopen it.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("new") !== "1") return;
+    window.history.replaceState(null, "", "/tasks");
+    handleNewTask();
+  }, [handleNewTask]);
+
   return (
     <div className="desk-surface relative -mx-8 px-8 -mt-2 pt-2 pb-6">
       {/* Two restrained desk-surface blobs — atmosphere, no work to do */}
@@ -1004,7 +1013,7 @@ function SubjectTab({
         }
       }}
       className={cn(
-        "press group relative inline-flex items-center gap-2 whitespace-nowrap cursor-pointer select-none text-xs rounded-t-lg border border-b-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-baltic-950",
+        "press group relative inline-flex items-center gap-2 whitespace-nowrap cursor-pointer select-none text-xs rounded-t-lg border border-b-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-baltic-950",
         // Both tabs share the SAME bottom padding (pb-2) and the SAME 1px
         // border, so every label sits on one baseline. The active tab is
         // taller via extra TOP padding (a raised lid) and fills white,
@@ -1111,7 +1120,7 @@ function SubjectTab({
           onKeyDown={(e) => e.stopPropagation()}
           aria-label={`Close ${displayLabel}`}
           className={cn(
-            "press flex items-center justify-center w-[18px] h-[18px] rounded-full flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70",
+            "press flex items-center justify-center w-[18px] h-[18px] rounded-full flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
             isActive
               ? "text-steel-400 dark:text-steel-500 hover:bg-baltic-100 dark:hover:bg-baltic-800/60 hover:text-baltic-700 dark:hover:text-baltic-200 opacity-100"
               : "text-steel-300 dark:text-steel-600 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-baltic-100 dark:hover:bg-baltic-800/60 hover:text-baltic-700 dark:hover:text-baltic-200"
@@ -1214,7 +1223,7 @@ function AddTabButton({
         aria-haspopup="menu"
         title="Add tab"
         className={cn(
-          "press inline-flex items-center justify-center w-7 h-7 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950",
+          "press inline-flex items-center justify-center w-7 h-7 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950",
           open
             ? "bg-white dark:bg-lavender-900 text-baltic-700 dark:text-baltic-200 shadow-sm"
             : "text-steel-400 dark:text-steel-500 hover:text-baltic-700 dark:hover:text-baltic-200 hover:bg-baltic-50/60 dark:hover:bg-baltic-900/30"
@@ -1381,7 +1390,7 @@ function StatusFilterPills({
           key={opt.value}
           onClick={() => onChange(opt.value)}
           className={cn(
-            "press px-2.5 py-1 rounded-full text-[10px] font-mono uppercase tracking-[0.16em] focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70",
+            "press px-2.5 py-1 rounded-full text-[10px] font-mono uppercase tracking-[0.16em] focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
             value === opt.value
               ? "bg-white dark:bg-lavender-900 shadow-sm text-baltic-800 dark:text-baltic-100"
               : "text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300"
@@ -1511,7 +1520,7 @@ function TaskRow({
         }
       }}
       className={cn(
-        "press group flex items-center gap-3 py-2 px-2 rounded-lg cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-baltic-950 hover:bg-baltic-50/70 dark:hover:bg-baltic-900/30",
+        "press group flex items-center gap-3 py-2 px-2 rounded-lg cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-baltic-950 hover:bg-baltic-50/70 dark:hover:bg-baltic-900/30",
         task.completed && "opacity-50 hover:opacity-70"
       )}
       style={{
@@ -1706,7 +1715,7 @@ function Empty({
         {filterStatus !== "pending" && hasAnyTasks && (
           <button
             onClick={onShowPending}
-            className="press text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 rounded-md py-1.5 px-2 -my-1.5 -mx-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
+            className="press text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 rounded-md py-1.5 px-2 -my-1.5 -mx-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
             style={{
               transition: "color 160ms ease, transform 160ms var(--ease-out)",
             }}
@@ -2041,7 +2050,7 @@ function AddSubjectModal({
                   aria-label={`Use color ${c}`}
                   aria-pressed={isSelected}
                   className={cn(
-                    "press relative w-7 h-7 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-lavender-900",
+                    "press relative w-7 h-7 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-lavender-900",
                     isSelected
                       ? "ring-2 ring-offset-2 ring-baltic-500 dark:ring-baltic-400 dark:ring-offset-lavender-900"
                       : "hover:scale-110"
@@ -2211,7 +2220,7 @@ function ManageSubjectsModal({
                             aria-label={`Use color ${c}`}
                             aria-pressed={sel}
                             className={cn(
-                              "press w-7 h-7 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-lavender-900",
+                              "press w-7 h-7 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-lavender-900",
                               sel
                                 ? "ring-2 ring-offset-2 ring-baltic-500 dark:ring-baltic-400 dark:ring-offset-lavender-900"
                                 : "hover:scale-110"
@@ -2235,7 +2244,7 @@ function ManageSubjectsModal({
                         type="button"
                         onClick={() => commitEdit(s)}
                         disabled={!draftLabel.trim()}
-                        className="press px-3 py-1.5 text-xs font-semibold rounded-full bg-baltic-700 dark:bg-baltic-500 text-white hover:bg-baltic-800 dark:hover:bg-baltic-400 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70"
+                        className="press px-3 py-1.5 text-xs font-semibold rounded-full bg-baltic-700 dark:bg-baltic-500 text-white hover:bg-baltic-800 dark:hover:bg-baltic-400 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
                         style={{
                           transition:
                             "background-color 160ms ease, transform 160ms var(--ease-out)",
@@ -2249,7 +2258,7 @@ function ManageSubjectsModal({
                           setEditingId(null);
                           setError("");
                         }}
-                        className="press px-3 py-1.5 text-xs font-medium rounded-full text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-lavender-100/60 dark:hover:bg-lavender-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70"
+                        className="press px-3 py-1.5 text-xs font-medium rounded-full text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-lavender-100/60 dark:hover:bg-lavender-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
                         style={{
                           transition:
                             "color 160ms ease, transform 160ms var(--ease-out)",
@@ -2277,7 +2286,7 @@ function ManageSubjectsModal({
                         type="button"
                         onClick={() => startEdit(s)}
                         aria-label={`Rename ${s.label}`}
-                        className="press flex-shrink-0 p-1.5 -m-0.5 rounded-md text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-200 hover:bg-lavender-100/70 dark:hover:bg-lavender-800/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70"
+                        className="press flex-shrink-0 p-1.5 -m-0.5 rounded-md text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-200 hover:bg-lavender-100/70 dark:hover:bg-lavender-800/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
                         style={{
                           transition:
                             "color 160ms ease, background-color 160ms ease, transform 160ms var(--ease-out)",
@@ -2306,7 +2315,7 @@ function ManageSubjectsModal({
                             : `Delete ${s.label}`
                         }
                         className={cn(
-                          "press flex-shrink-0 p-1.5 -m-0.5 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70",
+                          "press flex-shrink-0 p-1.5 -m-0.5 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600",
                           isConfirming
                             ? "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40"
                             : "text-steel-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
@@ -2521,7 +2530,7 @@ function AddTaskModal({
                   type="button"
                   onClick={() => setSubject(sub.label)}
                   className={cn(
-                    "press inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70",
+                    "press inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
                     isActive
                       ? "bg-white dark:bg-lavender-900 border-lavender-300 dark:border-lavender-700 shadow-sm text-baltic-800 dark:text-baltic-100"
                       : "border-transparent text-steel-500 dark:text-steel-400 hover:bg-lavender-50 dark:hover:bg-lavender-900/40"
@@ -2554,7 +2563,7 @@ function AddTaskModal({
               }}
               aria-expanded={addingSubject}
               className={cn(
-                "press inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70",
+                "press inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
                 addingSubject
                   ? "border-baltic-400 dark:border-baltic-500 bg-baltic-50 dark:bg-baltic-900/40 text-baltic-700 dark:text-baltic-200"
                   : "border-lavender-300 dark:border-lavender-700 text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:border-lavender-400 dark:hover:border-lavender-600"
@@ -2616,7 +2625,7 @@ function AddTaskModal({
                       aria-label={`Use color ${c}`}
                       aria-pressed={isSelected}
                       className={cn(
-                        "press w-7 h-7 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-lavender-900",
+                        "press w-7 h-7 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-lavender-900",
                         isSelected
                           ? "ring-2 ring-offset-2 ring-baltic-500 dark:ring-baltic-400 dark:ring-offset-lavender-900"
                           : "hover:scale-110"
@@ -2640,7 +2649,7 @@ function AddTaskModal({
                   type="button"
                   onClick={handleAddSubject}
                   disabled={!newSubjectLabel.trim()}
-                  className="press px-3 py-1.5 text-xs font-semibold rounded-full bg-baltic-700 dark:bg-baltic-500 text-white hover:bg-baltic-800 dark:hover:bg-baltic-400 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70"
+                  className="press px-3 py-1.5 text-xs font-semibold rounded-full bg-baltic-700 dark:bg-baltic-500 text-white hover:bg-baltic-800 dark:hover:bg-baltic-400 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
                   style={{
                     transition:
                       "background-color 160ms ease, transform 160ms var(--ease-out)",
@@ -2651,7 +2660,7 @@ function AddTaskModal({
                 <button
                   type="button"
                   onClick={cancelAddSubject}
-                  className="press px-3 py-1.5 text-xs font-medium rounded-full text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-lavender-100/60 dark:hover:bg-lavender-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70"
+                  className="press px-3 py-1.5 text-xs font-medium rounded-full text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-lavender-100/60 dark:hover:bg-lavender-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
                   style={{
                     transition:
                       "color 160ms ease, transform 160ms var(--ease-out)",
@@ -2701,7 +2710,7 @@ function AddTaskModal({
                     type="button"
                     onClick={() => setPriority(p)}
                     className={cn(
-                      "press flex-1 py-2 rounded-xl text-xs font-medium border focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70",
+                      "press flex-1 py-2 rounded-xl text-xs font-medium border focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
                       isActive
                         ? "border-baltic-400 bg-baltic-50 text-baltic-800 dark:bg-baltic-900/60 dark:text-baltic-200 dark:border-baltic-600"
                         : "border-lavender-200 dark:border-lavender-700 text-steel-500 hover:border-lavender-300 dark:hover:border-lavender-600"
