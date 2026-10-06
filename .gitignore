@@ -10,3 +10,10 @@ next-env.d.ts
 npm-debug.log
 yarn-error.log
 /coverage
+
+# Local tooling state: the preview server config, and Impeccable's
+# critique history, live-mode files and hook cache. design.json stays
+# tracked: it is the machine-readable half of DESIGN.md.
+.claude/launch.json
+.impeccable/*
+!.impeccable/design.json

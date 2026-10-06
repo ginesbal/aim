@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback } from "react";
-import { cn } from "@/lib/utils";
+import { cn, formatTime } from "@/lib/utils";
 
 export const DURATION_MIN = 5;
 export const DURATION_MAX = 120;
 export const DURATION_STEP = 5;
 
-const PRESETS = [25, 45, 60, 90];
+// The quick lengths offered on Focus and in the dashboard launcher.
+export const DURATION_PRESETS = [25, 45, 60, 90];
 
 interface DurationPickerProps {
   value: number;
@@ -39,7 +40,7 @@ export default function DurationPicker({ value, onChange, disabled }: DurationPi
         <button
           onClick={decrement}
           disabled={disabled || value <= DURATION_MIN}
-          className="w-9 h-9 rounded-full flex items-center justify-center border border-lavender-200 text-baltic-500 hover:bg-lavender-50 hover:border-lavender-300 disabled:opacity-30 disabled:cursor-not-allowed transition-[background-color,border-color,transform] duration-150 ease-out press"
+          className="tap-target w-9 h-9 rounded-full flex items-center justify-center border border-lavender-400 text-baltic-500 hover:bg-lavender-50 hover:border-lavender-500 disabled:opacity-30 disabled:cursor-not-allowed transition-[background-color,border-color,transform] duration-150 ease-out press"
           aria-label="Decrease duration"
         >
           <svg width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
@@ -52,14 +53,14 @@ export default function DurationPicker({ value, onChange, disabled }: DurationPi
             {formatDisplay(value)}
           </span>
           {value < 60 && (
-            <span className="text-[10px] uppercase tracking-[0.2em] text-steel-400 mt-2">minutes</span>
+            <span className="text-[11px] uppercase tracking-[0.18em] text-steel-600 mt-2">minutes</span>
           )}
         </div>
 
         <button
           onClick={increment}
           disabled={disabled || value >= DURATION_MAX}
-          className="w-9 h-9 rounded-full flex items-center justify-center border border-lavender-200 text-baltic-500 hover:bg-lavender-50 hover:border-lavender-300 disabled:opacity-30 disabled:cursor-not-allowed transition-[background-color,border-color,transform] duration-150 ease-out press"
+          className="tap-target w-9 h-9 rounded-full flex items-center justify-center border border-lavender-400 text-baltic-500 hover:bg-lavender-50 hover:border-lavender-500 disabled:opacity-30 disabled:cursor-not-allowed transition-[background-color,border-color,transform] duration-150 ease-out press"
           aria-label="Increase duration"
         >
           <svg width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
@@ -70,20 +71,21 @@ export default function DurationPicker({ value, onChange, disabled }: DurationPi
 
       {/* Preset chips */}
       <div className="flex items-center gap-1.5" role="group" aria-label="Duration presets">
-        {PRESETS.map((p) => (
+        {DURATION_PRESETS.map((p) => (
           <button
             key={p}
             onClick={() => onChange(p)}
             disabled={disabled}
             aria-pressed={value === p}
             className={cn(
-              "px-3 py-1 rounded-full text-xs font-medium tabular-nums transition-[background-color,color] duration-150 ease-out press",
+              "tap-target px-3 py-1 rounded-full text-xs font-medium tabular-nums transition-[background-color,color] duration-150 ease-out press",
               value === p
                 ? "bg-baltic-100 text-baltic-700"
-                : "text-steel-400 hover:text-baltic-600 hover:bg-lavender-50"
+                : "text-steel-600 hover:text-baltic-600 hover:bg-lavender-50"
             )}
           >
-            {p >= 60 ? `${p / 60}h` : `${p}m`}
+            {/* Same format as everywhere else ("1h 30m", not "1.5h"). */}
+            {formatTime(p)}
           </button>
         ))}
       </div>

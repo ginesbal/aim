@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 import { cn } from "@/lib/utils";
 import { useSubjects } from "@/lib/contexts";
-import { SUBJECT_COLORS, type UserSubject } from "@/lib/types";
+import { SUBJECT_COLORS, SUBJECT_COLOR_NAMES, type UserSubject } from "@/lib/types";
 
 interface SubjectSelectorProps {
   value: string | null;
@@ -18,10 +18,41 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
   const [newLabel, setNewLabel] = useState("");
   const [newColor, setNewColor] = useState<string>(SUBJECT_COLORS[0]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listId = useId();
 
   const selected = subjects.find((s) => s.label === value);
+
+  // Opening moves focus onto the chosen subject (or the first one), so a
+  // keyboard user lands inside the list instead of behind it.
+  useEffect(() => {
+    if (!open) return;
+    const list = listRef.current;
+    const target =
+      list?.querySelector<HTMLButtonElement>('[aria-pressed="true"]') ??
+      list?.querySelector<HTMLButtonElement>("[data-subject-option]");
+    target?.focus();
+  }, [open]);
+
+  function close() {
+    setOpen(false);
+    setAdding(false);
+    setConfirmDelete(null);
+    setAddError(null);
+  }
+
+  // Esc closes the list and returns focus to the trigger. It stops here so
+  // the Focus page's own Esc shortcut (exit focus mode) doesn't also fire.
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key !== "Escape" || !open) return;
+    e.stopPropagation();
+    close();
+    triggerRef.current?.focus();
+  }
 
   // Close on outside click
   useEffect(() => {
@@ -31,21 +62,31 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
         setOpen(false);
         setAdding(false);
         setConfirmDelete(null);
+        setAddError(null);
       }
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  // Focus input when adding
+  // Focus input when adding, and bring the whole form (down to its Add
+  // button) into view where the page can scroll.
   useEffect(() => {
-    if (adding) inputRef.current?.focus();
+    if (!adding) return;
+    inputRef.current?.focus();
+    inputRef.current?.parentElement?.scrollIntoView({ block: "nearest" });
   }, [adding]);
 
   const handleAdd = () => {
     const trimmed = newLabel.trim();
     if (!trimmed) return;
-    if (subjects.some((s) => s.label.toLowerCase() === trimmed.toLowerCase())) return;
+    // Say why nothing happened and what to do instead, rather than
+    // silently ignoring the click.
+    const existing = subjects.find((s) => s.label.toLowerCase() === trimmed.toLowerCase());
+    if (existing) {
+      setAddError(`${existing.label} is already in your list. Pick it above.`);
+      return;
+    }
     addSubject(trimmed, newColor);
     onChange(trimmed);
     setNewLabel("");
@@ -68,19 +109,24 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
     onChange(value === sub.label ? null : sub.label);
     setOpen(false);
     setConfirmDelete(null);
+    triggerRef.current?.focus();
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative" ref={dropdownRef} onKeyDown={handleKeyDown}>
       {/* Trigger button */}
       <button
+        ref={triggerRef}
+        type="button"
+        aria-expanded={open}
+        aria-controls={open ? listId : undefined}
         onClick={() => { if (!disabled) setOpen(!open); }}
         disabled={disabled}
         className={cn(
           "flex items-center gap-2 px-3.5 py-2 rounded-full text-sm w-full border bg-white transition-[background-color,border-color,transform] duration-150 ease-out press",
           open
             ? "border-baltic-400 ring-2 ring-baltic-400/20"
-            : "border-lavender-200 hover:border-lavender-300",
+            : "border-lavender-400 hover:border-lavender-500",
           disabled && "opacity-50 cursor-not-allowed"
         )}
       >
@@ -90,9 +136,9 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
             <span className="text-baltic-700 truncate">{selected.label}</span>
           </>
         ) : (
-          <span className="text-steel-400">Select subject</span>
+          <span className="text-steel-600">Select subject</span>
         )}
-        <svg className="ml-auto flex-shrink-0 text-steel-400" width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+        <svg aria-hidden className="ml-auto flex-shrink-0 text-steel-500" width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
           <path d={open ? "M3 7.5L6 4.5L9 7.5" : "M3 4.5L6 7.5L9 4.5"} />
         </svg>
       </button>
@@ -105,22 +151,26 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
         >
           {/* Subject list */}
           {subjects.length > 0 && (
-            <div className="max-h-48 overflow-y-auto py-1">
+            <div id={listId} ref={listRef} className="max-h-48 overflow-y-auto py-1">
               {subjects.map((sub) => (
                 <div
                   key={sub.id}
                   className={cn(
-                    "flex items-center gap-2.5 px-3 py-2 cursor-pointer group transition-colors duration-150",
+                    "flex items-center gap-2.5 px-3 py-2 group transition-colors duration-150",
                     value === sub.label
                       ? "bg-baltic-50"
                       : "hover:bg-lavender-50"
                   )}
                 >
-                  <div
-                    className="flex items-center gap-2.5 flex-1 min-w-0"
+                  {/* A real button, so Tab reaches it and Enter/Space pick it. */}
+                  <button
+                    type="button"
+                    data-subject-option
+                    aria-pressed={value === sub.label}
                     onClick={() => handleSelect(sub)}
+                    className="flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-md -mx-1 px-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
                   >
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: sub.color }} />
+                    <span aria-hidden className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: sub.color }} />
                     <span className={cn(
                       "text-sm truncate",
                       value === sub.label
@@ -129,15 +179,17 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
                     )}>
                       {sub.label}
                     </span>
-                  </div>
+                  </button>
                   <button
+                    type="button"
                     onClick={(e) => { e.stopPropagation(); handleDelete(sub); }}
                     className={cn(
-                      "flex-shrink-0 p-0.5 rounded transition-colors duration-150",
+                      "flex-shrink-0 p-0.5 rounded transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600",
                       confirmDelete === sub.id
                         ? "text-red-500 opacity-100"
-                        : "text-steel-400 opacity-0 group-hover:opacity-100 hover:text-red-500"
+                        : "text-steel-500 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-red-500"
                     )}
+                    aria-label={confirmDelete === sub.id ? `Confirm deleting ${sub.label}` : `Delete ${sub.label}`}
                     title={confirmDelete === sub.id ? "Click again to confirm" : "Delete subject"}
                   >
                     <svg width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
@@ -157,19 +209,33 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
                 ref={inputRef}
                 type="text"
                 value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
+                onChange={(e) => { setNewLabel(e.target.value); setAddError(null); }}
                 onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); if (e.key === "Escape") setAdding(false); }}
                 placeholder="Subject name"
+                aria-label="New subject name"
+                aria-invalid={addError ? true : undefined}
+                aria-describedby={addError ? `${listId}-error` : undefined}
                 maxLength={30}
-                className="w-full px-3 py-1.5 text-sm rounded-md border border-lavender-200 bg-white text-baltic-800 placeholder:text-steel-400 outline-none focus:ring-2 focus:ring-baltic-400/20 focus:border-baltic-400 transition-colors duration-150"
+                className={cn(
+                  "w-full px-3 py-1.5 text-sm rounded-md border bg-white text-baltic-800 placeholder:text-steel-600 transition-colors duration-150",
+                  addError ? "border-red-600" : "border-lavender-400 focus:border-baltic-400"
+                )}
               />
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {SUBJECT_COLORS.map((c) => (
+              {addError && (
+                <p id={`${listId}-error`} role="alert" className="-mt-1.5 text-xs text-red-600">
+                  {addError}
+                </p>
+              )}
+              <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Subject colour">
+                {SUBJECT_COLORS.map((c, i) => (
                   <button
                     key={c}
+                    type="button"
                     onClick={() => setNewColor(c)}
+                    aria-label={SUBJECT_COLOR_NAMES[c] ?? `Colour ${i + 1}`}
+                    aria-pressed={newColor === c}
                     className={cn(
-                      "w-5 h-5 rounded-full transition-transform duration-150",
+                      "w-6 h-6 rounded-full transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-baltic-600",
                       newColor === c ? "ring-2 ring-offset-2 ring-baltic-400 ring-offset-white" : "hover:scale-110"
                     )}
                     style={{ backgroundColor: c }}
@@ -178,6 +244,7 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
               </div>
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={handleAdd}
                   disabled={!newLabel.trim()}
                   className="px-3 py-1 text-xs font-medium rounded-full bg-baltic-600 text-white hover:bg-baltic-700 disabled:bg-baltic-200 disabled:cursor-not-allowed transition-colors duration-150 press"
@@ -185,8 +252,9 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
                   Add
                 </button>
                 <button
-                  onClick={() => { setAdding(false); setNewLabel(""); }}
-                  className="px-3 py-1 text-xs font-medium rounded-full text-steel-500 hover:text-baltic-600 hover:bg-lavender-50 transition-colors duration-150 press"
+                  type="button"
+                  onClick={() => { setAdding(false); setNewLabel(""); setAddError(null); }}
+                  className="px-3 py-1 text-xs font-medium rounded-full text-steel-600 hover:text-baltic-600 hover:bg-lavender-50 transition-colors duration-150 press"
                 >
                   Cancel
                 </button>
@@ -194,8 +262,9 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
             </div>
           ) : (
             <button
+              type="button"
               onClick={() => setAdding(true)}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-steel-500 hover:text-baltic-600 hover:bg-lavender-50 transition-colors duration-150"
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-steel-600 hover:text-baltic-600 hover:bg-lavender-50 transition-colors duration-150"
             >
               <svg width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
                 <path d="M6 2v8M2 6h8" />

@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-06T00:00:00Z",
+  "title": "Design System: aim",
+  "extensions": {
+    "colorMeta": {
+      "baltic-50": { "role": "neutral", "displayName": "Baltic Desk", "tonalRamp": ["#131720", "#262d40", "#394460", "#4d5b80", "#60729f", "#808eb3", "#bfc6d9", "#eff1f5"] },
+      "baltic-100": { "role": "neutral", "displayName": "Baltic Selected", "tonalRamp": ["#131720", "#262d40", "#394460", "#4d5b80", "#60729f", "#808eb3", "#bfc6d9", "#eff1f5"] },
+      "baltic-500": { "role": "primary", "displayName": "Baltic", "tonalRamp": ["#131720", "#262d40", "#394460", "#4d5b80", "#60729f", "#808eb3", "#bfc6d9", "#eff1f5"] },
+      "baltic-600": { "role": "primary", "displayName": "Deep Baltic", "tonalRamp": ["#131720", "#262d40", "#394460", "#4d5b80", "#60729f", "#808eb3", "#bfc6d9", "#eff1f5"] },
+      "baltic-700": { "role": "primary", "displayName": "Deep Baltic (hover)", "tonalRamp": ["#131720", "#262d40", "#394460", "#4d5b80", "#60729f", "#808eb3", "#bfc6d9", "#eff1f5"] },
+      "baltic-800": { "role": "neutral", "displayName": "Baltic Night", "tonalRamp": ["#131720", "#262d40", "#394460", "#4d5b80", "#60729f", "#808eb3", "#bfc6d9", "#eff1f5"] },
+      "lavender-50": { "role": "neutral", "displayName": "Lavender Hover", "tonalRamp": ["#16181d", "#2c303a", "#424857", "#586074", "#6e7891", "#8b93a7", "#c5c9d3", "#f0f1f4"] },
+      "lavender-200": { "role": "neutral", "displayName": "Lavender Hairline", "tonalRamp": ["#16181d", "#2c303a", "#424857", "#586074", "#6e7891", "#8b93a7", "#c5c9d3", "#f0f1f4"] },
+      "lavender-400": { "role": "neutral", "displayName": "Lavender Edge", "tonalRamp": ["#16181d", "#2c303a", "#424857", "#586074", "#6e7891", "#8b93a7", "#c5c9d3", "#f0f1f4"] },
+      "steel-300": { "role": "neutral", "displayName": "Steel Separator", "tonalRamp": ["#181b1b", "#303636", "#495050", "#616b6b", "#798686", "#949e9e", "#c9cfcf", "#f2f3f3"] },
+      "steel-600": { "role": "neutral", "displayName": "Steel", "tonalRamp": ["#181b1b", "#303636", "#495050", "#616b6b", "#798686", "#949e9e", "#c9cfcf", "#f2f3f3"] },
+      "ash-500": { "role": "secondary", "displayName": "Ash", "tonalRamp": ["#181e15", "#2f3b2b", "#475940", "#5e7656", "#76946b", "#91a989", "#c8d4c4", "#f1f4f0"] },
+      "cream-300": { "role": "secondary", "displayName": "Cream Highlighter", "tonalRamp": ["#25270c", "#4a4e18", "#6f7425", "#949b31", "#b9c23d", "#c7ce64", "#e3e7b1", "#f8f9ec"] },
+      "cream-600": { "role": "secondary", "displayName": "Cream", "tonalRamp": ["#25270c", "#4a4e18", "#6f7425", "#949b31", "#b9c23d", "#c7ce64", "#e3e7b1", "#f8f9ec"] },
+      "paper": { "role": "neutral", "displayName": "Paper", "tonalRamp": ["#131720", "#262d40", "#394460", "#4d5b80", "#60729f", "#808eb3", "#bfc6d9", "#ffffff"] },
+      "error": { "role": "error", "displayName": "Error", "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#f87171", "#fecaca", "#fef2f2"] }
+    },
+    "typographyMeta": {
+      "countdown": { "displayName": "Countdown", "purpose": "The Focus clock only; light weight keeps a large number calm." },
+      "headline": { "displayName": "Headline", "purpose": "The task in the launcher sentence and the 'just logged' headline; 1.875rem on phones, 2.25rem from 640px." },
+      "script": { "displayName": "Script", "purpose": "Connecting words of a sentence only: 'focus for', 'on', 'just logged', 'paused on'." },
+      "title": { "displayName": "Title", "purpose": "The greeting." },
+      "body": { "displayName": "Body", "purpose": "Status lines, lists and help text." },
+      "label": { "displayName": "Label", "purpose": "Uppercase captions on Focus and in menus, in steel-600." },
+      "mono-label": { "displayName": "Mono label", "purpose": "Dates, counts and filter chips on Tasks and Journal (JetBrains Mono, 10-11px, uppercase)." }
+    },
+    "shadows": [
+      { "name": "resting-paper", "value": "0 1px 1px rgba(38,45,64,.04), 0 4px 8px -2px rgba(38,45,64,.06), 0 14px 28px -10px rgba(38,45,64,.10)", "purpose": "Dashboard cards resting on the desk." },
+      { "name": "floating", "value": "0 16px 36px -12px rgba(38,45,64,.28)", "purpose": "Menus, popovers and dialogs above the page." },
+      { "name": "focus-card", "value": "0 18px 44px -14px rgba(38,45,64,.22)", "purpose": "Setup and ending cards on the Focus canvas." },
+      { "name": "primary-lift", "value": "0 6px 16px -8px rgba(38,45,64,.35)", "purpose": "The Begin button." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.23, 1, 0.32, 1)", "purpose": "Default easing for entrances and state changes." },
+      { "name": "ease-in-out", "value": "cubic-bezier(0.77, 0, 0.175, 1)", "purpose": "Two-way transitions." },
+      { "name": "press", "value": "transform: scale(0.97) over 160ms ease-out", "purpose": "Buttons press in when held." },
+      { "name": "meter-band-in", "value": "900ms, 300ms delay", "purpose": "A newly saved session's band grows into the 'a'." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Begin Button",
+      "kind": "button",
+      "refersTo": "button-begin",
+      "description": "The dashboard's one filled button, in the subject's colour (Baltic by default).",
+      "html": "<button class=\"ds-btn-begin\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 14 14\" aria-hidden=\"true\"><polygon points=\"3,2 12,7 3,12\" fill=\"currentColor\"/></svg>Begin focusing</button>",
+      "css": ".ds-btn-begin { display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: 9999px; padding: 14px 28px; background: #60729f; color: #ffffff; font: 500 15px/1.2 'Bricolage Grotesque', system-ui, sans-serif; box-shadow: 0 6px 16px -8px rgba(38,45,64,.35); cursor: pointer; transition: filter 150ms cubic-bezier(0.23,1,0.32,1), transform 150ms cubic-bezier(0.23,1,0.32,1); } .ds-btn-begin:hover { filter: brightness(0.94); } .ds-btn-begin:active { transform: scale(0.98); } .ds-btn-begin:focus-visible { outline: 2px solid #60729f; outline-offset: 2px; }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Filled Deep Baltic pill for the main action on Focus and in dialogs.",
+      "html": "<button class=\"ds-btn-primary\">Save session</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 8px; border: 1px solid transparent; border-radius: 9999px; padding: 8px 24px; background: #4d5b80; color: #ffffff; font: 500 14px/1.4 'Bricolage Grotesque', system-ui, sans-serif; cursor: pointer; transition: background-color 150ms, transform 160ms cubic-bezier(0.23,1,0.32,1); } .ds-btn-primary:hover { background: #394460; } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid #60729f; outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "White pill with a hairline edge for secondary actions (Finish early, Pause & leave).",
+      "html": "<button class=\"ds-btn-secondary\">Finish early</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #c5c9d3; border-radius: 9999px; padding: 8px 16px; background: #ffffff; color: #394460; font: 500 14px/1.4 'Bricolage Grotesque', system-ui, sans-serif; cursor: pointer; transition: background-color 150ms, border-color 150ms, transform 160ms cubic-bezier(0.23,1,0.32,1); } .ds-btn-secondary:hover { background: #f0f1f4; border-color: #a8aebd; } .ds-btn-secondary:active { transform: scale(0.97); } .ds-btn-secondary:focus-visible { outline: 2px solid #60729f; outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Link",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Underlined quiet alternative to the primary action.",
+      "html": "<button class=\"ds-link\">or focus without a task</button>",
+      "css": ".ds-link { border: none; background: none; padding: 0 4px; border-radius: 6px; color: #616b6b; font: 500 14px/1.5 'Bricolage Grotesque', system-ui, sans-serif; text-decoration: underline; text-decoration-color: #afb6b6; text-underline-offset: 2px; cursor: pointer; } .ds-link:hover { color: #394460; } .ds-link:focus-visible { outline: none; box-shadow: 0 0 0 2px #60729f; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "White field with a 3:1 edge; focus uses the shared outline.",
+      "html": "<input class=\"ds-input\" placeholder=\"What should we call you?\" />",
+      "css": ".ds-input { width: 280px; padding: 8px 12px; border: 1px solid #8b93a7; border-radius: 6px; background: #ffffff; color: #262d40; font: 400 14px/1.5 'Bricolage Grotesque', system-ui, sans-serif; } .ds-input::placeholder { color: #616b6b; } .ds-input:focus-visible { border-color: #808eb3; outline: 2px solid #60729f; outline-offset: 2px; }"
+    },
+    {
+      "name": "Paper Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The dashboard's resting surface.",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-script\">focus for <b>25m</b> on</p><p class=\"ds-card-title\">Lab report</p></div>",
+      "css": ".ds-card { width: 320px; padding: 24px; border-radius: 16px; background: #ffffff; border: 1px solid rgba(197,201,211,.6); box-shadow: 0 1px 1px rgba(38,45,64,.04), 0 4px 8px -2px rgba(38,45,64,.06), 0 14px 28px -10px rgba(38,45,64,.10); } .ds-card-script { margin: 0; font: 600 30px/1.2 Caveat, cursive; color: #60729f; } .ds-card-script b { font: 600 24px 'Bricolage Grotesque', system-ui, sans-serif; color: #262d40; } .ds-card-title { margin: 4px 0 0; font: 700 36px/1.12 'Bricolage Grotesque', system-ui, sans-serif; letter-spacing: -0.025em; color: #262d40; }"
+    },
+    {
+      "name": "Page Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Page pills in a Baltic Desk track; the active page fills Deep Baltic.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item ds-nav-active\" href=\"#\">Dashboard</a><a class=\"ds-nav-item\" href=\"#\">Tasks</a><a class=\"ds-nav-item\" href=\"#\">Focus</a><a class=\"ds-nav-item\" href=\"#\">Journal</a></nav>",
+      "css": ".ds-nav { display: inline-flex; gap: 4px; padding: 4px; border-radius: 9999px; background: #eff1f5; } .ds-nav-item { padding: 6px 16px; border-radius: 9999px; color: #616b6b; font: 500 14px/1.4 'Bricolage Grotesque', system-ui, sans-serif; text-decoration: none; transition: background-color 200ms, color 200ms; } .ds-nav-item:hover { color: #394460; } .ds-nav-active { background: #4d5b80; color: #ffffff; } .ds-nav-active:hover { color: #ffffff; } .ds-nav-item:focus-visible { outline: 2px solid #60729f; outline-offset: 2px; }"
+    },
+    {
+      "name": "Duration Chip",
+      "kind": "chip",
+      "refersTo": "chip-selected",
+      "description": "Text-only preset; the selected one fills Baltic Selected.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip ds-chip-on\">25m</button><button class=\"ds-chip\">45m</button><button class=\"ds-chip\">1h</button></div>",
+      "css": ".ds-chips { display: inline-flex; gap: 4px; } .ds-chip { border: none; border-radius: 9999px; padding: 4px 12px; background: transparent; color: #616b6b; font: 500 13px/1.4 'Bricolage Grotesque', system-ui, sans-serif; cursor: pointer; } .ds-chip:hover { color: #394460; } .ds-chip-on { background: #dfe3ec; color: #394460; } .ds-chip:focus-visible { outline: 2px solid #60729f; outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Annotated Notebook",
+    "overview": "aim looks like study material marked up by hand, kept calm. White paper cards with a faint grain rest on a pale blue-grey desk. The words that join a sentence (\"focus for\", \"on\", \"just logged\") are handwritten, while what matters (the task, the length, the time) is set in a clear grotesque. A highlighter swipe marks the one number worth noticing, and the day's progress fills the \"a\" of the logo like ink.\n\nThe north star describes what is already there; it is not a licence to add notebook props. The system is quiet by default: one card, one sentence, one filled button per screen, and everything else steps back. Focus, where the session runs, is the same desk with the furniture cleared away, keeping only the clock, the controls and an optional slow backdrop.\n\nThe rejected direction is the generic productivity dashboard: grids of same-size stat cards, competing accents, decoration added to fill space. It was tried, felt AI-generated and overwhelming, and was taken out.",
+    "keyCharacteristics": [
+      "A sentence as the headline, with handwritten connecting words.",
+      "Paper cards with soft, layered shadows on a pale blue-grey surface.",
+      "One filled, fully rounded primary button per screen, coloured by the subject.",
+      "Colour carries meaning: a subject's colour, the progress band, the primary action.",
+      "Light theme only for now; motion is slow, optional, and off under \"reduce motion\"."
+    ],
+    "rules": [
+      { "name": "The Reason Rule", "body": "Every visual change states the reason it serves (a finding, a user need, a measured problem). A change that only makes something look more like a notebook does not ship.", "section": "overview" },
+      { "name": "The Subject Colour Rule", "body": "A subject's colour appears where that subject is: its dot, its band in the \"a\", the Begin button for it. It is never used decoratively.", "section": "colors" },
+      { "name": "The Script Connects Rule", "body": "Handwriting only joins the words of a sentence. It never carries content, a number or a control label.", "section": "typography" },
+      { "name": "The One Filled Button Rule", "body": "Each screen has exactly one filled primary button. Everything else is a secondary pill, an underlined text link or a plain row.", "section": "layout" },
+      { "name": "The Rest and Float Rule", "body": "Things on the page rest; only things above the page float. A card never gets a floating shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do give every visual change a stated reason (The Reason Rule).",
+      "Do keep exactly one filled button per screen (The One Filled Button Rule).",
+      "Do keep text at 4.5:1 or better (steel-600 on white is the floor) and control edges and icons at 3:1 (lavender-400).",
+      "Do use the shared baltic-500 focus outline; a custom ring must use the same colour.",
+      "Do honour \"reduce motion\": animated backdrops don't start and entrance animations are off."
+    ],
+    "donts": [
+      "Don't add notebook props (tape, doodles, ruled lines, stickers) to express the north star.",
+      "Don't use handwriting for content, numbers or controls (The Script Connects Rule).",
+      "Don't use a subject colour decoratively (The Subject Colour Rule).",
+      "Don't use dark surfaces; aim is light-only until dark mode is deliberately brought back.",
+      "Don't return to grids of same-size stat cards or competing accents; that is the direction aim moved away from.",
+      "Don't use emoji or Unicode symbols as icons; icons are inline SVG with a 1.5 to 1.75 stroke."
+    ]
+  }
+}

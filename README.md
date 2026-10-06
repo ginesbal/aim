@@ -1,4 +1,4 @@
-# Meridian
+# AIM
 
 A calm, purposeful study planner built with Next.js, TypeScript, and Tailwind CSS.
 

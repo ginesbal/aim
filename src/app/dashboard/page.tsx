@@ -2,9 +2,11 @@
 
 import {
   useEffect,
+  useId,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
-  type CSSProperties,
   type ReactNode,
 } from "react";
 import {
@@ -22,6 +24,7 @@ import {
   dayLabel,
   parseLocalDate,
   projectedFinishTime,
+  readableFill,
   cn,
 } from "@/lib/utils";
 import Button from "@/components/ui/Button";
@@ -29,7 +32,17 @@ import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 import AimLogo from "@/components/layout/AimLogo";
 import { useRouter } from "next/navigation";
-import type { Task, FocusSession, UserSubject } from "@/lib/types";
+import { createPortal } from "react-dom";
+import type { Task, UserSubject } from "@/lib/types";
+import { loadLiveSession, type LiveSession } from "@/lib/liveSession";
+import { DURATION_PRESETS } from "@/components/ui/DurationPicker";
+
+/* Saved for later, not deleted: the weekday / date / streak chips above
+   the greeting. They're hidden while the dashboard is refocused around
+   starting a focus session; flip to true to bring them back. */
+const SHOW_DAY_CHIPS = false;
+
+const WELCOME_SKIPPED_KEY = "aim_welcome_skipped";
 
 /* Tick the dashboard once a minute so the header date / weekday and any
    time-of-day-derived copy ("Hit your goal by 4:30 PM") stay current
@@ -55,29 +68,23 @@ function formatSubjectLabel(s: string | undefined | null) {
 }
 
 export default function DashboardPage() {
-  const { name, isFirstVisit, dailyGoal, focusBlockMin, setName } =
+  const { name, isFirstVisit, dailyGoal, focusBlockMin, setName, setFocusBlockMin } =
     usePreferences();
-  const { tasks, toggleComplete } = useTasks();
+  const { tasks } = useTasks();
   const { todayMinutes, streak, sessions } = useFocus();
   const { getSubject } = useSubjects();
   const router = useRouter();
 
   useMinuteTick();
 
-  const [showWelcome, setShowWelcome] = useState(isFirstVisit);
-  const [welcomeName, setWelcomeName] = useState("");
-
-  // Inline undo for Mark done — capture the task at the moment of
-  // completion so the user has 5 seconds to take it back. Better than
-  // forcing them to navigate to /tasks and toggle the checkbox.
-  const [lastDone, setLastDone] = useState<{ id: string; title: string } | null>(
-    null
+  // The welcome dialog asks for a name but doesn't insist: "Skip for now"
+  // (or Esc) is remembered, so it doesn't come back on every visit. The
+  // name can still be set in Settings; until then the greeting says "there".
+  const [showWelcome, setShowWelcome] = useState(
+    () => isFirstVisit && !(typeof window !== "undefined" && window.localStorage.getItem(WELCOME_SKIPPED_KEY))
   );
-  useEffect(() => {
-    if (!lastDone) return;
-    const id = setTimeout(() => setLastDone(null), 5000);
-    return () => clearTimeout(id);
-  }, [lastDone]);
+  const [welcomeName, setWelcomeName] = useState("");
+  const [welcomeError, setWelcomeError] = useState<string | null>(null);
 
   const firstName = name ? name.split(" ")[0] : "there";
 
@@ -97,44 +104,82 @@ export default function DashboardPage() {
   const focusPct = Math.min(Math.round((todayMinutes / dailyGoal) * 100), 100);
   const minutesToGoal = Math.max(dailyGoal - todayMinutes, 0);
 
-  // Sessions completed today, recent first — surfaces in the week card so the
-  // user sees their effort logged, not as a separate "history" panel.
-  const todaySessions = useMemo(() => {
+  // Today's sessions become the meter's segments: oldest at the bottom of
+  // the "a", each band in its subject's colour.
+  const segments = useMemo(() => {
     const todayKey = new Date().toDateString();
     return sessions
       .filter((s) => new Date(s.completedAt).toDateString() === todayKey)
       .sort(
         (a, b) =>
-          new Date(b.completedAt).getTime() -
-          new Date(a.completedAt).getTime()
-      );
-  }, [sessions]);
+          new Date(a.completedAt).getTime() -
+          new Date(b.completedAt).getTime()
+      )
+      .map((s) => ({
+        id: s.id,
+        minutes: s.duration,
+        color: getSubject(s.subject)?.color ?? "#60729f",
+        label: formatSubjectLabel(getSubject(s.subject)?.label ?? s.subject),
+      }));
+  }, [sessions, getSubject]);
 
-  // Pending tasks grouped by day for the next 7 days. Overdue items collapse
-  // into a single "Overdue" group at the top so they never get lost.
-  const weekGroups = useMemo(() => {
-    const ordered: { label: string; tasks: Task[] }[] = [];
-    const byLabel = new Map<string, Task[]>();
-    const cap = new Date();
-    cap.setDate(cap.getDate() + 7);
-    cap.setHours(23, 59, 59);
-
-    for (const t of pendingTasks) {
-      const due = parseLocalDate(t.dueDate);
-      if (due > cap) continue;
-      const label = dayLabel(t.dueDate);
-      if (!byLabel.has(label)) {
-        byLabel.set(label, []);
-        ordered.push({ label, tasks: byLabel.get(label)! });
-      }
-      byLabel.get(label)!.push(t);
+  // Arriving from Focus after "Save session" (?logged=<id>): that session
+  // gets its moment once — a line naming it and its band growing into
+  // the "a". The param is dropped so a reload doesn't replay it. Also
+  // notice a session still open in this tab (left mid-way), so the
+  // launcher offers to return to it instead of starting another.
+  const [justLoggedId, setJustLoggedId] = useState<string | null>(null);
+  const [live, setLive] = useState<LiveSession | null>(null);
+  useEffect(() => {
+    const logged = new URLSearchParams(window.location.search).get("logged");
+    if (logged) {
+      setJustLoggedId(logged);
+      window.history.replaceState(null, "", "/dashboard");
     }
-    return ordered;
-  }, [pendingTasks]);
+    setLive(loadLiveSession());
+  }, []);
+
+  const justLogged = useMemo(() => {
+    const s = justLoggedId ? sessions.find((x) => x.id === justLoggedId) : undefined;
+    if (!s) return undefined;
+    const sub = getSubject(s.subject);
+    // The planner task this session finished, if "Mark done" was ticked:
+    // matched the way Focus links them, by the session's task text.
+    const done = s.task?.trim()
+      ? tasks.find((t) => t.completed && t.title.slice(0, 60).trim() === s.task?.trim())
+      : undefined;
+    return {
+      minutes: s.duration,
+      label: formatSubjectLabel(sub?.label ?? s.subject),
+      color: sub?.color ?? "#60729f",
+      doneTitle: done?.title,
+    };
+  }, [justLoggedId, sessions, getSubject, tasks]);
+
+  // The two tasks after the one the launcher offers, soonest due first.
+  const afterThis = useMemo(
+    () => pendingTasks.filter((t) => t.id !== nextTask?.id).slice(0, 2),
+    [pendingTasks, nextTask]
+  );
+
+  // Focus, set up for a task. taskId lets Focus offer "Mark done" at the
+  // end of the session; start=1 (the launcher's Begin) also starts the
+  // timer on arrival.
+  function focusHref(task: Task, start: boolean) {
+    const params = new URLSearchParams({
+      subject: getSubject(task.subject)?.label ?? task.subject,
+      task: task.title,
+      taskId: task.id,
+      min: String(focusBlockMin),
+    });
+    if (start) params.set("start", "1");
+    return `/focus?${params}`;
+  }
 
   // Last 7 days of session activity → small dot trail on the streak chip.
   // Index 6 is today; earlier indexes are days ago.
   const last7 = useMemo(() => {
+    if (!SHOW_DAY_CHIPS) return [];
     const dates = new Set(
       sessions.map((s) => new Date(s.completedAt).toDateString())
     );
@@ -149,78 +194,102 @@ export default function DashboardPage() {
 
   function handleWelcomeSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!welcomeName.trim()) return;
+    // Say what's missing instead of silently ignoring the click.
+    if (!welcomeName.trim()) {
+      setWelcomeError("Add a name so aim knows what to call you.");
+      return;
+    }
     setName(welcomeName.trim());
     setShowWelcome(false);
   }
 
+  function skipWelcome() {
+    window.localStorage.setItem(WELCOME_SKIPPED_KEY, "1");
+    setShowWelcome(false);
+  }
+
+  // A session still open in this tab lives only in the tab's storage, so
+  // closing the tab would lose it without a word. Ask first, as Focus does.
+  useEffect(() => {
+    if (!live) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [live]);
+
   return (
-    <div className="desk-surface relative -mx-8 px-8 -mt-2 pt-2 pb-4">
-      <Modal open={showWelcome} onClose={() => {}} width="sm">
+    // A narrower column than the app shell's: the headline is ~540px
+    // wide, so at the full width the meter sat stranded across a gap and
+    // each "After this" row's title and day were a screen-width apart.
+    <div className="pb-4 mx-auto max-w-4xl">
+      <Modal open={showWelcome} onClose={skipWelcome} width="sm" labelledBy="welcome-title">
         <div className="text-center py-2">
           <div className="flex justify-center mb-4">
             <AimLogo size="md" />
           </div>
-          <h2 className="text-display text-baltic-800 dark:text-baltic-100 mb-1">
+          <h2 id="welcome-title" className="text-display text-baltic-800 dark:text-baltic-100 mb-1">
             Welcome to aim
           </h2>
-          <p className="text-body text-steel-500 dark:text-steel-400 mb-5">
+          <p className="text-body text-balance text-steel-600 dark:text-steel-400 mb-5">
             A calm space to plan your studies and build focus habits.
           </p>
-          <form onSubmit={handleWelcomeSubmit} className="space-y-3">
+          <form onSubmit={handleWelcomeSubmit} noValidate className="space-y-3">
             <Input
               id="welcome-name"
+              label="Your name"
               placeholder="What should we call you?"
               value={welcomeName}
-              onChange={(e) => setWelcomeName(e.target.value)}
+              onChange={(e) => {
+                setWelcomeName(e.target.value);
+                setWelcomeError(null);
+              }}
+              error={welcomeError ?? undefined}
               autoFocus
+              autoComplete="given-name"
               className="text-center"
             />
-            <Button type="submit" className="w-full press">
+            <Button type="submit" pill className="w-full press">
               Get started
             </Button>
           </form>
+          <button
+            type="button"
+            onClick={skipWelcome}
+            className="tap-target mt-3 rounded-md px-1 text-sm font-medium text-steel-600 underline decoration-steel-300 underline-offset-2 hover:text-baltic-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
+          >
+            Skip for now
+          </button>
         </div>
       </Modal>
 
-      {/* Two restrained desk-surface blobs — atmosphere, no work to do */}
-      <div
-        aria-hidden
-        className="absolute top-32 right-[-80px] w-72 h-72 blob-1 bg-baltic-200/25 dark:bg-baltic-700/15 float-slow pointer-events-none -z-10"
-      />
-      <div
-        aria-hidden
-        className="absolute bottom-20 right-[8%] w-32 h-32 blob-2 bg-ash-200/30 dark:bg-ash-800/15 float-slow pointer-events-none -z-10"
-      />
-
-      {/* ── HEADER — orient + ambient streak ── */}
-      <header
-        className="mb-8 sticky-enter"
-        style={{ "--delay": "0ms" } as CSSProperties}
-      >
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-cream-100 dark:bg-cream-900/40 border border-cream-200 dark:border-cream-800/60">
-            <span className="w-1.5 h-1.5 rounded-full bg-cream-500" />
-            <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-cream-700 dark:text-cream-300">
-              {getWeekday()}
+      {/* ── HEADER — greeting ── */}
+      <header className="mb-5 sm:mb-8">
+        {SHOW_DAY_CHIPS && (
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-cream-100 dark:bg-cream-900/40 border border-cream-200 dark:border-cream-800/60">
+              <span className="w-1.5 h-1.5 rounded-full bg-cream-500" />
+              <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-cream-700 dark:text-cream-300">
+                {getWeekday()}
+              </span>
             </span>
-          </span>
-          <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-steel-400">
-            {getFormattedDate()}
-          </span>
-          {streak > 0 && <StreakChip streak={streak} last7={last7} />}
-        </div>
-        <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100 leading-[1.1] pt-1">
-          {getGreeting()},{" "}
-          <span className="font-script text-baltic-600 dark:text-baltic-300 text-[1.25em] inline-block translate-y-[2px]">
-            {firstName}
-          </span>
-          <span className="text-baltic-600 dark:text-baltic-300">.</span>
-        </h1>
+            <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-steel-400">
+              {getFormattedDate()}
+            </span>
+            {streak > 0 && <StreakChip streak={streak} last7={last7} />}
+          </div>
+        )}
+        {/* A quiet greeting: the launcher sentence below is the page's
+            headline, so the name no longer competes with it. */}
+        <p className="text-xl font-semibold text-baltic-700 dark:text-baltic-200">
+          {getGreeting()}, {firstName}
+        </p>
       </header>
 
-      {/* ── HERO — "Right now" — single dominant CTA, cream accent ── */}
-      <StickyCard accent="cream" delay={80} className="mb-3">
+      {/* ── HERO — the launcher: "focus for 25m on <task>" + Begin ── */}
+      <StickyCard className="mb-3">
         <HeroBody
           focusPct={focusPct}
           todayMinutes={todayMinutes}
@@ -230,38 +299,40 @@ export default function DashboardPage() {
           nextTask={nextTask}
           subject={nextTask ? getSubject(nextTask.subject) : undefined}
           hasAnySessions={sessions.length > 0}
-          onFocus={() => router.push("/focus")}
-          onPlanStep={() => router.push("/tasks")}
+          // Remounted when the welcome dialog closes, so the main button
+          // takes focus then, the same as on any later arrival.
+          key={showWelcome ? "welcome" : "ready"}
+          focusPrimary={!showWelcome}
+          segments={segments}
+          newSegmentId={justLogged ? justLoggedId ?? undefined : undefined}
+          justLogged={justLogged}
+          live={live}
+          liveSubject={live ? getSubject(live.subject) : undefined}
+          onReturnToFocus={() => router.push("/focus")}
+          onFocusBlank={() => router.push("/focus")}
+          onSetLength={setFocusBlockMin}
+          onFocus={() =>
+            // Begin means begin: Focus opens set up for this task and
+            // starts the timer (Focus strips start=1 so a reload won't
+            // restart it).
+            router.push(nextTask ? focusHref(nextTask, true) : "/focus")
+          }
+          onPlanStep={() => router.push("/tasks?new=1")}
           onEditGoal={() => router.push("/settings")}
-          onComplete={() => {
-            if (!nextTask) return;
-            setLastDone({ id: nextTask.id, title: nextTask.title });
-            toggleComplete(nextTask.id);
-          }}
         />
       </StickyCard>
 
-      {/* Undo banner — slot reserved between hero and week so it never
-          shifts other layout when it appears or disappears. */}
-      <UndoSlot
-        item={lastDone}
-        onUndo={() => {
-          if (!lastDone) return;
-          toggleComplete(lastDone.id);
-          setLastDone(null);
-        }}
-        onDismiss={() => setLastDone(null)}
-      />
-
-      {/* ── THIS WEEK — look-ahead + today's completed sessions, ash accent ── */}
-      <StickyCard accent="ash" delay={160}>
-        <WeekBody
-          groups={weekGroups}
-          todaySessions={todaySessions}
+      {/* ── AFTER THIS — the next two tasks, one click from focusing.
+          Hidden while a session is still open: every row would lead
+          back to that session anyway. ── */}
+      {nextTask && !live && (
+        <AfterThis
+          tasks={afterThis}
           getSubject={getSubject}
+          onFocusOn={(t) => router.push(focusHref(t, false))}
           onOpenAll={() => router.push("/tasks")}
         />
-      </StickyCard>
+      )}
     </div>
   );
 }
@@ -304,9 +375,12 @@ function StreakChip({ streak, last7 }: { streak: number; last7: boolean[] }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   HERO — focus widget on the left, named CTA on the right.
-   One headline, one highlighter phrase, one button. Branches by
-   user state so the empty path teaches instead of apologizing.
+   HERO — the launcher. The Focus setup sentence, already filled
+   in: "focus for 25m on <task>", with Caveat only on the
+   connecting words (as on the Focus card) and Begin in the
+   subject's colour. The "a" meter sits beside it as a gauge.
+   Without a task to launch, it falls back to a plain headline
+   and a way to add one.
    ───────────────────────────────────────────────────────────── */
 
 function HeroBody({
@@ -318,10 +392,18 @@ function HeroBody({
   nextTask,
   subject,
   hasAnySessions,
+  focusPrimary,
+  segments,
+  newSegmentId,
+  justLogged,
+  live,
+  liveSubject,
+  onReturnToFocus,
   onFocus,
+  onFocusBlank,
+  onSetLength,
   onPlanStep,
   onEditGoal,
-  onComplete,
 }: {
   focusPct: number;
   todayMinutes: number;
@@ -331,626 +413,621 @@ function HeroBody({
   nextTask: Task | undefined;
   subject: UserSubject | undefined;
   hasAnySessions: boolean;
+  /** The main button takes focus on arrival. Off while the welcome
+      dialog is open, so it can't pull focus out from under it. */
+  focusPrimary: boolean;
+  segments: MeterSegment[];
+  /** The session just saved on Focus, whose band grows into the "a". */
+  newSegmentId?: string;
+  justLogged?: { minutes: number; label: string; color: string; doneTitle?: string };
+  /** A session still open in this tab (left mid-way on Focus). */
+  live: LiveSession | null;
+  liveSubject: UserSubject | undefined;
+  onReturnToFocus: () => void;
   onFocus: () => void;
+  /** Focus with nothing set up: pick a subject on the Focus card. */
+  onFocusBlank: () => void;
+  /** New default session length, from the menu in the sentence. */
+  onSetLength: (minutes: number) => void;
   onPlanStep: () => void;
   onEditGoal: () => void;
-  onComplete: () => void;
 }) {
-  const isDone = focusPct >= 100;
-  const subjectLabel = formatSubjectLabel(
-    subject?.label ?? nextTask?.subject ?? "study"
+  // The launcher's text column. The length menu's list renders here, not
+  // inside the <h1>, so the heading still reads as one sentence.
+  const columnRef = useRef<HTMLDivElement>(null);
+
+  const meter = (
+    <FocusTarget
+      focusPct={focusPct}
+      todayMinutes={todayMinutes}
+      dailyGoal={dailyGoal}
+      segments={segments}
+      newSegmentId={newSegmentId}
+      justLogged={justLogged}
+      firstUse={!hasAnySessions}
+    />
   );
-  const subjectColor = subject?.color ?? "#60729f";
-  const blockLabel = formatTime(focusBlockMin); // e.g. "25m" or "1h"
 
-  // ── Branch the headline + CTA by what the student actually needs ──
-  let headline: ReactNode;
-  let sub: ReactNode = null;
-  let ctaLabel: string;
-  let ctaAction: () => void;
+  // The quiet alternative to the main action: a session with no task.
+  const focusBlank = (
+    <button
+      onClick={onFocusBlank}
+      className="press tap-target rounded-md px-1 -mx-1 text-sm font-medium text-steel-600 dark:text-steel-400 underline decoration-steel-300 underline-offset-2 hover:text-baltic-700 dark:hover:text-baltic-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
+    >
+      or focus without a task
+    </button>
+  );
 
-  if (!nextTask && !hasAnySessions) {
-    // Truly fresh — never touched the app
-    headline = (
+  // Arriving from "Save session": for this one visit the headline is what
+  // was just done (same shape as the other headlines), and the next task
+  // steps back to a quiet line under it. "Done" first, "next" second.
+  const loggedHeadline = justLogged && (
+    <>
+      <h1 id="launcher-headline" className="text-baltic-800 dark:text-baltic-100">
+        <span className="block text-2xl font-semibold leading-tight">
+          <span className="font-script text-[1.25em] text-baltic-500 dark:text-baltic-300 pr-1">just logged</span>
+        </span>{" "}
+        <span className="mt-1 block text-3xl sm:text-4xl font-bold tracking-tight leading-[1.12]">
+          <span className="tabular-nums">{formatTime(justLogged.minutes)}</span> of {justLogged.label}
+        </span>
+      </h1>
+      {/* The session that reached the day's goal is the day's biggest
+          moment; it gets a line of its own here, not just the small
+          status line further down. */}
+      {todayMinutes >= dailyGoal && todayMinutes - justLogged.minutes < dailyGoal && (
+        <p className="mt-3 text-base font-semibold text-baltic-700 dark:text-baltic-300">
+          Today&apos;s <span className="tabular-nums">{formatTime(dailyGoal)}</span> goal is done.
+        </p>
+      )}
+      {/* "Mark done" took effect: the task has left the launcher, so say
+          where it went. */}
+      {justLogged.doneTitle && (
+        <p title={justLogged.doneTitle} className="mt-3 truncate text-sm text-steel-600 dark:text-steel-400">
+          Marked done:{" "}
+          <span className="font-semibold text-baltic-700 dark:text-baltic-300">{justLogged.doneTitle}</span>
+        </p>
+      )}
+    </>
+  );
+
+  // ── A session is still open: offer the way back, not a new one ──
+  if (live) {
+    const label = formatSubjectLabel(liveSubject?.label ?? live.subject);
+    const color = liveSubject?.color ?? "#60729f";
+    // Clock time, like the rest of the dashboard. A running session whose
+    // end time has passed (the page re-renders each minute) is finished.
+    const finished =
+      live.state === "done" || live.state === "reflecting" ||
+      (live.state === "running" && live.endTime <= Date.now());
+    const lead = finished ? "just finished" : live.state === "paused" ? "paused on" : "still focusing on";
+    // The headline already names the state; this line adds only what's new.
+    let detail: ReactNode;
+    if (finished) {
+      detail = "Waiting to be saved";
+    } else if (live.state === "paused") {
+      detail = (
+        <>
+          <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
+            {formatTime(Math.max(1, Math.floor(live.secondsLeft / 60)))}
+          </span>{" "}
+          left
+        </>
+      );
+    } else {
+      const ends = new Date(live.endTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      detail = (
+        <>
+          Ends at{" "}
+          <span className="whitespace-nowrap font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">{ends}</span>
+        </>
+      );
+    }
+    return (
+      <div className="grid gap-6 lg:gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_13rem]">
+        <div className="min-w-0">
+          <h1 id="launcher-headline" className="text-baltic-800 dark:text-baltic-100">
+            <span className="block text-2xl font-semibold leading-tight">
+              <span className="font-script text-[1.25em] text-baltic-500 dark:text-baltic-300 pr-1">{lead}</span>
+            </span>{" "}
+            <span
+              title={live.task.trim() || label}
+              className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight leading-[1.12] line-clamp-3 sm:line-clamp-2"
+            >
+              {live.task.trim() || label}
+            </span>
+          </h1>
+          <p className="mt-3 flex items-center gap-2 text-sm text-steel-600 dark:text-steel-400">
+            <span aria-hidden className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+            <span>{detail}</span>
+          </p>
+          <div className="mt-7">
+            <button
+              onClick={onReturnToFocus}
+              autoFocus={focusPrimary}
+              aria-describedby="launcher-headline"
+              style={{ backgroundColor: readableFill(color) }}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-medium text-white hover:brightness-[0.94] active:scale-[0.98] shadow-[0_6px_16px_-8px_rgba(38,45,64,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950 transition-[filter,transform] duration-150 ease-out"
+            >
+              {/* No ▶ here: returning doesn't start anything, and ▶ means
+                  "starts now" everywhere else. */}
+              {finished ? "Finish saving" : "Return to focus"}
+            </button>
+          </div>
+        </div>
+        {meter}
+      </div>
+    );
+  }
+
+  // ── No task to launch: teach the next step instead ──
+  if (!nextTask) {
+    const fresh = !hasAnySessions;
+    return (
+      <div className="grid gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_13rem]">
+        <div>
+          {loggedHeadline ?? (
+            <h1 id="launcher-headline" className="text-3xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100 leading-tight">
+              {fresh ? (
+                <>
+                  Set your <span className="highlighter">first aim</span>
+                </>
+              ) : (
+                "All caught up"
+              )}
+            </h1>
+          )}
+          <p className="mt-2 text-sm text-steel-600 dark:text-steel-400">
+            {fresh
+              ? "Add a task and your first focus session is one click away."
+              : "Plan the next task and it will be waiting here."}
+          </p>
+          <button
+            onClick={onPlanStep}
+            autoFocus={focusPrimary}
+            aria-describedby="launcher-headline"
+            className="press mt-6 inline-flex items-center gap-2 rounded-full px-6 py-3 bg-baltic-700 dark:bg-baltic-500 text-white text-[15px] font-medium hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
+            style={{ transition: "transform 160ms var(--ease-out), background-color 160ms ease" }}
+          >
+            {fresh ? "Add your first task" : "Add a task"}
+          </button>
+          <div className="mt-4">{focusBlank}</div>
+        </div>
+        {meter}
+      </div>
+    );
+  }
+
+  // ── The launcher ──
+  const subjectLabel = formatSubjectLabel(subject?.label ?? nextTask.subject);
+  const fill = readableFill(subject?.color ?? "#60729f");
+  const overdue = isOverdue(nextTask.dueDate);
+  const day = dayLabel(nextTask.dueDate);
+  const due = overdue
+    ? "overdue"
+    : `due ${day === "Today" || day === "Tomorrow" ? day.toLowerCase() : day}`;
+
+  // Where the day stands, in one quiet line under the actions. The one
+  // highlighter swipe on the page lands on the number that matters.
+  let status: ReactNode;
+  if (focusPct >= 100) {
+    status = (
       <>
-        Set your <span className="highlighter">first aim</span>.
+        <span className="highlighter text-baltic-700 dark:text-baltic-200">Goal hit</span> · {formatTime(todayMinutes)} of focus today, anything more is bonus
       </>
     );
-    sub = "Add a task and your study plan starts taking shape.";
-    ctaLabel = "Add your first task";
-    ctaAction = onPlanStep;
-  } else if (!nextTask) {
-    // Caught up but has a history
-    headline = (
-      <>
-        <span className="highlighter">All caught up</span>.
-      </>
-    );
-    sub = "Plan something to keep momentum.";
-    ctaLabel = "Plan a study step";
-    ctaAction = onPlanStep;
-  } else if (isDone) {
-    headline = (
-      <>
-        <span className="highlighter">Goal hit</span>. Anything more is bonus.
-      </>
-    );
-    sub = `${formatTime(dailyGoal)} of focus locked in today.`;
-    ctaLabel = `Start another ${blockLabel} on ${subjectLabel}`;
-    ctaAction = onFocus;
   } else if (todayMinutes === 0) {
     const finish = projectedFinishTime(focusBlockMin);
-    headline = (
+    status = (
       <>
-        Aim for <span className="highlighter">{formatTime(dailyGoal)}</span>{" "}
-        today.
+        Aim for <span className="highlighter text-baltic-700 dark:text-baltic-200">{formatTime(dailyGoal)}</span> today
+        {finish && (
+          <>
+            {" "}· this session ends at{" "}
+            <span className="whitespace-nowrap font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">{finish}</span>
+          </>
+        )}
       </>
     );
-    sub = finish ? (
-      <>
-        First block ends at{" "}
-        <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
-          {finish}
-        </span>
-        .
-      </>
-    ) : null;
-    ctaLabel = `Start ${blockLabel} on ${subjectLabel}`;
-    ctaAction = onFocus;
   } else {
     const finish = projectedFinishTime(minutesToGoal);
-    headline = (
+    status = (
       <>
-        <span className="highlighter">{formatTime(minutesToGoal)} to go</span>.
+        <span className="highlighter text-baltic-700 dark:text-baltic-200">{formatTime(minutesToGoal)} to go</span>
+        {finish && (
+          <>
+            {" "}· hit your goal by{" "}
+            <span className="whitespace-nowrap font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">{finish}</span>
+          </>
+        )}
       </>
     );
-    sub = finish ? (
-      <>
-        Hit your goal by{" "}
-        <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
-          {finish}
-        </span>
-        .
-      </>
-    ) : null;
-    ctaLabel = `Start ${blockLabel} on ${subjectLabel}`;
-    ctaAction = onFocus;
   }
 
   return (
-    <div
-      className={cn(
-        "grid gap-7 md:gap-10 items-start grid-cols-1",
-        // Three-column layout reads left to right like a sentence:
-        //   FOCUS (where I am)  ·  RIGHT NOW (the headline)  ·  WORKING ON (what to do)
-        // The middle column flexes; the focus column is fixed; the action column
-        // is generous enough to hold a task title without truncation.
-        nextTask
-          ? "lg:grid-cols-[13rem_minmax(0,1fr)_minmax(17rem,21rem)]"
-          : "lg:grid-cols-[13rem_minmax(0,1fr)]"
-      )}
-    >
-      {/* COLUMN 1 — FOCUS: progress visual.
-          Order shifted on mobile so the headline lands first; the visual
-          is reinforcement, not the entry point. Desktop reading stays L→R. */}
-      <div className="order-2 lg:order-1">
-        <FocusTarget
-          focusPct={focusPct}
-          todayMinutes={todayMinutes}
-          dailyGoal={dailyGoal}
-        />
-      </div>
-
-      {/* COLUMN 2 — RIGHT NOW: headline + sub. First on mobile. */}
-      <div className="order-1 lg:order-2 text-center lg:text-left space-y-2">
-        <CardEyebrow>Right now</CardEyebrow>
-        <h2 className="text-2xl font-bold text-baltic-800 dark:text-baltic-100 leading-snug">
-          {headline}
-        </h2>
-        {sub && (
-          <p className="text-sm text-steel-500 dark:text-steel-400">{sub}</p>
-        )}
-        {/* Goal edit affordance — only shown when the goal is the salient
-            number (mid-progress states). The user might wonder "where did
-            2h come from?" — this answers it without cluttering the headline. */}
-        {nextTask && !isDone && (
-          <button
-            onClick={onEditGoal}
-            className="press text-[11px] font-medium text-steel-400 dark:text-steel-500 hover:text-baltic-700 dark:hover:text-baltic-300 rounded-md py-1 px-1.5 -mx-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
-            style={{
-              transition: "color 160ms ease, transform 160ms var(--ease-out)",
-            }}
-          >
-            Adjust goal &rarr;
-          </button>
-        )}
-        {!nextTask && (
-          <div className="pt-3 flex items-center gap-3 flex-wrap justify-center lg:justify-start">
-            <button
-              onClick={ctaAction}
-              className="press inline-flex items-center gap-2 min-w-0 max-w-full px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
-              style={{
-                transition:
-                  "transform 160ms var(--ease-out), background-color 160ms ease",
-              }}
-            >
-              <span className="truncate min-w-0">{ctaLabel}</span>
-              <span className="text-base leading-none flex-shrink-0" aria-hidden>
-                →
+    <div className="grid gap-6 lg:gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_13rem]">
+      <div ref={columnRef} className="relative min-w-0">
+        {loggedHeadline ? (
+          <>
+            {loggedHeadline}
+            {/* The launcher sentence, one step quieter: still one click
+                from the next session, length menu included. */}
+            <p id="launcher-next" className="mt-4 text-base text-steel-600 dark:text-steel-400">
+              Next, focus for{" "}
+              <span className="font-semibold text-baltic-800 dark:text-baltic-100">
+                <LengthMenu minutes={focusBlockMin} onChange={onSetLength} listParent={columnRef} />
+              </span>{" "}
+              on{" "}
+              <span title={nextTask.title} className="font-semibold text-baltic-800 dark:text-baltic-100">
+                {nextTask.title}
               </span>
-            </button>
-          </div>
-        )}
-      </div>
+            </p>
+          </>
+        ) : (
+          <>
+            {/* The sentence is the headline. It reads the same aloud:
+                "focus for 25m on Lab report — Organic compounds". */}
+            <h1 id="launcher-headline" className="text-baltic-800 dark:text-baltic-100">
+              {/* Real spaces between the words (not margins), so the sentence
+                  reads correctly aloud and when copied. */}
+              <span className="block text-2xl font-semibold leading-tight">
+                <span className="font-script text-[1.25em] text-baltic-500 dark:text-baltic-300 pr-1">focus for</span>{" "}
+                <LengthMenu minutes={focusBlockMin} onChange={onSetLength} listParent={columnRef} />{" "}
+                <span className="font-script text-[1.25em] text-baltic-500 dark:text-baltic-300 pl-1">on</span>
+              </span>{" "}
+              {/* No `block` here: it would override line-clamp's display and
+                  switch the clamp off. Phones allow a third line so a long
+                  title still reads whole. */}
+              <span
+                // Clamped to two lines (three on phones): the full title is
+                // still one hover away.
+                title={nextTask.title}
+                className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight leading-[1.12] line-clamp-3 sm:line-clamp-2"
+              >
+                {nextTask.title}
+              </span>
+            </h1>
 
-      {/* COLUMN 3 — UP NEXT: task + primary action.
-          Lives in the same column as the CTA so "the task you're starting"
-          and "the button that starts it" are visually linked. Renamed from
-          "Working on" because the user hasn't started yet — they're about to.
-          Explicit margins (not space-y) so the eyebrow→title gap matches
-          col 2's, then meta hugs the title, then the action breathes. */}
-      {nextTask && (
-        <div className="order-3 text-center lg:text-left lg:border-l lg:border-lavender-200/60 lg:dark:border-lavender-800/60 lg:pl-7">
-          <CardEyebrow>Up next</CardEyebrow>
-          <p className="mt-3 text-sm font-bold text-baltic-800 dark:text-baltic-100 leading-snug line-clamp-2">
-            {nextTask.title}
-          </p>
-          <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-steel-500 dark:text-steel-400 max-w-full">
-            <span
-              aria-hidden
-              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-              style={{ backgroundColor: subjectColor }}
-            />
-            <span className="truncate">{subjectLabel}</span>
-            <span aria-hidden className="text-steel-300 dark:text-steel-600">
-              ·
-            </span>
-            <span
-              className={cn(
-                "font-medium flex-shrink-0",
-                isOverdue(nextTask.dueDate) &&
-                  "text-red-500 dark:text-red-400"
+            <p className="mt-3 inline-flex items-center gap-2 text-sm text-steel-600 dark:text-steel-400">
+              <span
+                aria-hidden
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: subject?.color ?? "#60729f" }}
+              />
+              <span>{subjectLabel}</span>
+              <span aria-hidden className="text-steel-300 dark:text-steel-600">·</span>
+              <span className={cn(overdue && "font-semibold text-red-600 dark:text-red-400")}>{due}</span>
+              {/* A new user never created this task: say it's one of the
+                  seeded examples (ids demo1–6 in contexts.tsx). */}
+              {nextTask.id.startsWith("demo") && (
+                <>
+                  <span aria-hidden className="text-steel-300 dark:text-steel-600">·</span>
+                  <span>sample task</span>
+                </>
               )}
-            >
-              {isOverdue(nextTask.dueDate)
-                ? "Overdue"
-                : dayLabel(nextTask.dueDate)}
-            </span>
-          </p>
+            </p>
+          </>
+        )}
 
-          <div className="mt-5 flex items-center gap-3 justify-center lg:justify-start">
-            <button
-              onClick={ctaAction}
-              className="press inline-flex items-center gap-2 min-w-0 max-w-full px-5 py-2.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-sm font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
-              style={{
-                transition:
-                  "transform 160ms var(--ease-out), background-color 160ms ease",
-              }}
-            >
-              <span className="truncate min-w-0">{ctaLabel}</span>
-              <span className="text-base leading-none flex-shrink-0" aria-hidden>
-                →
-              </span>
-            </button>
-            <button
-              onClick={onComplete}
-              className="press flex-shrink-0 whitespace-nowrap rounded-md py-2 px-2 -my-2 -mx-2 text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
-              style={{
-                transition:
-                  "color 160ms ease, transform 160ms var(--ease-out)",
-              }}
-            >
-              Mark done
-            </button>
-          </div>
+        <div className="mt-7 flex items-center gap-5 flex-wrap">
+          {/* Same button as Focus's Begin: subject colour, play mark. The
+              launcher's main button takes focus on arrival (here and in
+              the other two states), so Enter acts on it. It is described by
+              the sentence it starts, so a screen reader landing here still
+              hears it: the headline, or after a save the "Next, focus
+              for…" line (the headline then names what was just logged). */}
+          <button
+            onClick={onFocus}
+            autoFocus={focusPrimary}
+            aria-describedby={loggedHeadline ? "launcher-next" : "launcher-headline"}
+            style={{ backgroundColor: fill }}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-medium text-white hover:brightness-[0.94] active:scale-[0.98] shadow-[0_6px_16px_-8px_rgba(38,45,64,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950 transition-[filter,transform] duration-150 ease-out"
+          >
+            <svg aria-hidden width={14} height={14} viewBox="0 0 14 14" fill="none">
+              <polygon points="3,2 12,7 3,12" fill="currentColor" />
+            </svg>
+            Begin focusing
+          </button>
+          {focusBlank}
         </div>
-      )}
+
+        <p className="mt-6 text-sm text-steel-600 dark:text-steel-400">
+          {status}
+          {focusPct < 100 && (
+            <>
+              {" "}
+              <button
+                onClick={onEditGoal}
+                // Own line on phones (it would otherwise wrap mid-sentence),
+                // inline after the status from sm up.
+                className="press tap-target block w-fit mt-1 sm:inline sm:mt-0 sm:ml-1 rounded-md px-1 -mx-1 text-sm font-medium text-steel-600 dark:text-steel-400 underline decoration-steel-300 underline-offset-2 hover:text-baltic-700 dark:hover:text-baltic-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
+              >
+                Adjust goal
+              </button>
+            </>
+          )}
+        </p>
+      </div>
+
+      {meter}
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────
-   THIS WEEK — day-grouped pending tasks. Today's row also lists
-   completed sessions as quiet ash chips at the top, so a
-   student's morning effort is visible alongside what's still due.
+   LENGTH MENU — the "25m" in the launcher sentence, as a real
+   control. It offers the same quick lengths as Focus, and a pick
+   becomes the default session length (the value in Settings), so
+   the launcher keeps offering it. A small disclosure like the
+   subject picker: opening moves focus to the current length, Esc
+   closes and hands focus back, a click outside closes.
    ───────────────────────────────────────────────────────────── */
 
-function WeekBody({
-  groups,
-  todaySessions,
-  getSubject,
-  onOpenAll,
+function LengthMenu({
+  minutes,
+  onChange,
+  listParent,
 }: {
-  groups: { label: string; tasks: Task[] }[];
-  todaySessions: FocusSession[];
-  getSubject: (idOrLabel: string) => UserSubject | undefined;
-  onOpenAll: () => void;
+  minutes: number;
+  onChange: (minutes: number) => void;
+  /** Where the open list renders: outside the heading the trigger sits in. */
+  listParent: React.RefObject<HTMLElement>;
 }) {
-  const totalPending = groups.reduce((sum, g) => sum + g.tasks.length, 0);
-  const isEmpty = totalPending === 0 && todaySessions.length === 0;
+  const [open, setOpen] = useState(false);
+  // Where to place the list: under the trigger, in listParent's coordinates.
+  const [pos, setPos] = useState({ left: 0, top: 0 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLSpanElement>(null);
+  const listId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    listRef.current?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus();
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!triggerRef.current?.contains(t) && !listRef.current?.contains(t)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  function toggle() {
+    const t = triggerRef.current;
+    // offsetLeft/Top are relative to listParent: the nearest positioned
+    // ancestor of the trigger.
+    if (t) setPos({ left: t.offsetLeft, top: t.offsetTop + t.offsetHeight + 8 });
+    setOpen((v) => !v);
+  }
+
+  function close() {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
+
+  // The quick lengths, plus the current one if Settings holds a custom
+  // length (say 35m), so the menu always shows what's picked.
+  const options = DURATION_PRESETS.includes(minutes)
+    ? DURATION_PRESETS
+    : [...DURATION_PRESETS, minutes].sort((a, b) => a - b);
 
   return (
-    <div>
-      <div className="flex items-baseline justify-between gap-3">
-        <CardEyebrow>This week</CardEyebrow>
-        {totalPending > 0 && (
-          <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-steel-400 tabular-nums">
-            {totalPending} pending
-          </span>
-        )}
-      </div>
-
-      {isEmpty ? (
-        <WeekEmpty onAdd={onOpenAll} />
-      ) : (
-        <div className="mt-5 space-y-5">
-          {/* Today's completed sessions — only shown if today exists in groups
-              we'd render the chips inside that group; otherwise prepend a
-              today section so the user's done work is acknowledged. */}
-          {todaySessions.length > 0 &&
-            !groups.some((g) => g.label === "Today") && (
-              <DayGroup
-                label="Today"
-                tasks={[]}
-                completedSessions={todaySessions}
-                getSubject={getSubject}
-                onOpenTask={onOpenAll}
-                rowDelayBase={220}
-              />
-            )}
-
-          {groups.map((group, i) => (
-            <DayGroup
-              key={group.label}
-              label={group.label}
-              tasks={group.tasks}
-              completedSessions={
-                group.label === "Today" ? todaySessions : []
-              }
-              getSubject={getSubject}
-              onOpenTask={onOpenAll}
-              rowDelayBase={220 + i * 30}
-            />
-          ))}
-
-          <button
-            onClick={onOpenAll}
-            className="press rounded-md py-1.5 px-2 -mx-2 text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
-            style={{
-              transition: "color 160ms ease, transform 160ms var(--ease-out)",
-            }}
-          >
-            See all tasks &rarr;
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DayGroup({
-  label,
-  tasks,
-  completedSessions,
-  getSubject,
-  onOpenTask,
-  rowDelayBase,
-}: {
-  label: string;
-  tasks: Task[];
-  completedSessions: FocusSession[];
-  getSubject: (idOrLabel: string) => UserSubject | undefined;
-  onOpenTask: () => void;
-  rowDelayBase: number;
-}) {
-  const isOverdueGroup = label === "Overdue";
-  return (
-    <div>
-      <div className="flex items-baseline gap-2 mb-2">
-        <h3
-          className={cn(
-            "text-[10px] font-bold uppercase tracking-[0.2em]",
-            isOverdueGroup
-              ? "text-red-500 dark:text-red-400"
-              : "text-steel-500 dark:text-steel-400"
-          )}
-        >
-          {label}
-        </h3>
-        {tasks.length > 0 && (
-          <span className="text-[10px] font-mono text-steel-300 dark:text-steel-600 tabular-nums">
-            {tasks.length}
-          </span>
-        )}
-      </div>
-
-      <ul className="space-y-1">
-        {completedSessions.map((s, i) => (
-          <li
-            key={s.id}
-            className="sticky-enter"
-            style={{ "--delay": `${rowDelayBase + i * 30}ms` } as CSSProperties}
-          >
-            <CompletedSessionRow
-              session={s}
-              subject={getSubject(s.subject)}
-            />
-          </li>
-        ))}
-        {tasks.map((t, i) => (
-          <li
-            key={t.id}
-            className="sticky-enter"
-            style={
-              {
-                "--delay": `${
-                  rowDelayBase + (completedSessions.length + i) * 30
-                }ms`,
-              } as CSSProperties
-            }
-          >
-            <TaskRow
-              task={t}
-              subject={getSubject(t.subject)}
-              onOpen={onOpenTask}
-            />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function CompletedSessionRow({
-  session,
-  subject,
-}: {
-  session: FocusSession;
-  subject: UserSubject | undefined;
-}) {
-  const date = new Date(session.completedAt);
-  const time = date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  const label = subject?.label ?? session.subject;
-  return (
-    <div className="flex items-center gap-2.5 py-1.5 px-2.5 -mx-2 rounded-md text-xs text-ash-700 dark:text-ash-300 bg-ash-50/60 dark:bg-ash-900/25">
-      <svg
-        width="11"
-        height="11"
-        viewBox="0 0 12 12"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="text-ash-600 dark:text-ash-400 flex-shrink-0"
-      >
-        <path d="M2.5 6.5l2.5 2.5L9.5 4" />
-      </svg>
-      <span className="font-semibold">{label}</span>
-      <span aria-hidden className="text-ash-400/70 dark:text-ash-600/70">
-        ·
-      </span>
-      <span className="tabular-nums">{formatTime(session.duration)}</span>
-      <span className="ml-auto tabular-nums text-[10px] font-mono uppercase tracking-[0.14em] text-ash-600/80 dark:text-ash-400/80">
-        {time}
-      </span>
-    </div>
-  );
-}
-
-function TaskRow({
-  task,
-  subject,
-  onOpen,
-}: {
-  task: Task;
-  subject: UserSubject | undefined;
-  onOpen: () => void;
-}) {
-  const color = subject?.color ?? "#60729f";
-  const label = subject?.label ?? task.subject;
-  return (
-    <button
-      onClick={onOpen}
-      className="press group w-full flex items-center gap-3 py-2 px-2 -mx-2 rounded-md text-left hover:bg-baltic-50/60 dark:hover:bg-baltic-900/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-baltic-950"
-      style={{
-        transition:
-          "background-color 160ms ease, transform 160ms var(--ease-out)",
+    // Keys and focus events from the portalled list still bubble here
+    // through React.
+    <span
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && open) {
+          e.stopPropagation();
+          close();
+        }
+      }}
+      // Tabbing out of the trigger or the list closes it, so it can't be
+      // left open over Begin with focus somewhere else.
+      onBlur={(e) => {
+        const next = e.relatedTarget as Node | null;
+        if (open && !triggerRef.current?.contains(next) && !listRef.current?.contains(next)) setOpen(false);
       }}
     >
-      <span
-        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-        style={{ backgroundColor: color }}
-        aria-hidden
-      />
-      <span className="flex-1 min-w-0 text-sm text-baltic-800 dark:text-baltic-100 truncate">
-        {task.title}
-      </span>
-      <span className="text-[11px] text-steel-500 dark:text-steel-400 flex-shrink-0 hidden sm:inline">
-        {label}
-      </span>
-      <span className="text-steel-300 dark:text-steel-600 flex-shrink-0 transition-transform group-hover:translate-x-0.5">
-        →
-      </span>
-    </button>
-  );
-}
-
-function WeekEmpty({ onAdd }: { onAdd: () => void }) {
-  return (
-    <div className="mt-4">
-      <p className="text-sm text-steel-500 dark:text-steel-400">
-        Your week is empty. Add what&rsquo;s next so you have a place to start.
-      </p>
       <button
-        onClick={onAdd}
-        className="press mt-3 rounded-md py-1.5 px-2 -mx-2 text-xs font-semibold text-baltic-700 dark:text-baltic-300 hover:text-baltic-900 dark:hover:text-baltic-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
-        style={{
-          transition: "color 160ms ease, transform 160ms var(--ease-out)",
-        }}
+        ref={triggerRef}
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        aria-controls={open ? listId : undefined}
+        title="Change session length"
+        className="tap-target inline-flex items-center gap-1 rounded-lg px-1.5 -mx-1.5 tabular-nums hover:bg-lavender-100 dark:hover:bg-lavender-800/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 transition-colors duration-150"
       >
-        Plan a study step →
+        {formatTime(minutes)}
+        <svg
+          aria-hidden
+          width={14}
+          height={14}
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          className={cn("text-steel-500 transition-transform duration-150", open && "rotate-180")}
+        >
+          <path d="M3 4.5L6 7.5L9 4.5" />
+        </svg>
       </button>
-    </div>
+      {open &&
+        listParent.current &&
+        createPortal(
+          <span
+            ref={listRef}
+            id={listId}
+            role="group"
+            aria-label="Session length"
+            className="absolute z-20 flex w-36 flex-col rounded-2xl border border-lavender-200 bg-white py-1 text-left leading-normal shadow-[0_16px_36px_-12px_rgba(38,45,64,0.28)] dropdown-enter dark:border-lavender-700 dark:bg-lavender-900"
+            style={{ left: pos.left, top: pos.top, transformOrigin: "top left" }}
+          >
+            {options.map((m) => (
+              <button
+                key={m}
+                type="button"
+                aria-pressed={m === minutes}
+                onClick={() => {
+                  onChange(m);
+                  close();
+                }}
+                className="flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-baltic-700 dark:text-baltic-200 hover:bg-lavender-50 dark:hover:bg-lavender-800/60 focus:outline-none focus-visible:bg-lavender-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-baltic-500"
+              >
+                <span className="tabular-nums">{formatTime(m)}</span>
+                {m === minutes && (
+                  <svg aria-hidden width={14} height={14} viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="text-baltic-600">
+                    <path d="M2.5 7.5L6 11l5.5-7" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </span>,
+          listParent.current
+        )}
+    </span>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────
-   UNDO SLOT — reserves a row between the hero and the week so
-   the layout stays still whether or not an undo is pending.
-   Mark done is destructive enough to deserve a 5-second window;
-   without this, accidental taps mean a navigation to /tasks to
-   re-open and toggle the checkbox.
+   AFTER THIS — the next two tasks, as a quiet list under the
+   launcher (no card of its own). Each row opens Focus set up for
+   that task, not started, so switching what you work on is one
+   click. Everything else lives on /tasks.
    ───────────────────────────────────────────────────────────── */
 
-function UndoSlot({
-  item,
-  onUndo,
-  onDismiss,
+function AfterThis({
+  tasks,
+  getSubject,
+  onFocusOn,
+  onOpenAll,
 }: {
-  item: { id: string; title: string } | null;
-  onUndo: () => void;
-  onDismiss: () => void;
+  tasks: Task[];
+  getSubject: (idOrLabel: string) => UserSubject | undefined;
+  onFocusOn: (task: Task) => void;
+  onOpenAll: () => void;
 }) {
   return (
-    <div className="min-h-[2.75rem] mb-3 flex items-center" aria-live="polite">
-      {item && (
-        <div
-          role="status"
-          className="sticky-enter w-full inline-flex items-center justify-between gap-3 px-4 py-2 rounded-full bg-baltic-700 dark:bg-baltic-800 text-white text-xs shadow-sm"
-          style={{ "--delay": "0ms" } as CSSProperties}
+    <section aria-labelledby="after-this" className="mt-8">
+      <div className="flex items-baseline justify-between gap-4 px-1 mb-2">
+        <h2 id="after-this" className="text-sm font-semibold text-baltic-700 dark:text-baltic-200">
+          After this
+        </h2>
+        <button
+          onClick={onOpenAll}
+          className="press tap-target rounded-md px-1 -mx-1 text-sm font-medium text-steel-600 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
         >
-          <span className="inline-flex items-center gap-2 min-w-0">
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-              className="flex-shrink-0 text-cream-400"
-            >
-              <path d="M2.5 6.5l2.5 2.5L9.5 4" />
-            </svg>
-            <span className="font-semibold flex-shrink-0">Marked done.</span>
-            <span className="truncate text-white/70">{item.title}</span>
-          </span>
-          <span className="inline-flex items-center gap-1 flex-shrink-0">
-            <button
-              onClick={onUndo}
-              className="press rounded-md py-1 px-2 -my-1 text-xs font-bold text-cream-300 hover:text-cream-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cream-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-baltic-700"
-              style={{
-                transition:
-                  "color 160ms ease, transform 160ms var(--ease-out)",
-              }}
-            >
-              Undo
-            </button>
-            <button
-              onClick={onDismiss}
-              aria-label="Dismiss"
-              className="press rounded-md p-1 -m-1 text-white/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cream-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-baltic-700"
-              style={{
-                transition:
-                  "color 160ms ease, transform 160ms var(--ease-out)",
-              }}
-            >
-              <svg
-                width="11"
-                height="11"
-                viewBox="0 0 12 12"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                aria-hidden
-              >
-                <path d="M2 2 L10 10 M10 2 L2 10" />
-              </svg>
-            </button>
-          </span>
-        </div>
+          See all tasks
+        </button>
+      </div>
+
+      {tasks.length === 0 ? (
+        <p className="px-1 text-sm text-steel-600 dark:text-steel-400">
+          Nothing else is open after this one.
+        </p>
+      ) : (
+        <ul className="divide-y divide-lavender-200/70 dark:divide-lavender-800/60 border-y border-lavender-200/70 dark:border-lavender-800/60">
+          {tasks.map((t) => {
+            const subject = getSubject(t.subject);
+            const subjectLabel = formatSubjectLabel(subject?.label ?? t.subject);
+            const overdue = isOverdue(t.dueDate);
+            const day = dayLabel(t.dueDate);
+            return (
+              <li key={t.id}>
+                <button
+                  onClick={() => onFocusOn(t)}
+                  // Everything the row shows, in words: the visible subject
+                  // and day (including "overdue") would otherwise be lost
+                  // behind a label naming only the title.
+                  aria-label={`Set up focus for ${t.title}, ${subjectLabel}, ${overdue ? "overdue" : `due ${day === "Today" || day === "Tomorrow" ? day.toLowerCase() : day}`}`}
+                  className="group w-full flex items-center gap-3 px-1 py-3.5 text-left rounded-lg hover:bg-white dark:hover:bg-baltic-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 transition-colors duration-150"
+                >
+                  <span
+                    aria-hidden
+                    className="self-start mt-[7px] sm:self-center sm:mt-0 w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: subject?.color ?? "#60729f" }}
+                  />
+                  <span className="flex-1 min-w-0">
+                    <span className="block truncate text-[15px] text-baltic-800 dark:text-baltic-100">
+                      {t.title}
+                    </span>
+                    {/* Phones: subject and day go under the title, so the
+                        title gets the row's full width. */}
+                    <span className="sm:hidden mt-0.5 block truncate text-sm text-steel-600 dark:text-steel-400">
+                      {subjectLabel} ·{" "}
+                      <span className={cn(overdue && "font-semibold text-red-700 dark:text-red-400")}>{day}</span>
+                    </span>
+                  </span>
+                  <span className="hidden sm:inline text-sm text-steel-600 dark:text-steel-400 flex-shrink-0">
+                    {subjectLabel}
+                  </span>
+                  <span
+                    className={cn(
+                      "hidden sm:block w-20 text-right text-sm flex-shrink-0",
+                      // red-700: red-600 is 4.27:1 on the page surface, under 4.5.
+                      overdue ? "font-semibold text-red-700 dark:text-red-400" : "text-steel-600 dark:text-steel-400"
+                    )}
+                  >
+                    {day}
+                  </span>
+                  {/* A chevron, not Begin's play mark: this row opens Focus
+                      set up for the task, it doesn't start the timer. ▶
+                      means "starts now" everywhere in the app. */}
+                  <svg
+                    aria-hidden
+                    width={14}
+                    height={14}
+                    viewBox="0 0 14 14"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.75}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="flex-shrink-0 text-steel-500 group-hover:text-baltic-600 group-hover:translate-x-0.5 dark:group-hover:text-baltic-300 transition-[color,transform] duration-150"
+                  >
+                    <path d="M5.5 3l4 4-4 4" />
+                  </svg>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       )}
-    </div>
+    </section>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────
-   STICKY CARD — flat panel with a thin top accent bar. The accent
-   is the only color signal that distinguishes one surface from
-   another; everything else stays uniform so the page reads as a
-   single composition. Cards level — no tilt, no thumbtack, no
-   tape. Visual rhythm comes from the accent palette + content,
-   not from physical-world decoration.
+   STICKY CARD — a plain paper panel: white surface, hairline
+   border, the layered paper shadow. No accent strip, no grain
+   overlay (after:hidden switches off .paper-card's ::after), and
+   no entrance animation — the cards are simply there.
    ───────────────────────────────────────────────────────────── */
-
-type Accent = "cream" | "ash" | "baltic";
-
-const ACCENT_FILLS: Record<Accent, { light: string; dark: string }> = {
-  // cream-400 / cream-600 — warm, "active right now" energy
-  cream: { light: "#c7ce64", dark: "#949b31" },
-  // ash-400 / ash-600 — calm, "looking ahead" planning
-  ash: { light: "#91a989", dark: "#5e7656" },
-  // baltic-400 / baltic-600 — primary anchor, used sparingly
-  baltic: { light: "#808eb3", dark: "#4d5b80" },
-};
 
 function StickyCard({
   children,
-  accent = "cream",
-  delay = 0,
   className,
 }: {
   children: ReactNode;
-  accent?: Accent;
-  delay?: number;
   className?: string;
 }) {
-  const fill = ACCENT_FILLS[accent];
   return (
     <div
       className={cn(
-        "paper-card sticky-enter relative px-6 pt-7 pb-6 border border-lavender-200/60 dark:border-lavender-800/60 overflow-hidden",
+        "paper-card after:hidden relative px-5 sm:px-6 py-6 border border-lavender-200/60 dark:border-lavender-800/60",
         className
       )}
-      style={{ "--delay": `${delay}ms` } as CSSProperties}
     >
-      {/* Top accent — the only color that distinguishes one card
-          from another. Light/dark mode handled inline. */}
-      <div
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-1 dark:hidden"
-        style={{ backgroundColor: fill.light }}
-      />
-      <div
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-1 hidden dark:block"
-        style={{ backgroundColor: fill.dark }}
-      />
-      <div className="relative z-10">{children}</div>
+      {children}
     </div>
   );
 }
 
-function CardEyebrow({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-steel-500 dark:text-steel-400">
-      {children}
-    </p>
-  );
-}
-
 /* ─────────────────────────────────────────────────────────────
-   FOCUS TARGET — the full "a" of aim. Bowl + tail silhouette
-   pulled directly from the AimLogo paths; baltic translates up
-   from below as focus minutes accrue. White counter dot sits in
-   the bowl with the percentage centered.
+   FOCUS TARGET — the full "a" of aim, as today's meter. Bowl + tail
+   silhouette pulled directly from the AimLogo paths. Each focus
+   session today stacks in from the bottom as its own band, sized
+   by its share of the daily goal and coloured by its subject, so
+   the fill says what the time went into. The counter shows the
+   percentage; the legend names the subjects.
    ───────────────────────────────────────────────────────────── */
 
 const A_BOWL_CX = 241.5;
@@ -967,21 +1044,101 @@ const A_VB_Y = 222;
 const A_VB_SIZE = 142;
 const A_TOP = A_BOWL_CY - A_BOWL_R;
 const A_HEIGHT = 2 * A_BOWL_R;
+const A_BOTTOM = A_TOP + A_HEIGHT;
+// Hairline of card showing between bands, so two sessions of the same
+// subject still read as two sessions.
+const BAND_GAP = 1.5;
+
+interface MeterSegment {
+  id: string;
+  minutes: number;
+  color: string;
+  label: string;
+}
 
 function FocusTarget({
   focusPct,
   todayMinutes,
   dailyGoal,
+  segments,
+  newSegmentId,
+  justLogged,
+  firstUse,
 }: {
   focusPct: number;
   todayMinutes: number;
   dailyGoal: number;
+  segments: MeterSegment[];
+  newSegmentId?: string;
+  /** The session just saved on Focus: named here, where it lands. */
+  justLogged?: { minutes: number; label: string; color: string };
+  /** No session ever finished: say what the "a" is for, once. */
+  firstUse?: boolean;
 }) {
-  return (
-    <div className="mx-auto w-full max-w-[15rem] text-center">
-      <CardEyebrow>Focus</CardEyebrow>
+  // Right after "Save session", the percentage counts up from where the
+  // day stood before, on the same 300ms wait and 900ms run as the band
+  // growing into the "a", so number and letter move as one. A layout
+  // effect sets the starting value before the first paint (no flash of
+  // the final number); reduced motion just shows the result.
+  const fromPct = justLogged
+    ? Math.min(Math.round(((todayMinutes - justLogged.minutes) / Math.max(dailyGoal, 1)) * 100), 100)
+    : undefined;
+  const [shownPct, setShownPct] = useState(focusPct);
+  useLayoutEffect(() => {
+    if (fromPct === undefined || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setShownPct(focusPct);
+      return;
+    }
+    setShownPct(fromPct);
+    const start = performance.now() + 300;
+    let raf = requestAnimationFrame(function step(now) {
+      const t = Math.min(Math.max((now - start) / 900, 0), 1);
+      setShownPct(Math.round(fromPct + (focusPct - fromPct) * (1 - (1 - t) ** 3)));
+      if (t < 1) raf = requestAnimationFrame(step);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [focusPct, fromPct]);
+  const crossedGoal = fromPct !== undefined && fromPct < 100 && focusPct >= 100;
 
-      <div className="relative mx-auto mt-3 w-44 h-44">
+  // Stack bands bottom-up; anything past the goal is capped at a full "a".
+  const bands: (MeterSegment & { y: number; h: number })[] = [];
+  let filled = 0;
+  for (const seg of segments) {
+    const share = Math.min(seg.minutes / Math.max(dailyGoal, 1), 1 - filled);
+    if (share <= 0) break;
+    const h = share * A_HEIGHT;
+    bands.push({ ...seg, y: A_BOTTOM - filled * A_HEIGHT - h, h });
+    filled += share;
+  }
+
+  // Legend: minutes per subject today, largest first.
+  const legend = Array.from(
+    segments
+      .reduce((map, seg) => {
+        const prev = map.get(seg.label);
+        map.set(seg.label, {
+          label: seg.label,
+          color: seg.color,
+          minutes: (prev?.minutes ?? 0) + seg.minutes,
+        });
+        return map;
+      }, new Map<string, { label: string; color: string; minutes: number }>())
+      .values()
+  ).sort((a, b) => b.minutes - a.minutes);
+
+  // Beside the launcher (lg+) it's a centred column. Stacked under it on
+  // smaller screens it becomes the card's footer: the "a" on the left,
+  // the numbers beside it, which saves a screen-height of scrolling.
+  return (
+    <div className="flex items-center gap-5 pt-6 border-t border-lavender-200/60 dark:border-lavender-800/60 lg:block lg:pt-0 lg:border-0 lg:mx-auto lg:w-full lg:max-w-[13rem] lg:text-center">
+      <div
+        className={cn(
+          "relative flex-shrink-0 w-28 h-28 lg:mx-auto lg:w-48 lg:h-48",
+          crossedGoal && "focus-complete-settle"
+        )}
+        // After the band has landed (300ms wait + 900ms growth).
+        style={crossedGoal ? { animationDelay: "1200ms", animationFillMode: "forwards" } : undefined}
+      >
         <svg
           aria-hidden
           viewBox={`${A_VB_X} ${A_VB_Y} ${A_VB_SIZE} ${A_VB_SIZE}`}
@@ -994,48 +1151,114 @@ function FocusTarget({
             </clipPath>
           </defs>
 
+          {/* The empty "a" is drawn as an outline, the logo waiting to be
+              filled, not a grey blob. Bowl and tail are stroked, then
+              painted over in the card colour: that hides the inner half
+              of each stroke, including where the two shapes overlap, and
+              leaves one clean outline of the whole letter. */}
+          <g
+            fill="none"
+            strokeWidth={3}
+            vectorEffect="non-scaling-stroke"
+            className="stroke-lavender-400 dark:stroke-lavender-600"
+          >
+            <circle cx={A_BOWL_CX} cy={A_BOWL_CY} r={A_BOWL_R} vectorEffect="non-scaling-stroke" />
+            <path d={A_TAIL_PATH} vectorEffect="non-scaling-stroke" />
+          </g>
+          <g className="fill-white dark:fill-lavender-900">
+            <circle cx={A_BOWL_CX} cy={A_BOWL_CY} r={A_BOWL_R} />
+            <path d={A_TAIL_PATH} />
+          </g>
+
           <g clipPath="url(#aim-a-silhouette)">
-            <rect
-              x={A_VB_X}
-              y={A_VB_Y}
-              width={A_VB_SIZE}
-              height={A_VB_SIZE}
-              className="fill-lavender-200/55 dark:fill-lavender-800/40"
-            />
-            <rect
-              x={A_VB_X}
-              y={A_TOP}
-              width={A_VB_SIZE}
-              height={A_HEIGHT}
-              className="fill-baltic-700 dark:fill-baltic-400"
-              style={{
-                transform: `translateY(${
-                  100 - Math.max(0, Math.min(100, focusPct))
-                }%)`,
-                transformBox: "fill-box",
-                transition: "transform 800ms var(--ease-out)",
-              }}
-            />
+            {bands.map((b) => (
+              <rect
+                key={b.id}
+                // The session just saved grows in from its bottom edge,
+                // once: the moment the time you put in lands in the "a".
+                className={b.id === newSegmentId ? "meter-band-in" : undefined}
+                x={A_VB_X}
+                y={b.y + BAND_GAP / 2}
+                width={A_VB_SIZE}
+                height={Math.max(b.h - BAND_GAP, 0.75)}
+                fill={b.color}
+              />
+            ))}
           </g>
 
           <circle
             cx={A_COUNTER_CX}
             cy={A_COUNTER_CY}
             r={A_COUNTER_R}
-            className="fill-white dark:fill-baltic-900"
+            strokeWidth={1.5}
+            vectorEffect="non-scaling-stroke"
+            className="fill-white stroke-lavender-400 dark:fill-lavender-900 dark:stroke-lavender-600"
           />
+          {shownPct >= 100 ? (
+            <path
+              d={`M${A_COUNTER_CX - 8} ${A_COUNTER_CY + 0.5}l5.5 5.5l10.5 -11.5`}
+              fill="none"
+              strokeWidth={3}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="stroke-baltic-800 dark:stroke-baltic-100"
+            />
+          ) : (
+            <text
+              x={A_COUNTER_CX}
+              y={A_COUNTER_CY}
+              textAnchor="middle"
+              dominantBaseline="central"
+              // Sizes are in viewBox units, so the smaller "a" gets a
+              // bigger number: about 12px on screen there, 16px in the large "a".
+              className="fill-baltic-800 dark:fill-baltic-100 tabular-nums font-bold text-[15px] lg:text-[12px]"
+            >
+              {shownPct}%
+            </text>
+          )}
         </svg>
       </div>
 
-      <p className="mt-4 text-xs text-steel-500 dark:text-steel-400">
-        <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
-          {formatTime(todayMinutes)}
-        </span>{" "}
-        of{" "}
-        <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
-          {formatTime(dailyGoal)}
-        </span>
-      </p>
+      <div className="min-w-0">
+        <p className="lg:mt-3 text-sm text-steel-600 dark:text-steel-400">
+          <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
+            {formatTime(todayMinutes)}
+          </span>{" "}
+          of{" "}
+          <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
+            {formatTime(dailyGoal)}
+          </span>
+          <span className="sr-only"> focused today ({focusPct}%)</span>
+        </p>
+        {firstUse && (
+          <p className="mt-1 text-xs text-balance text-steel-600 dark:text-steel-400">
+            Every session you finish fills in the &ldquo;a&rdquo;.
+          </p>
+        )}
+
+        {legend.length > 0 && (
+          <ul className="mt-2 space-y-1" aria-label="Today by subject">
+            {legend.map((l) => (
+              <li
+                key={l.label}
+                className={cn(
+                  "flex items-center lg:justify-center gap-1.5 text-xs",
+                  // The subject just logged stands out for this arrival.
+                  l.label === justLogged?.label
+                    ? "font-semibold text-baltic-800 dark:text-baltic-100"
+                    : "text-steel-600 dark:text-steel-400"
+                )}
+              >
+                <span aria-hidden className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: l.color }} />
+                <span>{l.label}</span>{" "}
+                <span className="tabular-nums font-medium text-baltic-700 dark:text-baltic-300">
+                  {formatTime(l.minutes)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

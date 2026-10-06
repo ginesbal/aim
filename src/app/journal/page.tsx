@@ -515,9 +515,12 @@ export default function JournalPage() {
           <p className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
             No sessions recorded yet
           </p>
-          <p className="text-xs text-steel-400 mt-1">
-            Complete a focus session to start building your journal.
-          </p>
+          <a
+            href="/focus"
+            className="mt-4 inline-block text-sm font-medium text-baltic-700 dark:text-baltic-300 underline decoration-steel-300 underline-offset-2 hover:text-baltic-800"
+          >
+            Start a focus session
+          </a>
         </section>
       )}
     </div>

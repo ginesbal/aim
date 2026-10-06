@@ -74,7 +74,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
-          "Plus Jakarta Sans",
+          "Bricolage Grotesque",
           "system-ui",
           "-apple-system",
           "BlinkMacSystemFont",

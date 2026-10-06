@@ -64,7 +64,8 @@ export default function QualityIndicator({
 
 interface QualitySelectorProps {
   value: FocusQuality | null;
-  onChange: (quality: FocusQuality) => void;
+  /** null when the chosen level is clicked again: the rating is optional. */
+  onChange: (quality: FocusQuality | null) => void;
   size?: number;
 }
 
@@ -78,18 +79,34 @@ export function QualitySelector({ value, onChange, size = 32 }: QualitySelectorP
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="flex items-center gap-4">
+      <div
+        role="group"
+        aria-label="Focus rating"
+        className="flex items-center gap-4"
+        // 1–4 pick a level while focus is on the scale, and focus follows
+        // the pick. Scoped to the scale on purpose: a bare number key that
+        // acted anywhere on the page couldn't be switched off (WCAG 2.1.4).
+        onKeyDown={(e) => {
+          const q = Number(e.key);
+          if (e.ctrlKey || e.metaKey || e.altKey || !(q >= 1 && q <= 4)) return;
+          onChange(q as FocusQuality);
+          (e.currentTarget.children[q - 1] as HTMLElement).focus();
+        }}
+      >
         {qualities.map((q) => {
           const selected = value === q;
-          const strokeColor = selected ? "#60729f" : "#c5c9d3";
-          const fillColor = selected ? "#4d5b80" : "#c5c9d3";
+          // Unselected: lavender-400, 3:1 against the card (lavender-200 was 1.66:1).
+          const strokeColor = selected ? "#60729f" : "#8b93a7";
+          const fillColor = selected ? "#4d5b80" : "#8b93a7";
           return (
             <button
               key={q}
               type="button"
-              onClick={() => onChange(q)}
+              onClick={() => onChange(selected ? null : q)}
               aria-label={QUALITY_LEVELS[q].label}
               aria-pressed={selected}
+              aria-keyshortcuts={String(q)}
+              title={`${QUALITY_LEVELS[q].label} (${q})`}
               className={cn(
                 "relative rounded-full p-2 transition-[background-color,transform] duration-150 ease-out press",
                 selected
@@ -117,11 +134,19 @@ export function QualitySelector({ value, onChange, size = 32 }: QualitySelectorP
           );
         })}
       </div>
-      <div className="h-5">
-        {value && (
+      {/* Before a choice, this line names the two ends of the scale; after
+          one, it describes the choice. (Each circle has its own label for
+          screen readers, so the end labels are visual only.) */}
+      <div className="h-5 self-stretch">
+        {value ? (
           <p className="text-xs text-baltic-700 text-center">
             <span className="font-medium">{QUALITY_LEVELS[value].label}</span>
-            <span className="text-steel-400"> · {QUALITY_LEVELS[value].description}</span>
+            <span className="text-steel-600"> · {QUALITY_LEVELS[value].description}</span>
+          </p>
+        ) : (
+          <p aria-hidden className="flex justify-between text-xs text-steel-600">
+            <span>{QUALITY_LEVELS[1].label}</span>
+            <span>{QUALITY_LEVELS[4].label}</span>
           </p>
         )}
       </div>
