@@ -910,8 +910,9 @@ function SetupStage({
 
   return (
     <div className="focus-stage-enter w-full max-w-sm">
-      {/* Intention card — reads as a handwritten line ("focus for 25 minutes
-          on …") and quietly takes on the colour of the subject you choose. */}
+      {/* Intention card — reads as a line of a sentence ("focus for 25
+          minutes on …"), its joining words in the dashboard's italic serif,
+          and quietly takes on the colour of the subject you choose. */}
       <div className="relative rounded-[28px] bg-white border border-lavender-200 shadow-[0_2px_4px_-1px_rgba(38,45,64,0.04),0_14px_30px_-10px_rgba(38,45,64,0.16),0_40px_64px_-32px_rgba(38,45,64,0.12)]">
         {/* Subject wash — barely-there tint at the head of the card. */}
         <div
@@ -927,7 +928,7 @@ function SetupStage({
 
         <div className="relative px-8 pt-8 pb-8">
           {/* Duration */}
-          <p className="text-center font-script text-[17px] leading-none text-baltic-500 mb-3 select-none">
+          <p className="text-center font-connect text-lg leading-none text-baltic-600 mb-3 select-none">
             focus for
           </p>
           <DurationPicker value={duration} onChange={onDurationChange} />
@@ -936,7 +937,7 @@ function SetupStage({
           <div className="border-t border-dashed border-lavender-200 my-6" />
 
           {/* Subject */}
-          <p className="text-center font-script text-[17px] leading-none text-baltic-500 mb-3 select-none">
+          <p className="text-center font-connect text-lg leading-none text-baltic-600 mb-3 select-none">
             on
           </p>
           <SubjectSelector value={subject} onChange={onSubjectChange} />

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=JetBrains+Mono:wght@400;500&family=Caveat:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@1,6..72,400..500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -448,11 +448,21 @@
     transform: translate(-50%, -50%);
   }
 
-  /* Handwritten accent font — used sparingly */
-  .font-script {
-    font-family: 'Caveat', 'Bricolage Grotesque', cursive;
-    font-weight: 600;
-    letter-spacing: 0.01em;
+  /* Connecting words: the italic serif that joins a sentence ("focus
+     for", "on", "just logged"). Regular weight and normal tracking even
+     inside a bold, tight headline, so it steps back from what it joins.
+     Newsreader's x-height is smaller than Bricolage's, so it's set a
+     touch larger to sit level with the words around it. */
+  .font-connect {
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.08em;
+    letter-spacing: 0;
+    font-optical-sizing: auto;
+    /* The italic leans into the next word ("of Science" read as one);
+       a hair of room after it keeps the word space visible. */
+    padding-inline-end: 0.06em;
   }
 
   /* Doodle stroke — animates on first reveal */

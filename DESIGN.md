@@ -30,13 +30,14 @@ typography:
     fontFamily: "Bricolage Grotesque, system-ui, sans-serif"
     fontSize: "2.25rem"
     fontWeight: 700
-    lineHeight: 1.12
+    lineHeight: 1.15
     letterSpacing: "-0.025em"
-  script:
-    fontFamily: "Caveat, Bricolage Grotesque, cursive"
-    fontSize: "1.875rem"
-    fontWeight: 600
-    letterSpacing: "0.01em"
+  connector:
+    fontFamily: "Newsreader, Georgia, serif"
+    fontSize: "1.08em"
+    fontWeight: 400
+    fontStyle: "italic"
+    letterSpacing: "0"
   title:
     fontFamily: "Bricolage Grotesque, system-ui, sans-serif"
     fontSize: "1.25rem"
@@ -119,14 +120,14 @@ components:
 
 **Creative North Star: "The Annotated Notebook"**
 
-aim looks like study material marked up by hand, kept calm. White paper cards with a faint grain rest on a pale blue-grey desk. The words that join a sentence ("focus for", "on", "just logged") are handwritten, while what matters (the task, the length, the time) is set in a clear grotesque. The day's progress fills the "a" of the logo like ink.
+aim looks like study material annotated in the margins, kept calm. White paper cards with a faint grain rest on a pale blue-grey desk. The words that join a sentence ("focus for", "on", "just logged") are set in an italic serif, like a note in a textbook's margin, while what matters (the task, the length, the time) is set in a clear grotesque. The day's progress fills the "a" of the logo like ink.
 
 The north star describes what is already there; it is not a licence to add notebook props. The system is quiet by default: one card, one sentence, one filled button per screen, and everything else steps back. Focus, where the session runs, is the same desk with the furniture cleared away, keeping only the clock, the controls and an optional slow backdrop.
 
 The rejected direction is the generic productivity dashboard: grids of same-size stat cards, competing accents, decoration added to fill space. It was tried, felt AI-generated and overwhelming, and was taken out.
 
 **Key Characteristics:**
-- A sentence as the headline, with handwritten connecting words.
+- A sentence as the headline: what matters in a bold grotesque, the words that join it in an italic serif.
 - Paper cards with soft, layered shadows on a pale blue-grey surface.
 - One filled, fully rounded primary button per screen, coloured by the subject.
 - Colour carries meaning: a subject's colour, the ink in the "a", the primary action.
@@ -139,8 +140,8 @@ The rejected direction is the generic productivity dashboard: grids of same-size
 A cool, low-saturation palette: blue-grey for the voice of the product, grey-violet and grey-green for structure and secondary text, with sage and cream as the only warm notes.
 
 ### Primary
-- **Baltic** (`baltic-500`): the product's accent. The handwritten connecting words, the keyboard focus outline and the Begin button when no subject colour applies.
-- **Deep Baltic** (`baltic-600`, hover `baltic-700`): filled primary buttons on Focus and in dialogs, the active page in the navigation.
+- **Baltic** (`baltic-500`): the product's accent. The keyboard focus outline and the Begin button when no subject colour applies.
+- **Deep Baltic** (`baltic-600`, hover `baltic-700`): filled primary buttons on Focus and in dialogs, the active page in the navigation, and the connecting words of a sentence.
 - **Baltic Night** (`baltic-800`): body and heading text.
 - **Baltic Desk** (`baltic-50`): the app surface everything rests on, and the Focus canvas. `baltic-100` marks a selected chip.
 
@@ -162,21 +163,21 @@ Ten muted colours that students assign to their subjects: Baltic blue `#60729f`,
 ## Typography
 
 **Body Font:** Bricolage Grotesque (with system-ui fallback)
-**Script Font:** Caveat 600, for connecting words only
+**Connecting Font:** Newsreader italic 400, for the words that join a sentence only
 **Label/Mono Font:** JetBrains Mono, for small uppercase captions on Tasks and Journal
 
-**Character:** A warm, slightly irregular grotesque carries all content and controls; a handwritten script joins the words of a sentence, so the headline reads like a note to yourself.
+**Character:** A warm, slightly irregular grotesque carries all content and controls; a reading serif, in italic, joins the words of a sentence, so the headline reads like a line of annotated notes. It replaced Caveat, whose handwriting read as a kid's notebook and sat a size down on a line of its own, so the headline read as a label over a title (critique, 2026-10-27).
 
 ### Hierarchy
 - **Countdown** (200, 3.75rem, line-height 1, tabular figures): the Focus clock only. Light weight so a large number stays calm.
-- **Headline** (700, 1.875rem on phones and 2.25rem from 640px, line-height 1.12, tracking -0.025em): the task in the launcher sentence and the "just logged" headline. Clamped to two lines (three on phones).
-- **Script** (Caveat 600, 1.875rem on the dashboard, 17px on the Focus card): "focus for", "on", "just logged", "paused on". The length ("25m") between them sits in the body font at 24px semibold.
+- **Headline** (700, 1.875rem on phones and 2.25rem from 640px, line-height 1.15, tracking -0.025em): the launcher sentence ("focus for 25m on Lab report"), "just logged 45m of Science" and "paused on …", each one sentence at one size. In the launcher a task title over 72 characters is shortened with an ellipsis (the full title is its tooltip); "paused on …" is clamped to three lines (four on phones).
+- **Connecting words** (Newsreader italic 400 at 1.08em of the sentence around them, `baltic-600`, normal tracking): "focus for", "on", "of", "just logged", "paused on", "next, focus for"; 1.125rem on the Focus card. They sit inline at the sentence's size, never on a line of their own.
 - **Title** (600, 1.25rem): the greeting. Also 1.125rem 500 for "How focused were you?" on the ending card.
 - **Body** (400, 0.875rem, line-height 1.5): status lines, lists, help text. Button labels are 15px 500.
 - **Label** (400, 11px, uppercase, tracking 0.18em to 0.22em, `steel-600`): small captions on Focus and in menus ("Focusing on", "of 25:00", "Pattern").
 - **Mono label** (JetBrains Mono 400, 10px to 11px, uppercase, tracking 0.16em to 0.18em, tabular figures): dates, counts and filter chips on Tasks and Journal, and the parked day chips on the dashboard. Not used on Focus or in the launcher.
 
-**The Script Connects Rule.** Handwriting only joins the words of a sentence. It never carries content, a number or a control label.
+**The Connecting Words Rule.** The italic serif only joins the words of a sentence. It never carries content, a number or a control label.
 
 ## Layout
 
@@ -245,7 +246,7 @@ Above the ink, a ghost of the same ink at 14% opacity is the session Begin would
 It used to stack one band per session in its subject's colour, with the percentage in a white disc. Out of the wordmark that read as a striped chart behind a mask, and the disc hid the middle third of the fill (critique, 2026-10-27).
 
 ### The launcher sentence
-"focus for [25m] on [task]": the dashboard's headline and its main control in one. The length opens a small menu; the task is the next one due. The same sentence reappears on the Focus setup card.
+"focus for [25m] on [task]": the dashboard's headline and its main control in one. Both the length and the task are slots: words of the sentence underlined like blanks, each opening a short list under itself. The length list offers the quick lengths and becomes the default length. The task list offers the next five tasks by due date; a pick lasts for the visit, and Begin, the meta line and "After this" follow it. With only one task open, the task is plain text. After a save, the same sentence steps down to 1.125rem as "next, focus for [25m] on [task]". The same sentence reappears on the Focus setup card.
 
 ## Do's and Don'ts
 
@@ -258,7 +259,7 @@ It used to stack one band per session in its subject's colour, with the percenta
 
 ### Don't:
 - **Don't** add notebook props (tape, doodles, ruled lines, stickers) to express the north star.
-- **Don't** use handwriting for content, numbers or controls (The Script Connects Rule).
+- **Don't** set content, numbers or controls in the italic serif (The Connecting Words Rule).
 - **Don't** use a subject colour decoratively (The Subject Colour Rule).
 - **Don't** use dark surfaces; aim is light-only until dark mode is deliberately brought back.
 - **Don't** return to grids of same-size stat cards or competing accents; that is the direction aim moved away from.

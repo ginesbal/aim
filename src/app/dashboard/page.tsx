@@ -3,6 +3,7 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -99,12 +100,22 @@ export default function DashboardPage() {
     [tasks]
   );
 
-  const nextTask = pendingTasks[0];
+  // The launcher offers the soonest-due task unless another was picked
+  // from the task slot in its sentence. The pick lasts for this visit;
+  // once that task is done, the soonest-due one comes back.
+  const [pickedTaskId, setPickedTaskId] = useState<string | null>(null);
+  const nextTask = pendingTasks.find((t) => t.id === pickedTaskId) ?? pendingTasks[0];
+  // What the task slot offers: the next few by due date, plus the picked
+  // one if it sits further down.
+  const taskChoices = useMemo(() => {
+    const soonest = pendingTasks.slice(0, 5);
+    return nextTask && !soonest.includes(nextTask) ? [...soonest, nextTask] : soonest;
+  }, [pendingTasks, nextTask]);
   const focusPct = Math.min(Math.round((todayMinutes / dailyGoal) * 100), 100);
   const minutesToGoal = Math.max(dailyGoal - todayMinutes, 0);
 
-  // Today's sessions become the meter's segments: oldest at the bottom of
-  // the "a", each band in its subject's colour.
+  // Today's sessions, oldest first: the meter's ink and, by subject, its
+  // legend.
   const segments = useMemo(() => {
     const todayKey = new Date().toDateString();
     return sessions
@@ -297,6 +308,9 @@ export default function DashboardPage() {
           focusBlockMin={focusBlockMin}
           nextTask={nextTask}
           subject={nextTask ? getSubject(nextTask.subject) : undefined}
+          taskChoices={taskChoices}
+          getSubject={getSubject}
+          onPickTask={(t) => setPickedTaskId(t.id)}
           hasAnySessions={sessions.length > 0}
           // Remounted when the welcome dialog closes, so the main button
           // takes focus then, the same as on any later arrival.
@@ -373,13 +387,28 @@ function StreakChip({ streak, last7 }: { streak: number; last7: boolean[] }) {
   );
 }
 
+/* The launcher's headlines are each one sentence at headline size:
+   "focus for 25m on Lab report", "just logged 45m of Science", "paused
+   on Linear algebra". What matters is in the grotesque; the words that
+   join it step back in an italic serif, like a note in a textbook's
+   margin. They used to sit on a line of their own in Caveat, a size
+   down, which read as a label over a title rather than a sentence
+   (critique, 2026-10-27). */
+const SENTENCE =
+  "text-3xl sm:text-4xl font-bold tracking-tight leading-[1.15] text-baltic-800 dark:text-baltic-100";
+
+function Connect({ children }: { children: ReactNode }) {
+  return <span className="font-connect text-baltic-600 dark:text-baltic-300">{children}</span>;
+}
+
 /* ─────────────────────────────────────────────────────────────
    HERO — the launcher. The Focus setup sentence, already filled
-   in: "focus for 25m on <task>", with Caveat only on the
-   connecting words (as on the Focus card) and Begin in the
-   subject's colour. The "a" meter sits beside it as a gauge.
-   Without a task to launch, it falls back to a plain headline
-   and a way to add one.
+   in: "focus for 25m on <task>", read as one sentence at headline
+   size. The connecting words are set in an italic serif (as on
+   the Focus card); the length and the task are slots you can
+   swap. Begin is in the subject's colour, and the "a" meter sits
+   beside it as a gauge. Without a task to launch, it falls back
+   to a plain headline and a way to add one.
    ───────────────────────────────────────────────────────────── */
 
 function HeroBody({
@@ -390,6 +419,9 @@ function HeroBody({
   focusBlockMin,
   nextTask,
   subject,
+  taskChoices,
+  getSubject,
+  onPickTask,
   hasAnySessions,
   focusPrimary,
   segments,
@@ -411,6 +443,10 @@ function HeroBody({
   focusBlockMin: number;
   nextTask: Task | undefined;
   subject: UserSubject | undefined;
+  /** What the task slot in the sentence offers, the current one included. */
+  taskChoices: Task[];
+  getSubject: (idOrLabel: string) => UserSubject | undefined;
+  onPickTask: (task: Task) => void;
   hasAnySessions: boolean;
   /** The main button takes focus on arrival. Off while the welcome
       dialog is open, so it can't pull focus out from under it. */
@@ -431,7 +467,7 @@ function HeroBody({
   onPlanStep: () => void;
   onEditGoal: () => void;
 }) {
-  // The launcher's text column. The length menu's list renders here, not
+  // The launcher's text column. The slot menus' lists render here, not
   // inside the <h1>, so the heading still reads as one sentence.
   const columnRef = useRef<HTMLDivElement>(null);
 
@@ -484,13 +520,9 @@ function HeroBody({
   // steps back to a quiet line under it. "Done" first, "next" second.
   const loggedHeadline = justLogged && (
     <>
-      <h1 id="launcher-headline" className="text-baltic-800 dark:text-baltic-100">
-        <span className="block text-2xl font-semibold leading-tight">
-          <span className="font-script text-[1.25em] text-baltic-500 dark:text-baltic-300 pr-1">just logged</span>
-        </span>{" "}
-        <span className="mt-1 block text-3xl sm:text-4xl font-bold tracking-tight leading-[1.12]">
-          <span className="tabular-nums">{formatTime(justLogged.minutes)}</span> of {justLogged.label}
-        </span>
+      <h1 id="launcher-headline" className={SENTENCE}>
+        <Connect>just logged</Connect> <span className="tabular-nums">{formatTime(justLogged.minutes)}</span>{" "}
+        <Connect>of</Connect> {justLogged.label}
       </h1>
       {/* The session that reached the day's goal is the day's biggest
           moment; it gets a line of its own here, not just the small
@@ -546,16 +578,14 @@ function HeroBody({
     return (
       <div className="grid gap-6 lg:gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_11rem]">
         <div className="min-w-0">
-          <h1 id="launcher-headline" className="text-baltic-800 dark:text-baltic-100">
-            <span className="block text-2xl font-semibold leading-tight">
-              <span className="font-script text-[1.25em] text-baltic-500 dark:text-baltic-300 pr-1">{lead}</span>
-            </span>{" "}
-            <span
-              title={live.task.trim() || label}
-              className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight leading-[1.12] line-clamp-3 sm:line-clamp-2"
-            >
-              {live.task.trim() || label}
-            </span>
+          {/* Clamped to three lines (four on phones); the full task is
+              one hover away. */}
+          <h1
+            id="launcher-headline"
+            title={live.task.trim() || label}
+            className={cn(SENTENCE, "line-clamp-4 sm:line-clamp-3")}
+          >
+            <Connect>{lead}</Connect> {live.task.trim() || label}
           </h1>
           <p className="mt-3 flex items-center gap-2 text-sm text-steel-600 dark:text-steel-400">
             <span aria-hidden className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
@@ -665,6 +695,21 @@ function HeroBody({
     );
   }
 
+  // The sentence's two slots. A long title is shortened here rather than
+  // clamped with overflow, which would also clip the slot's focus ring;
+  // the full title is the slot's tooltip.
+  const lengthSlot = <LengthSlot minutes={focusBlockMin} onChange={onSetLength} listParent={columnRef} />;
+  const taskSlot = (
+    <TaskSlot
+      task={nextTask}
+      label={nextTask.title.length > 72 ? `${nextTask.title.slice(0, 70).trimEnd()}…` : nextTask.title}
+      choices={taskChoices}
+      getSubject={getSubject}
+      onPick={onPickTask}
+      listParent={columnRef}
+    />
+  );
+
   return (
     <div className="grid gap-6 lg:gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_11rem]">
       <div ref={columnRef} className="relative min-w-0">
@@ -672,41 +717,19 @@ function HeroBody({
           <>
             {loggedHeadline}
             {/* The launcher sentence, one step quieter: still one click
-                from the next session, length menu included. */}
-            <p id="launcher-next" className="mt-4 text-base text-steel-600 dark:text-steel-400">
-              Next, focus for{" "}
-              <span className="font-semibold text-baltic-800 dark:text-baltic-100">
-                <LengthMenu minutes={focusBlockMin} onChange={onSetLength} listParent={columnRef} />
-              </span>{" "}
-              on{" "}
-              <span title={nextTask.title} className="font-semibold text-baltic-800 dark:text-baltic-100">
-                {nextTask.title}
-              </span>
+                from the next session, both slots included. */}
+            <p id="launcher-next" className="mt-4 text-lg leading-snug font-semibold text-baltic-800 dark:text-baltic-100">
+              <Connect>next, focus for</Connect> {lengthSlot} <Connect>on</Connect> {taskSlot}
             </p>
           </>
         ) : (
           <>
-            {/* The sentence is the headline. It reads the same aloud:
-                "focus for 25m on Lab report — Organic compounds". */}
-            <h1 id="launcher-headline" className="text-baltic-800 dark:text-baltic-100">
-              {/* Real spaces between the words (not margins), so the sentence
-                  reads correctly aloud and when copied. */}
-              <span className="block text-2xl font-semibold leading-tight">
-                <span className="font-script text-[1.25em] text-baltic-500 dark:text-baltic-300 pr-1">focus for</span>{" "}
-                <LengthMenu minutes={focusBlockMin} onChange={onSetLength} listParent={columnRef} />{" "}
-                <span className="font-script text-[1.25em] text-baltic-500 dark:text-baltic-300 pl-1">on</span>
-              </span>{" "}
-              {/* No `block` here: it would override line-clamp's display and
-                  switch the clamp off. Phones allow a third line so a long
-                  title still reads whole. */}
-              <span
-                // Clamped to two lines (three on phones): the full title is
-                // still one hover away.
-                title={nextTask.title}
-                className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight leading-[1.12] line-clamp-3 sm:line-clamp-2"
-              >
-                {nextTask.title}
-              </span>
+            {/* The sentence is the headline, and it reads the same aloud:
+                "focus for 25m on Lab report — Organic compounds". Real
+                spaces between the words (not margins), so it also reads
+                correctly when copied. */}
+            <h1 id="launcher-headline" className={SENTENCE}>
+              <Connect>focus for</Connect> {lengthSlot} <Connect>on</Connect> {taskSlot}
             </h1>
 
             <p className="mt-3 inline-flex items-center gap-2 text-sm text-steel-600 dark:text-steel-400">
@@ -786,26 +809,44 @@ function HeroBody({
 }
 
 /* ─────────────────────────────────────────────────────────────
-   LENGTH MENU — the "25m" in the launcher sentence, as a real
-   control. It offers the same quick lengths as Focus, and a pick
-   becomes the default session length (the value in Settings), so
-   the launcher keeps offering it. A small disclosure like the
-   subject picker: opening moves focus to the current length, Esc
-   closes and hands focus back, a click outside closes.
+   SENTENCE SLOTS — the "25m" and the task in the launcher
+   sentence, as real controls. Each is a word of the sentence,
+   underlined like a blank you can fill in, that opens a short list
+   under itself. A small disclosure like the subject picker:
+   opening moves focus to the current choice, Esc closes and hands
+   focus back, a click outside or tabbing away closes. The list
+   renders in listParent, outside the heading, so the heading still
+   reads as one sentence; a slot that wraps across two lines opens
+   its list under the last one.
    ───────────────────────────────────────────────────────────── */
 
-function LengthMenu({
-  minutes,
-  onChange,
+interface SlotChoice {
+  key: string;
+  content: ReactNode;
+  current: boolean;
+  onPick: () => void;
+}
+
+function SentenceSlot({
+  children,
+  title,
+  listLabel,
+  choices,
   listParent,
+  listClassName,
 }: {
-  minutes: number;
-  onChange: (minutes: number) => void;
-  /** Where the open list renders: outside the heading the trigger sits in. */
+  children: ReactNode;
+  /** Tooltip on the slot, also its hint for what clicking does. */
+  title: string;
+  listLabel: string;
+  choices: SlotChoice[];
+  /** Where the open list renders: outside the heading the slot sits in. */
   listParent: React.RefObject<HTMLElement>;
+  listClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
-  // Where to place the list: under the trigger, in listParent's coordinates.
+  // Where to place the list: under the slot, in listParent's coordinates,
+  // kept inside listParent's width.
   const [pos, setPos] = useState({ left: 0, top: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLSpanElement>(null);
@@ -822,24 +863,28 @@ function LengthMenu({
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
-  function toggle() {
+  // Measured once the list exists, so a wide list near the right edge
+  // shifts left instead of spilling out of the card.
+  useLayoutEffect(() => {
+    if (!open) return;
     const t = triggerRef.current;
-    // offsetLeft/Top are relative to listParent: the nearest positioned
-    // ancestor of the trigger.
-    if (t) setPos({ left: t.offsetLeft, top: t.offsetTop + t.offsetHeight + 8 });
-    setOpen((v) => !v);
-  }
+    const parent = listParent.current;
+    if (!t || !parent) return;
+    const box = parent.getBoundingClientRect();
+    // The last line the slot is set on: a task title can wrap.
+    const lines = t.getClientRects();
+    const last = lines[lines.length - 1] ?? t.getBoundingClientRect();
+    const width = listRef.current?.offsetWidth ?? 0;
+    setPos({
+      left: Math.max(0, Math.min(last.left - box.left, box.width - width)),
+      top: last.bottom - box.top + 8,
+    });
+  }, [open, listParent]);
 
   function close() {
     setOpen(false);
     triggerRef.current?.focus();
   }
-
-  // The quick lengths, plus the current one if Settings holds a custom
-  // length (say 35m), so the menu always shows what's picked.
-  const options = DURATION_PRESETS.includes(minutes)
-    ? DURATION_PRESETS
-    : [...DURATION_PRESETS, minutes].sort((a, b) => a - b);
 
   return (
     // Keys and focus events from the portalled list still bubble here
@@ -851,7 +896,7 @@ function LengthMenu({
           close();
         }
       }}
-      // Tabbing out of the trigger or the list closes it, so it can't be
+      // Tabbing out of the slot or its list closes it, so it can't be
       // left open over Begin with focus somewhere else.
       onBlur={(e) => {
         const next = e.relatedTarget as Node | null;
@@ -861,23 +906,29 @@ function LengthMenu({
       <button
         ref={triggerRef}
         type="button"
-        onClick={toggle}
+        onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
-        title="Change session length"
-        className="tap-target inline-flex items-center gap-1 rounded-lg px-1.5 -mx-1.5 tabular-nums hover:bg-lavender-100 dark:hover:bg-lavender-800/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 transition-colors duration-150"
+        title={title}
+        // Inline, so a long task wraps with the sentence; the underline
+        // and the hover wash follow it onto each line.
+        className={cn(
+          "rounded-lg px-1 -mx-1 text-left box-decoration-clone underline decoration-lavender-400 decoration-[0.06em] underline-offset-[0.16em] hover:bg-lavender-100 hover:decoration-baltic-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 dark:hover:bg-lavender-800/60 transition-[background-color,text-decoration-color] duration-150",
+          open && "bg-lavender-100 decoration-baltic-500 dark:bg-lavender-800/60"
+        )}
       >
-        {formatTime(minutes)}
+        {children}
         <svg
           aria-hidden
-          width={14}
-          height={14}
           viewBox="0 0 12 12"
           fill="none"
           stroke="currentColor"
           strokeWidth={1.5}
           strokeLinecap="round"
-          className={cn("text-steel-500 transition-transform duration-150", open && "rotate-180")}
+          className={cn(
+            "inline-block ml-1 w-[0.42em] h-[0.42em] align-[0.12em] text-steel-500 transition-transform duration-150",
+            open && "rotate-180"
+          )}
         >
           <path d="M3 4.5L6 7.5L9 4.5" />
         </svg>
@@ -889,33 +940,121 @@ function LengthMenu({
             ref={listRef}
             id={listId}
             role="group"
-            aria-label="Session length"
-            className="absolute z-20 flex w-36 flex-col rounded-2xl border border-lavender-200 bg-white py-1 text-left leading-normal shadow-[0_16px_36px_-12px_rgba(38,45,64,0.28)] dropdown-enter dark:border-lavender-700 dark:bg-lavender-900"
+            aria-label={listLabel}
+            className={cn(
+              "absolute z-20 flex flex-col rounded-2xl border border-lavender-200 bg-white py-1 text-left text-base font-normal tracking-normal leading-normal shadow-[0_16px_36px_-12px_rgba(38,45,64,0.28)] dropdown-enter dark:border-lavender-700 dark:bg-lavender-900",
+              listClassName
+            )}
             style={{ left: pos.left, top: pos.top, transformOrigin: "top left" }}
           >
-            {options.map((m) => (
+            {choices.map((c) => (
               <button
-                key={m}
+                key={c.key}
                 type="button"
-                aria-pressed={m === minutes}
+                aria-pressed={c.current}
                 onClick={() => {
-                  onChange(m);
+                  c.onPick();
                   close();
                 }}
-                className="flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-baltic-700 dark:text-baltic-200 hover:bg-lavender-50 dark:hover:bg-lavender-800/60 focus:outline-none focus-visible:bg-lavender-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-baltic-500"
+                className="flex items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium text-baltic-700 dark:text-baltic-200 hover:bg-lavender-50 dark:hover:bg-lavender-800/60 focus:outline-none focus-visible:bg-lavender-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-baltic-500"
               >
-                <span className="tabular-nums">{formatTime(m)}</span>
-                {m === minutes && (
-                  <svg aria-hidden width={14} height={14} viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="text-baltic-600">
-                    <path d="M2.5 7.5L6 11l5.5-7" />
-                  </svg>
-                )}
+                <span className="min-w-0 flex-1">{c.content}</span>
+                {/* Every row keeps the check's room, so the days line up. */}
+                <svg aria-hidden width={14} height={14} viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className={cn("flex-shrink-0 text-baltic-600", !c.current && "invisible")}>
+                  <path d="M2.5 7.5L6 11l5.5-7" />
+                </svg>
               </button>
             ))}
           </span>,
           listParent.current
         )}
     </span>
+  );
+}
+
+/* The length slot offers the same quick lengths as Focus, and a pick
+   becomes the default session length (the value in Settings), so the
+   launcher keeps offering it. */
+function LengthSlot({
+  minutes,
+  onChange,
+  listParent,
+}: {
+  minutes: number;
+  onChange: (minutes: number) => void;
+  listParent: React.RefObject<HTMLElement>;
+}) {
+  // The quick lengths, plus the current one if Settings holds a custom
+  // length (say 35m), so the list always shows what's picked.
+  const options = DURATION_PRESETS.includes(minutes)
+    ? DURATION_PRESETS
+    : [...DURATION_PRESETS, minutes].sort((a, b) => a - b);
+  return (
+    <SentenceSlot
+      title="Change session length"
+      listLabel="Session length"
+      listParent={listParent}
+      listClassName="w-36"
+      choices={options.map((m) => ({
+        key: String(m),
+        content: <span className="tabular-nums">{formatTime(m)}</span>,
+        current: m === minutes,
+        onPick: () => onChange(m),
+      }))}
+    >
+      <span className="tabular-nums">{formatTime(minutes)}</span>
+    </SentenceSlot>
+  );
+}
+
+/* The task slot offers the next few tasks by due date, so switching what
+   this session is about takes one pick, without leaving the sentence.
+   With nothing else open it's plain text: there is nothing to swap. */
+function TaskSlot({
+  task,
+  label,
+  choices,
+  getSubject,
+  onPick,
+  listParent,
+}: {
+  task: Task;
+  /** The title as the sentence shows it (shortened when long). */
+  label: string;
+  choices: Task[];
+  getSubject: (idOrLabel: string) => UserSubject | undefined;
+  onPick: (task: Task) => void;
+  listParent: React.RefObject<HTMLElement>;
+}) {
+  if (choices.length < 2) return <span title={task.title}>{label}</span>;
+  return (
+    <SentenceSlot
+      title={task.title}
+      listLabel="Task"
+      listParent={listParent}
+      listClassName="w-[min(22rem,100%)]"
+      choices={choices.map((t) => {
+        const sub = getSubject(t.subject);
+        const overdue = isOverdue(t.dueDate);
+        const day = dayLabel(t.dueDate);
+        return {
+          key: t.id,
+          current: t.id === task.id,
+          onPick: () => onPick(t),
+          content: (
+            <span className="flex items-center gap-2.5 min-w-0">
+              <span aria-hidden className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: sub?.color ?? "#60729f" }} />
+              <span className="truncate flex-1">{t.title}</span>
+              <span className={cn("flex-shrink-0 text-xs font-normal", overdue ? "font-semibold text-red-700 dark:text-red-400" : "text-steel-600 dark:text-steel-400")}>
+                {overdue ? "Overdue" : day}
+              </span>
+            </span>
+          ),
+        };
+      })}
+    >
+      {label}
+    </SentenceSlot>
   );
 }
 

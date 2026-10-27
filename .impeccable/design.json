@@ -94,8 +94,8 @@
       "kind": "card",
       "refersTo": "card",
       "description": "The dashboard's resting surface.",
-      "html": "<div class=\"ds-card\"><p class=\"ds-card-script\">focus for <b>25m</b> on</p><p class=\"ds-card-title\">Lab report</p></div>",
-      "css": ".ds-card { width: 320px; padding: 24px; border-radius: 16px; background: #ffffff; border: 1px solid rgba(197,201,211,.6); box-shadow: 0 1px 1px rgba(38,45,64,.04), 0 4px 8px -2px rgba(38,45,64,.06), 0 14px 28px -10px rgba(38,45,64,.10); } .ds-card-script { margin: 0; font: 600 30px/1.2 Caveat, cursive; color: #60729f; } .ds-card-script b { font: 600 24px 'Bricolage Grotesque', system-ui, sans-serif; color: #262d40; } .ds-card-title { margin: 4px 0 0; font: 700 36px/1.12 'Bricolage Grotesque', system-ui, sans-serif; letter-spacing: -0.025em; color: #262d40; }"
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-sentence\"><i>focus for</i> <b>25m</b> <i>on</i> <b>Lab report</b></p></div>",
+      "css": ".ds-card { width: 320px; padding: 24px; border-radius: 16px; background: #ffffff; border: 1px solid rgba(197,201,211,.6); box-shadow: 0 1px 1px rgba(38,45,64,.04), 0 4px 8px -2px rgba(38,45,64,.06), 0 14px 28px -10px rgba(38,45,64,.10); } .ds-card-sentence { margin: 0; font: 700 36px/1.15 'Bricolage Grotesque', system-ui, sans-serif; letter-spacing: -0.025em; color: #262d40; } .ds-card-sentence i { font: italic 400 1.08em 'Newsreader', Georgia, serif; letter-spacing: 0; padding-right: 0.06em; color: #4d5b80; } .ds-card-sentence b { text-decoration: underline; text-decoration-thickness: 0.06em; text-underline-offset: 0.16em; text-decoration-color: #8b93a7; }"
     },
     {
       "name": "Page Navigation",
@@ -116,9 +116,9 @@
   ],
   "narrative": {
     "northStar": "The Annotated Notebook",
-    "overview": "aim looks like study material marked up by hand, kept calm. White paper cards with a faint grain rest on a pale blue-grey desk. The words that join a sentence (\"focus for\", \"on\", \"just logged\") are handwritten, while what matters (the task, the length, the time) is set in a clear grotesque. The day's progress fills the \"a\" of the logo like ink.\n\nThe north star describes what is already there; it is not a licence to add notebook props. The system is quiet by default: one card, one sentence, one filled button per screen, and everything else steps back. Focus, where the session runs, is the same desk with the furniture cleared away, keeping only the clock, the controls and an optional slow backdrop.\n\nThe rejected direction is the generic productivity dashboard: grids of same-size stat cards, competing accents, decoration added to fill space. It was tried, felt AI-generated and overwhelming, and was taken out.",
+    "overview": "aim looks like study material annotated in the margins, kept calm. White paper cards with a faint grain rest on a pale blue-grey desk. The words that join a sentence (\"focus for\", \"on\", \"just logged\") are set in an italic serif, like a note in a textbook's margin, while what matters (the task, the length, the time) is set in a clear grotesque. The day's progress fills the \"a\" of the logo like ink.\n\nThe north star describes what is already there; it is not a licence to add notebook props. The system is quiet by default: one card, one sentence, one filled button per screen, and everything else steps back. Focus, where the session runs, is the same desk with the furniture cleared away, keeping only the clock, the controls and an optional slow backdrop.\n\nThe rejected direction is the generic productivity dashboard: grids of same-size stat cards, competing accents, decoration added to fill space. It was tried, felt AI-generated and overwhelming, and was taken out.",
     "keyCharacteristics": [
-      "A sentence as the headline, with handwritten connecting words.",
+      "A sentence as the headline: what matters in a bold grotesque, the words that join it in an italic serif.",
       "Paper cards with soft, layered shadows on a pale blue-grey surface.",
       "One filled, fully rounded primary button per screen, coloured by the subject.",
       "Colour carries meaning: a subject's colour, the ink in the \"a\", the primary action.",
@@ -127,7 +127,7 @@
     "rules": [
       { "name": "The Reason Rule", "body": "Every visual change states the reason it serves (a finding, a user need, a measured problem). A change that only makes something look more like a notebook does not ship.", "section": "overview" },
       { "name": "The Subject Colour Rule", "body": "A subject's colour appears where that subject is: its dot (in lists, the launcher and the meter's legend), the Begin button for it. It is never used decoratively. The \"a\" itself fills in one ink, the logo's colour, not in subject colours.", "section": "colors" },
-      { "name": "The Script Connects Rule", "body": "Handwriting only joins the words of a sentence. It never carries content, a number or a control label.", "section": "typography" },
+      { "name": "The Connecting Words Rule", "body": "The italic serif only joins the words of a sentence. It never carries content, a number or a control label.", "section": "typography" },
       { "name": "The One Filled Button Rule", "body": "Each screen has exactly one filled primary button. Everything else is a secondary pill, an underlined text link or a plain row.", "section": "layout" },
       { "name": "The Rest and Float Rule", "body": "Things on the page rest; only things above the page float. A card never gets a floating shadow.", "section": "elevation" }
     ],
@@ -140,7 +140,7 @@
     ],
     "donts": [
       "Don't add notebook props (tape, doodles, ruled lines, stickers) to express the north star.",
-      "Don't use handwriting for content, numbers or controls (The Script Connects Rule).",
+      "Don't set content, numbers or controls in the italic serif (The Connecting Words Rule).",
       "Don't use a subject colour decoratively (The Subject Colour Rule).",
       "Don't use dark surfaces; aim is light-only until dark mode is deliberately brought back.",
       "Don't return to grids of same-size stat cards or competing accents; that is the direction aim moved away from.",
