@@ -507,7 +507,8 @@
     .focus-complete-label,
     .focus-label-swap,
     .sweep-active,
-    .meter-band-in {
+    .meter-band-in,
+    .meter-ghost-in {
       animation: none !important;
     }
     .focus-tick-enter { opacity: 1 !important; }
@@ -676,6 +677,19 @@
     transform-box: fill-box;
     transform-origin: 50% 100%;
     animation: meter-band-in 900ms var(--ease-out) 300ms both;
+  }
+
+  /* Dashboard meter: the ghost of the next session. It eases to a new
+     level when the length changes and deepens while Begin is pointed at.
+     After a save it fades in once the new ink has landed (300ms + 900ms). */
+  .meter-ghost {
+    transition: transform 420ms var(--ease-out), opacity 200ms var(--ease-out);
+  }
+  @keyframes meter-ghost-in {
+    from { opacity: 0; }
+  }
+  .meter-ghost-in {
+    animation: meter-ghost-in 300ms var(--ease-out) 1200ms backwards;
   }
 
   @keyframes focus-complete-settle {

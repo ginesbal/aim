@@ -40,7 +40,8 @@
       { "name": "ease-out", "value": "cubic-bezier(0.23, 1, 0.32, 1)", "purpose": "Default easing for entrances and state changes." },
       { "name": "ease-in-out", "value": "cubic-bezier(0.77, 0, 0.175, 1)", "purpose": "Two-way transitions." },
       { "name": "press", "value": "transform: scale(0.97) over 160ms ease-out", "purpose": "Buttons press in when held." },
-      { "name": "meter-band-in", "value": "900ms, 300ms delay", "purpose": "A newly saved session's ink grows into the 'a'." }
+      { "name": "meter-band-in", "value": "900ms, 300ms delay", "purpose": "A newly saved session's ink grows into the 'a'." },
+      { "name": "meter-ghost", "value": "transform 420ms ease-out, opacity 200ms ease-out; fades in after 1200ms following a save", "purpose": "The ghost of the next session eases to a new length and deepens while Begin is pointed at." }
     ],
     "breakpoints": [
       { "name": "sm", "value": "640px" },

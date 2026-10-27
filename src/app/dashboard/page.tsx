@@ -435,6 +435,26 @@ function HeroBody({
   // inside the <h1>, so the heading still reads as one sentence.
   const columnRef = useRef<HTMLDivElement>(null);
 
+  // Begin shows what it would add to the "a" while it's pointed at: on
+  // hover, and on keyboard focus once the page has been used. Not on the
+  // focus it takes on arrival, or the preview would stay up until
+  // something else took focus.
+  const [hoverBegin, setHoverBegin] = useState(false);
+  const [focusBegin, setFocusBegin] = useState(false);
+  const usedPage = useRef(false);
+  useEffect(() => {
+    const mark = () => {
+      usedPage.current = true;
+    };
+    window.addEventListener("keydown", mark, { once: true });
+    window.addEventListener("pointerdown", mark, { once: true });
+    return () => {
+      window.removeEventListener("keydown", mark);
+      window.removeEventListener("pointerdown", mark);
+    };
+  }, []);
+  const launching = Boolean(nextTask) && !live;
+
   const meter = (
     <FocusTarget
       focusPct={focusPct}
@@ -444,6 +464,8 @@ function HeroBody({
       newSegmentId={newSegmentId}
       justLogged={justLogged}
       firstUse={!hasAnySessions}
+      nextMinutes={launching ? focusBlockMin : undefined}
+      previewNext={launching && (hoverBegin || focusBegin)}
     />
   );
 
@@ -718,7 +740,11 @@ function HeroBody({
           <button
             onClick={onFocus}
             autoFocus={focusPrimary}
-            aria-describedby={loggedHeadline ? "launcher-next" : "launcher-headline"}
+            onPointerEnter={() => setHoverBegin(true)}
+            onPointerLeave={() => setHoverBegin(false)}
+            onFocus={(e) => setFocusBegin(usedPage.current && e.currentTarget.matches(":focus-visible"))}
+            onBlur={() => setFocusBegin(false)}
+            aria-describedby={`${loggedHeadline ? "launcher-next" : "launcher-headline"} launcher-projection`}
             style={{ backgroundColor: fill }}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-medium text-white hover:brightness-[0.94] active:scale-[0.98] shadow-[0_6px_16px_-8px_rgba(38,45,64,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950 transition-[filter,transform] duration-150 ease-out"
           >
@@ -727,6 +753,12 @@ function HeroBody({
             </svg>
             Begin focusing
           </button>
+          {/* What the meter's preview shows, in words. */}
+          <span id="launcher-projection" className="sr-only">
+            {todayMinutes >= dailyGoal
+              ? `Adds ${formatTime(focusBlockMin)} past today's goal.`
+              : `Brings today to ${formatTime(todayMinutes + focusBlockMin)} of ${formatTime(dailyGoal)}.`}
+          </span>
           {focusBlank}
         </div>
 
@@ -1027,6 +1059,9 @@ function StickyCard({
    bottom with one ink, the logo's own colour, up to today's share of
    the goal. The counter stays the logo's white dot. The numbers sit
    under it once ("1h 10m of 2h"), and the legend names the subjects.
+   Above the ink, a pale ghost of the same ink is the session Begin
+   would start, so the meter answers "what will this session do to my
+   day?" instead of only reporting the past.
 
    It used to stack a band per session in each subject's colour, with
    the percentage in a white disc over the counter. Out of the
@@ -1050,6 +1085,47 @@ const A_VB_SIZE = 142;
 const A_TOP = A_BOWL_CY - A_BOWL_R;
 const A_HEIGHT = 2 * A_BOWL_R;
 const A_BOTTOM = A_TOP + A_HEIGHT;
+// The tail's box, from A_TAIL_PATH (its chamfered corner is too small to
+// count).
+const A_TAIL = { left: 233, right: 306, top: 279, bottom: 356 };
+
+/* The ink is sized by area, not height. The bowl is narrow at its top and
+   bottom, so a level set by height made the same 25m look about a third
+   bigger as the day's first session than as its last, and a 58% day
+   showed 62% ink (critique, 2026-10-27). INK_AREA holds the share of the
+   letter's inked area (bowl and tail, less the counter) below each half-
+   unit row, counted from the bottom; inkLevel turns a share of the goal
+   into the height that inks exactly that much of the letter. */
+const INK_ROW = 0.5;
+const INK_AREA: number[] = (() => {
+  const below: number[] = [];
+  let area = 0;
+  for (let y = A_BOTTOM; y > A_TOP; y -= INK_ROW) {
+    const mid = y - INK_ROW / 2;
+    const half = Math.sqrt(Math.max(A_BOWL_R ** 2 - (mid - A_BOWL_CY) ** 2, 0));
+    let left = A_BOWL_CX - half;
+    let right = A_BOWL_CX + half;
+    if (mid >= A_TAIL.top && mid <= A_TAIL.bottom) {
+      left = Math.min(left, A_TAIL.left);
+      right = Math.max(right, A_TAIL.right);
+    }
+    let width = right - left;
+    const fromCounter = mid - A_COUNTER_CY;
+    if (Math.abs(fromCounter) < A_COUNTER_R) width -= 2 * Math.sqrt(A_COUNTER_R ** 2 - fromCounter ** 2);
+    area += width * INK_ROW;
+    below.push(area);
+  }
+  return below.map((a) => a / area);
+})();
+
+function inkLevel(share: number): number {
+  if (share <= 0) return A_BOTTOM;
+  if (share >= 1) return A_TOP;
+  const row = INK_AREA.findIndex((a) => a >= share);
+  const prev = row > 0 ? INK_AREA[row - 1] : 0;
+  const within = (share - prev) / (INK_AREA[row] - prev);
+  return A_BOTTOM - (row + within) * INK_ROW;
+}
 
 interface MeterSegment {
   id: string;
@@ -1066,6 +1142,8 @@ function FocusTarget({
   newSegmentId,
   justLogged,
   firstUse,
+  nextMinutes,
+  previewNext,
 }: {
   focusPct: number;
   todayMinutes: number;
@@ -1076,6 +1154,10 @@ function FocusTarget({
   justLogged?: { minutes: number; label: string; color: string };
   /** No session ever finished: say what the "a" is for, once. */
   firstUse?: boolean;
+  /** The length Begin would start, drawn as a ghost above the ink. */
+  nextMinutes?: number;
+  /** Begin is hovered or keyboard-focused: show what it would add. */
+  previewNext?: boolean;
 }) {
   // The session that took the day past its goal gets a settle once its
   // ink has landed.
@@ -1094,7 +1176,33 @@ function FocusTarget({
     1
   );
   const added = newSeg ? Math.min(shareOf(newSeg.minutes), 1 - before) : 0;
-  const inkTop = A_BOTTOM - (before + added) * A_HEIGHT;
+  const beforeTop = inkLevel(before);
+  const inkTop = inkLevel(before + added);
+
+  // The next session, pale, above the ink: the length in the sentence,
+  // so picking 45m raises it, and it deepens while Begin is pointed at.
+  // Nothing to draw once the "a" is full.
+  const ghost = nextMinutes ? Math.min(shareOf(nextMinutes), 1 - before - added) : 0;
+  const ghostTop = inkLevel(before + added + ghost);
+  const projected = todayMinutes + (nextMinutes ?? 0);
+  const preview =
+    previewNext && nextMinutes ? (
+      <>
+        <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">+{formatTime(nextMinutes)}</span>
+        {todayMinutes >= dailyGoal ? (
+          " bonus"
+        ) : (
+          <>
+            <svg aria-hidden width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="inline-block mx-1 -mt-px">
+              <path d="M2 6h8M7 3l3 3-3 3" />
+            </svg>
+            <span className="font-semibold tabular-nums text-baltic-800 dark:text-baltic-100">
+              {projected >= dailyGoal ? "goal" : `${Math.round((projected / Math.max(dailyGoal, 1)) * 100)}%`}
+            </span>
+          </>
+        )}
+      </>
+    ) : null;
 
   // Legend: minutes per subject today, largest first.
   const legend = Array.from(
@@ -1162,8 +1270,27 @@ function FocusTarget({
           </g>
 
           <g clipPath="url(#aim-a-silhouette)" className="fill-baltic-700 dark:fill-baltic-200">
+            {nextMinutes !== undefined && (
+              // After a save it waits for the new ink to land first.
+              <g className={newSeg ? "meter-ghost-in" : undefined}>
+                {/* A full-height sheet behind the ink, moved so its top sits
+                    at the ghost's level: the ink covers the rest, and a new
+                    length only has to move it (a transform, so it eases). */}
+                <rect
+                  className="meter-ghost"
+                  x={A_VB_X}
+                  y={A_TOP}
+                  width={A_VB_SIZE}
+                  height={A_HEIGHT + 2}
+                  style={{
+                    transform: `translateY(${ghostTop - A_TOP}px)`,
+                    opacity: ghost > 0 ? (previewNext ? 0.3 : 0.14) : 0,
+                  }}
+                />
+              </g>
+            )}
             {before > 0 && (
-              <rect x={A_VB_X} y={A_BOTTOM - before * A_HEIGHT} width={A_VB_SIZE} height={before * A_HEIGHT} />
+              <rect x={A_VB_X} y={beforeTop} width={A_VB_SIZE} height={A_BOTTOM - beforeTop} />
             )}
             {added > 0 && (
               <rect
@@ -1176,7 +1303,7 @@ function FocusTarget({
                 x={A_VB_X}
                 y={inkTop}
                 width={A_VB_SIZE}
-                height={added * A_HEIGHT + (before > 0 ? 2 : 0)}
+                height={beforeTop - inkTop + (before > 0 ? 2 : 0)}
               />
             )}
           </g>
@@ -1200,13 +1327,21 @@ function FocusTarget({
 
       <div className="min-w-0">
         <p className="lg:mt-3 text-sm text-steel-600 dark:text-steel-400">
-          <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
-            {formatTime(todayMinutes)}
-          </span>{" "}
-          of{" "}
-          <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
-            {formatTime(dailyGoal)}
-          </span>
+          {/* While Begin is pointed at, the line says what it would add;
+              Begin's own description carries that for screen readers. */}
+          {preview ? (
+            <span aria-hidden>{preview}</span>
+          ) : (
+            <>
+              <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
+                {formatTime(todayMinutes)}
+              </span>{" "}
+              of{" "}
+              <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">
+                {formatTime(dailyGoal)}
+              </span>
+            </>
+          )}
           <span className="sr-only"> focused today ({focusPct}%)</span>
         </p>
         {firstUse && (
