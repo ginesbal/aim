@@ -33,7 +33,7 @@ The focus session is the centre of the product. Tasks exist to give sessions som
 - **No accounts; data stays in the browser.** Everything is in localStorage, plus sessionStorage for a live session. No server, no sign-in, no sync.
 - **Desktop web first.** Phone layouts exist for the dashboard and Focus; Tasks, Journal and Settings wait until the owner asks.
 - **Light theme only for now.** Dark mode is parked behind `DARK_MODE_ENABLED = false`.
-- **Unfinished features are parked behind flags, not deleted:** `SHOW_DAY_CHIPS`, `SHOW_AMBIENT`, `DARK_MODE_ENABLED`.
+- **Unfinished features are parked behind flags, not deleted:** `SHOW_AMBIENT`, `DARK_MODE_ENABLED`. (`SHOW_DAY_CHIPS` is gone: the week of small "a"s replaced the day and streak chips it parked.)
 - **Focus backdrops** come from Vanta.js: Contours (p5), Fog and Birds (three.js, pinned to 0.134.0, the version Vanta 0.5 is built for), plus Still for no motion.
 - **Terminology:** the product name is "aim", lowercase. A session can end three ways: "Pause & leave" (kept for later), "Finish early" (logged), "Discard" (not logged).
 

@@ -52,11 +52,6 @@ typography:
     fontSize: "0.6875rem"
     fontWeight: 400
     letterSpacing: "0.18em"
-  mono-label:
-    fontFamily: "JetBrains Mono, Fira Code, monospace"
-    fontSize: "0.625rem"
-    fontWeight: 400
-    letterSpacing: "0.18em"
 rounded:
   md: "6px"
   xl: "12px"
@@ -164,7 +159,7 @@ Ten muted colours that students assign to their subjects: Baltic blue `#60729f`,
 
 **Body Font:** Bricolage Grotesque (with system-ui fallback)
 **Connecting Font:** Newsreader italic 400, for the words that join a sentence only
-**Mono Font:** JetBrains Mono, now only on the Journal chart's axis and the parked day chips (both due to go)
+**Mono Font:** none. JetBrains Mono was retired with its last uses (critique, 2026-10-27) and is no longer loaded.
 
 **Character:** A warm, slightly irregular grotesque carries all content and controls; a reading serif, in italic, joins the words of a sentence, so the headline reads like a line of annotated notes. It replaced Caveat, whose handwriting read as a kid's notebook and sat a size down on a line of its own, so the headline read as a label over a title (critique, 2026-10-27).
 
@@ -172,10 +167,10 @@ Ten muted colours that students assign to their subjects: Baltic blue `#60729f`,
 - **Countdown** (200, 3.75rem, line-height 1, tabular figures): the Focus clock only. Light weight so a large number stays calm.
 - **Headline** (700, 1.875rem on phones and 2.25rem from 640px, line-height 1.15, tracking -0.025em): the launcher sentence ("focus for 25m on Lab report"), "just logged 45m of Science" and "paused on …", each one sentence at one size. In the launcher a task title over 72 characters is shortened with an ellipsis (the full title is its tooltip); "paused on …" is clamped to three lines (four on phones).
 - **Connecting words** (Newsreader italic 400 at 1.08em of the sentence around them, `baltic-600`, normal tracking): "focus for", "on", "of", "just logged", "paused on", "next, focus for"; 1.125rem on the Focus card. They sit inline at the sentence's size, never on a line of their own.
-- **Title** (600, 1.25rem): the greeting. Also 1.125rem 500 for "How focused were you?" on the ending card.
+- **Title** (600, 1.125rem): the day line above the launcher ("Tuesday evening, Maya · 1 due today"), which replaced the greeting; what's due follows in `steel-600` 400, overdue in red. Also 1.125rem 500 for "How focused were you?" on the ending card, and 1.125rem 600 for the Journal's week summary.
 - **Body** (400, 0.875rem, line-height 1.5): status lines, lists, help text. Button labels are 15px 500.
 - **Label** (400, 11px, uppercase, tracking 0.18em to 0.22em, `steel-600`): small captions on Focus and in menus ("Focusing on", "of 25:00", "Pattern").
-- **Mono label** (JetBrains Mono 400, 10px to 11px, uppercase, tracking 0.16em to 0.18em, tabular figures): retired from Tasks and Journal, where it read as decoration rather than information (critique, 2026-10-27); their dates, counts and filters are set in the body font, and their section headings like the dashboard's ("After this": 14px 600 `baltic-700`). Left only on the Journal chart's axis, which `/arrange` replaces, and the parked day chips on the dashboard.
+- **Mono label**: retired. It read as decoration rather than information on Tasks and Journal (critique, 2026-10-27); dates, counts and filters there are set in the body font, and section headings like the dashboard's ("After this": 14px 600 `baltic-700`).
 
 **The Connecting Words Rule.** The italic serif only joins the words of a sentence. It never carries content, a number or a control label.
 
@@ -183,9 +178,9 @@ Ten muted colours that students assign to their subjects: Baltic blue `#60729f`,
 
 The dashboard is a single centred column, 896px wide at most, inside a page frame of 1152px with 16px gutters on phones and 32px from 640px. A fixed 64px top bar holds the logo, the page navigation, help and profile; on phones the navigation moves to a bottom tab bar.
 
-The launcher card is a two-column grid from 1024px: the sentence and its button on the left, the "a" meter (144px) in an 11rem column on the right. Below 1024px the meter drops under the sentence. "After this" is a plain list under the card, not more cards.
+The launcher card is a two-column grid from 1024px: the sentence and its button on the left, the "a" meter (144px) in an 11rem column on the right. Below 1024px the meter drops under the sentence. "After this" is a plain list under the card, not more cards, and "This week" (the week of small "a"s, below) sits under it with the same header, its days linking to their entries in the Journal. It shows from the first finished session.
 
-Tasks and Journal open the way the dashboard does, with one sentence as the headline ("5 tasks to do, the next due today", "this week, 4 sessions for 2h 30m"), and no page title, date chips or status chips. Journal sits in the dashboard's 896px column; its entries are plain rows grouped by day, headed like "After this", not cards. Tasks uses the full frame width, because its subject tabs truncate in the narrower column; its list sits on one paper card, the active tab merging into its top edge. Neither page has a desk pattern, blobs, tape or tilted cards.
+Tasks and Journal open the way the dashboard does, with one sentence as the headline ("5 tasks to do, the next due today", "this week, 4 sessions for 2h 30m"), and no page title, date chips or status chips. Journal sits in the dashboard's 896px column. Under its headline, the week of small "a"s and a one-line summary ("mostly Science, 2 days at your goal, and felt focused") replace the bar chart and stat tiles, with no card around them; its entries are plain rows grouped by day, headed like "After this", not cards. Tasks uses the full frame width, because its subject tabs truncate in the narrower column; its list sits on one paper card, the active tab merging into its top edge. Neither page has a desk pattern, blobs, tape or tilted cards.
 
 Focus is a full-screen canvas. Its stage is centred and scrolls when it is taller than the window, so nothing is ever cut off. Controls sit at the top right; the session's context pill sits at the top left (on phones, on its own row below the controls). During a session, "Hide timer" (top right) clears the clock and its controls so the backdrop shows whole; the pill then carries the countdown (and "Paused") and brings the timer back when clicked. The timer returns by itself when the session ends.
 
@@ -241,9 +236,12 @@ Soft and tactile: fully rounded pills that press in slightly (scale 0.97 over 16
 - **Phone:** a four-item bottom tab bar with an underline marker on the active page.
 
 ### The "a" meter
-The logo's "a" drawn as an outline (counter included, so the empty letter still reads as an "a") and filled from the bottom with one ink, `baltic-700`, the logo's colour, up to today's share of the goal. The ink is sized by area, not height, so half the goal inks half the letter. The counter stays the logo's white dot; there is no percentage inside it. A newly saved session's ink grows in on top; reaching the goal gives the letter a small settle, and a full day looks exactly like the logo. The numbers appear once, under it ("1h 10m of 2h"), with the subjects in a legend. It is the dashboard's only data display.
+The logo's "a" drawn as an outline (counter included, so the empty letter still reads as an "a") and filled from the bottom with one ink, `baltic-700`, the logo's colour, up to today's share of the goal. The ink is sized by area, not height, so half the goal inks half the letter. The counter stays the logo's white dot; there is no percentage inside it. A newly saved session's ink grows in on top; reaching the goal gives the letter a small settle, and a full day looks exactly like the logo. The numbers appear once, under it ("1h 10m of 2h"), with the subjects in a legend. With the week of small "a"s, it is the dashboard's only data display.
 
 Above the ink, a ghost of the same ink at 14% opacity is the session Begin would start, sized by the length in the launcher sentence (picking 45m raises it). While Begin is hovered or keyboard-focused, the ghost deepens to 30% and the line under the "a" says what it would add ("+25m → 79%", "+25m → goal", or "+25m bonus" past the goal); Begin's description says the same for screen readers. The preview is not shown for the focus Begin takes on arrival. No ghost while a session is still open, or without a task to start.
+
+### The week of "a"s
+The last seven days (today on the right) as seven small "a"s, 40px (36px on phones), each inked by area to that day's share of the goal: an outline is a day with no focus, a full letter a day the goal was hit. Under each, the short weekday ("Today" in 600 `baltic-800`) and the day's minutes. On the dashboard and the Journal, a day with focus links to its entries in the Journal. Screen readers hear each day as one line ("Thursday: 2h 10m of 2h, goal hit"). Past days are measured against today's goal: the goal isn't stored per day.
 
 It used to stack one band per session in its subject's colour, with the percentage in a white disc. Out of the wordmark that read as a striped chart behind a mask, and the disc hid the middle third of the fill (critique, 2026-10-27).
 

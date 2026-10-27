@@ -81,7 +81,6 @@ const config: Config = {
           "Segoe UI",
           "sans-serif",
         ],
-        mono: ["JetBrains Mono", "Fira Code", "monospace"],
       },
     },
   },

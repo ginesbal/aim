@@ -23,12 +23,11 @@
     },
     "typographyMeta": {
       "countdown": { "displayName": "Countdown", "purpose": "The Focus clock only; light weight keeps a large number calm." },
-      "headline": { "displayName": "Headline", "purpose": "The task in the launcher sentence and the 'just logged' headline; 1.875rem on phones, 2.25rem from 640px." },
-      "script": { "displayName": "Script", "purpose": "Connecting words of a sentence only: 'focus for', 'on', 'just logged', 'paused on'." },
-      "title": { "displayName": "Title", "purpose": "The greeting." },
+      "headline": { "displayName": "Headline", "purpose": "Each page's one-sentence headline: the launcher sentence, 'just logged ...', '5 tasks to do, ...', 'this week, ...'; 1.875rem on phones, 2.25rem from 640px." },
+      "connector": { "displayName": "Connecting words", "purpose": "Newsreader italic, the words that join a sentence only: 'focus for', 'on', 'of', 'just logged', 'paused on'." },
+      "title": { "displayName": "Title", "purpose": "The day line above the launcher ('Tuesday evening, Maya · 1 due today'), and the Journal's week summary." },
       "body": { "displayName": "Body", "purpose": "Status lines, lists and help text." },
-      "label": { "displayName": "Label", "purpose": "Uppercase captions on Focus and in menus, in steel-600." },
-      "mono-label": { "displayName": "Mono label", "purpose": "Retired from Tasks and Journal (critique, 2026-10-27); left only on the Journal chart axis and the parked day chips (JetBrains Mono, 10-11px, uppercase)." }
+      "label": { "displayName": "Label", "purpose": "Uppercase captions on Focus and in menus, in steel-600." }
     },
     "shadows": [
       { "name": "resting-paper", "value": "0 1px 1px rgba(38,45,64,.04), 0 4px 8px -2px rgba(38,45,64,.06), 0 14px 28px -10px rgba(38,45,64,.10)", "purpose": "Dashboard cards resting on the desk." },

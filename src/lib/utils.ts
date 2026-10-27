@@ -50,29 +50,10 @@ export function formatTime(minutes: number) {
   return `${hrs}h ${mins}m`;
 }
 
-export function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
 export function getDayProgress() {
   const now = new Date();
   const hours = now.getHours() + now.getMinutes() / 60;
   return Math.min(hours / 16, 1); // 16 waking hours
-}
-
-export function getWeekday() {
-  return new Date().toLocaleDateString("en-US", { weekday: "long" });
-}
-
-export function getFormattedDate() {
-  return new Date().toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 export function isOverdue(dateStr: string) {

@@ -16,9 +16,6 @@ import {
   useSubjects,
 } from "@/lib/contexts";
 import {
-  getGreeting,
-  getWeekday,
-  getFormattedDate,
   formatTime,
   isOverdue,
   dayLabel,
@@ -32,16 +29,29 @@ import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 import AimLogo from "@/components/layout/AimLogo";
 import { SENTENCE, Connect } from "@/components/ui/Sentence";
+import WeekOfAs, { lastSevenDays } from "@/components/ui/WeekOfAs";
+import Link from "next/link";
+import {
+  A_BOWL_CX,
+  A_BOWL_CY,
+  A_BOWL_R,
+  A_TAIL_PATH,
+  A_COUNTER_CX,
+  A_COUNTER_CY,
+  A_COUNTER_R,
+  A_VB_X,
+  A_VB_Y,
+  A_VB_SIZE,
+  A_TOP,
+  A_HEIGHT,
+  A_BOTTOM,
+  inkLevel,
+} from "@/lib/aimLetter";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import type { Task, UserSubject } from "@/lib/types";
 import { loadLiveSession, type LiveSession } from "@/lib/liveSession";
 import { DURATION_PRESETS } from "@/components/ui/DurationPicker";
-
-/* Saved for later, not deleted: the weekday / date / streak chips above
-   the greeting. They're hidden while the dashboard is refocused around
-   starting a focus session; flip to true to bring them back. */
-const SHOW_DAY_CHIPS = false;
 
 const WELCOME_SKIPPED_KEY = "aim_welcome_skipped";
 
@@ -72,7 +82,7 @@ export default function DashboardPage() {
   const { name, isFirstVisit, dailyGoal, focusBlockMin, setName, setFocusBlockMin } =
     usePreferences();
   const { tasks } = useTasks();
-  const { todayMinutes, streak, sessions } = useFocus();
+  const { todayMinutes, sessions } = useFocus();
   const { getSubject } = useSubjects();
   const router = useRouter();
 
@@ -87,7 +97,7 @@ export default function DashboardPage() {
   const [welcomeName, setWelcomeName] = useState("");
   const [welcomeError, setWelcomeError] = useState<string | null>(null);
 
-  const firstName = name ? name.split(" ")[0] : "there";
+  const firstName = name ? name.split(" ")[0] : "";
 
   const pendingTasks = useMemo(
     () =>
@@ -112,8 +122,19 @@ export default function DashboardPage() {
     const soonest = pendingTasks.slice(0, 5);
     return nextTask && !soonest.includes(nextTask) ? [...soonest, nextTask] : soonest;
   }, [pendingTasks, nextTask]);
+  // The line above the launcher: the day and the part of it, the name the
+  // welcome asked for, and what's due. It replaced "Good evening, Maya",
+  // which took the page's first line and said nothing (critique,
+  // 2026-10-27).
+  const now = new Date();
+  const dayPart = now.getHours() < 12 ? "morning" : now.getHours() < 17 ? "afternoon" : "evening";
+  const weekday = now.toLocaleDateString("en-US", { weekday: "long" });
+  const dueToday = pendingTasks.filter((t) => dayLabel(t.dueDate) === "Today").length;
+  const overdueCount = pendingTasks.filter((t) => isOverdue(t.dueDate)).length;
   const focusPct = Math.min(Math.round((todayMinutes / dailyGoal) * 100), 100);
   const minutesToGoal = Math.max(dailyGoal - todayMinutes, 0);
+
+  const week = useMemo(() => lastSevenDays(sessions), [sessions]);
 
   // Today's sessions, oldest first: the meter's ink and, by subject, its
   // legend.
@@ -186,22 +207,6 @@ export default function DashboardPage() {
     if (start) params.set("start", "1");
     return `/focus?${params}`;
   }
-
-  // Last 7 days of session activity → small dot trail on the streak chip.
-  // Index 6 is today; earlier indexes are days ago.
-  const last7 = useMemo(() => {
-    if (!SHOW_DAY_CHIPS) return [];
-    const dates = new Set(
-      sessions.map((s) => new Date(s.completedAt).toDateString())
-    );
-    const out: boolean[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      out.push(dates.has(d.toDateString()));
-    }
-    return out;
-  }, [sessions]);
 
   function handleWelcomeSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -276,26 +281,24 @@ export default function DashboardPage() {
         </div>
       </Modal>
 
-      {/* ── HEADER — greeting ── */}
+      {/* ── HEADER — the day: "Tuesday evening, Maya · 1 due today" ── */}
       <header className="mb-5 sm:mb-8">
-        {SHOW_DAY_CHIPS && (
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-cream-100 dark:bg-cream-900/40 border border-cream-200 dark:border-cream-800/60">
-              <span className="w-1.5 h-1.5 rounded-full bg-cream-500" />
-              <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-cream-700 dark:text-cream-300">
-                {getWeekday()}
-              </span>
-            </span>
-            <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-steel-400">
-              {getFormattedDate()}
-            </span>
-            {streak > 0 && <StreakChip streak={streak} last7={last7} />}
-          </div>
-        )}
-        {/* A quiet greeting: the launcher sentence below is the page's
-            headline, so the name no longer competes with it. */}
-        <p className="text-xl font-semibold text-baltic-700 dark:text-baltic-200">
-          {getGreeting()}, {firstName}
+        <p className="text-lg text-steel-600 dark:text-steel-400">
+          <span className="font-semibold text-baltic-700 dark:text-baltic-200">
+            {weekday} {dayPart}
+            {firstName && `, ${firstName}`}
+          </span>
+          {pendingTasks.length > 0 && (
+            <>
+              {" "}·{" "}
+              {dueToday > 0 && <span className="tabular-nums">{dueToday} due today</span>}
+              {dueToday > 0 && overdueCount > 0 && ", "}
+              {overdueCount > 0 && (
+                <span className="font-semibold tabular-nums text-red-700 dark:text-red-400">{overdueCount} overdue</span>
+              )}
+              {dueToday === 0 && overdueCount === 0 && "nothing due today"}
+            </>
+          )}
         </p>
       </header>
 
@@ -347,44 +350,28 @@ export default function DashboardPage() {
           onOpenAll={() => router.push("/tasks")}
         />
       )}
+
+      {/* ── THIS WEEK — the last seven days as small "a"s, headed like
+          "After this". Each day with focus opens its entries in the
+          Journal. Not shown before the first session: the meter above
+          already says what the "a" is for. ── */}
+      {sessions.length > 0 && (
+        <section aria-labelledby="this-week" className="mt-10">
+          <div className="flex items-baseline justify-between gap-4 px-1 mb-3">
+            <h2 id="this-week" className="text-sm font-semibold text-baltic-700 dark:text-baltic-200">
+              This week
+            </h2>
+            <Link
+              href="/journal"
+              className="press tap-target rounded-md px-1 -mx-1 text-sm font-medium text-steel-600 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
+            >
+              Open journal
+            </Link>
+          </div>
+          <WeekOfAs days={week} dailyGoal={dailyGoal} dayHref={(key) => `/journal#day-${key}`} className="-ml-0.5" />
+        </section>
+      )}
     </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   STREAK CHIP — 7-dot trail + count. Replaces the streak card.
-   Today's dot has an outline so the user can read "did I focus
-   today yet?" without counting.
-   ───────────────────────────────────────────────────────────── */
-
-function StreakChip({ streak, last7 }: { streak: number; last7: boolean[] }) {
-  return (
-    <span
-      className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-baltic-50 dark:bg-baltic-900/40 border border-baltic-200/60 dark:border-baltic-800/60"
-      title={`${streak}-day focus streak`}
-    >
-      <span className="flex items-center gap-[3px]">
-        {last7.map((hit, i) => {
-          const isToday = i === 6;
-          return (
-            <span
-              key={i}
-              className={cn(
-                "block w-1 h-1 rounded-full",
-                hit
-                  ? "bg-baltic-600 dark:bg-baltic-300"
-                  : "bg-baltic-200 dark:bg-baltic-800",
-                isToday &&
-                  "outline outline-1 outline-offset-[1px] outline-cream-500/70 dark:outline-cream-500/50"
-              )}
-            />
-          );
-        })}
-      </span>
-      <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-baltic-700 dark:text-baltic-300 tabular-nums">
-        {streak}d streak
-      </span>
-    </span>
   );
 }
 
@@ -1196,63 +1183,6 @@ function StickyCard({
    filling with ink, and the disc hid the middle third of the fill
    (critique, 2026-10-27).
    ───────────────────────────────────────────────────────────── */
-
-const A_BOWL_CX = 241.5;
-const A_BOWL_CY = 293.5;
-const A_BOWL_R = 64.5;
-const A_TAIL_PATH =
-  "M305.782 288.417L306 290V356H233V279H302.256L305.782 288.417Z";
-const A_COUNTER_CX = 242;
-const A_COUNTER_CY = 294.5;
-const A_COUNTER_R = 20;
-
-const A_VB_X = 170;
-const A_VB_Y = 222;
-const A_VB_SIZE = 142;
-const A_TOP = A_BOWL_CY - A_BOWL_R;
-const A_HEIGHT = 2 * A_BOWL_R;
-const A_BOTTOM = A_TOP + A_HEIGHT;
-// The tail's box, from A_TAIL_PATH (its chamfered corner is too small to
-// count).
-const A_TAIL = { left: 233, right: 306, top: 279, bottom: 356 };
-
-/* The ink is sized by area, not height. The bowl is narrow at its top and
-   bottom, so a level set by height made the same 25m look about a third
-   bigger as the day's first session than as its last, and a 58% day
-   showed 62% ink (critique, 2026-10-27). INK_AREA holds the share of the
-   letter's inked area (bowl and tail, less the counter) below each half-
-   unit row, counted from the bottom; inkLevel turns a share of the goal
-   into the height that inks exactly that much of the letter. */
-const INK_ROW = 0.5;
-const INK_AREA: number[] = (() => {
-  const below: number[] = [];
-  let area = 0;
-  for (let y = A_BOTTOM; y > A_TOP; y -= INK_ROW) {
-    const mid = y - INK_ROW / 2;
-    const half = Math.sqrt(Math.max(A_BOWL_R ** 2 - (mid - A_BOWL_CY) ** 2, 0));
-    let left = A_BOWL_CX - half;
-    let right = A_BOWL_CX + half;
-    if (mid >= A_TAIL.top && mid <= A_TAIL.bottom) {
-      left = Math.min(left, A_TAIL.left);
-      right = Math.max(right, A_TAIL.right);
-    }
-    let width = right - left;
-    const fromCounter = mid - A_COUNTER_CY;
-    if (Math.abs(fromCounter) < A_COUNTER_R) width -= 2 * Math.sqrt(A_COUNTER_R ** 2 - fromCounter ** 2);
-    area += width * INK_ROW;
-    below.push(area);
-  }
-  return below.map((a) => a / area);
-})();
-
-function inkLevel(share: number): number {
-  if (share <= 0) return A_BOTTOM;
-  if (share >= 1) return A_TOP;
-  const row = INK_AREA.findIndex((a) => a >= share);
-  const prev = row > 0 ? INK_AREA[row - 1] : 0;
-  const within = (share - prev) / (INK_AREA[row] - prev);
-  return A_BOTTOM - (row + within) * INK_ROW;
-}
 
 interface MeterSegment {
   id: string;

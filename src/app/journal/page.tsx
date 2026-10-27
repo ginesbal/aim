@@ -1,26 +1,26 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import Link from "next/link";
-import { useFocus, useSubjects } from "@/lib/contexts";
-import { formatTime, cn } from "@/lib/utils";
+import { useFocus, useSubjects, usePreferences } from "@/lib/contexts";
+import { formatTime } from "@/lib/utils";
 import QualityIndicator from "@/components/ui/QualityIndicator";
 import { SENTENCE, Connect } from "@/components/ui/Sentence";
-import type { FocusSession } from "@/lib/types";
+import WeekOfAs, { lastSevenDays, localDayKey } from "@/components/ui/WeekOfAs";
+import type { FocusQuality, FocusSession } from "@/lib/types";
 
-// Small uppercase label for the chart card. The chart is replaced by the
-// week of "a"s next (/arrange); until then it keeps its own label.
-function CardEyebrow({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-steel-600 dark:text-steel-400">
-      {children}
-    </p>
-  );
-}
+// How a week's average rating reads in a sentence ("and felt focused").
+const FELT: Record<FocusQuality, string> = {
+  1: "scattered",
+  2: "distracted",
+  3: "focused",
+  4: "deeply focused",
+};
 
 export default function JournalPage() {
   const { sessions } = useFocus();
   const { getSubject } = useSubjects();
+  const { dailyGoal } = usePreferences();
 
   const sorted = useMemo(
     () =>
@@ -72,59 +72,82 @@ export default function JournalPage() {
     return groups;
   }, [sorted]);
 
-  // Weekly summary
+  // Arriving from a day in a week row (/journal#day-2026-10-23): the
+  // entries render after the stored sessions load, too late for the
+  // browser's own jump to the anchor, so jump once they're there.
+  const hasEntries = grouped.length > 0;
+  useEffect(() => {
+    if (!hasEntries) return;
+    const jump = () => {
+      const id = window.location.hash.slice(1);
+      if (id) document.getElementById(id)?.scrollIntoView({ block: "start" });
+    };
+    jump();
+    window.addEventListener("hashchange", jump);
+    return () => window.removeEventListener("hashchange", jump);
+  }, [hasEntries]);
+
+  // The last seven calendar days (today and the six before it): the
+  // week row's days, and the week the headline and summary describe.
+  const week = useMemo(() => lastSevenDays(sessions), [sessions]);
   const weeklyStats = useMemo(() => {
-    const now = new Date();
-    const weekAgo = new Date(now);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const weekSessions = sessions.filter(
-      (s) => new Date(s.completedAt) >= weekAgo
-    );
-    const totalMinutes = weekSessions.reduce((sum, s) => sum + s.duration, 0);
-    const withReflection = weekSessions.filter((s) => s.reflection);
+    const inWeek = new Set(week.map((d) => d.key));
+    const weekSessions = sessions.filter((s) => inWeek.has(localDayKey(new Date(s.completedAt))));
+    const bySubject = new Map<string, number>();
+    for (const s of weekSessions) bySubject.set(s.subject, (bySubject.get(s.subject) ?? 0) + s.duration);
+    const top = Array.from(bySubject.entries()).sort((a, b) => b[1] - a[1])[0]?.[0];
+    const rated = weekSessions.filter((s) => s.reflection);
     return {
       count: weekSessions.length,
-      totalMinutes,
-      avgQuality:
-        withReflection.length > 0
-          ? withReflection.reduce((sum, s) => sum + s.reflection!.quality, 0) /
-            withReflection.length
-          : 0,
+      totalMinutes: weekSessions.reduce((sum, s) => sum + s.duration, 0),
+      topSubject: top,
+      oneSubject: bySubject.size === 1,
+      daysAtGoal: week.filter((d) => d.minutes >= dailyGoal).length,
+      felt: rated.length
+        ? FELT[Math.round(rated.reduce((sum, s) => sum + s.reflection!.quality, 0) / rated.length) as FocusQuality]
+        : undefined,
     };
-  }, [sessions]);
-
-  // Last 7 days heatmap data
-  const heatmap = useMemo(() => {
-    const now = new Date();
-    const days: { label: string; dayNum: number; minutes: number; isToday: boolean }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const key = d.toDateString();
-      const mins = sessions
-        .filter((s) => new Date(s.completedAt).toDateString() === key)
-        .reduce((sum, s) => sum + s.duration, 0);
-      days.push({
-        label: d.toLocaleDateString("en-US", { weekday: "narrow" }),
-        dayNum: d.getDate(),
-        minutes: mins,
-        isToday: i === 0,
-      });
-    }
-    const maxMins = Math.max(...days.map((d) => d.minutes), 60);
-    return { days, maxMins };
-  }, [sessions]);
+  }, [sessions, week, dailyGoal]);
 
   function resolveSubject(key: string) {
     const sub = getSubject(key);
     return { label: sub?.label || key, color: sub?.color || "#60729f" };
   }
 
+  // One line under the week, in the headline's voice: what the time went
+  // into, how many days reached the goal, how it felt. It replaces the
+  // three stat tiles, two of which repeated the headline.
+  const summary: ReactNode[] = [];
+  if (weeklyStats.topSubject) {
+    summary.push(
+      <>
+        <Connect>{weeklyStats.oneSubject ? "all" : "mostly"}</Connect> {resolveSubject(weeklyStats.topSubject).label}
+      </>
+    );
+  }
+  if (weeklyStats.daysAtGoal > 0) {
+    summary.push(
+      <>
+        <span className="whitespace-nowrap tabular-nums">
+          {weeklyStats.daysAtGoal} {weeklyStats.daysAtGoal === 1 ? "day" : "days"}
+        </span>{" "}
+        <Connect>at your goal</Connect>
+      </>
+    );
+  }
+  if (weeklyStats.felt) {
+    summary.push(
+      <>
+        <Connect>{summary.length ? "and felt" : "felt"}</Connect> {weeklyStats.felt}
+      </>
+    );
+  }
+
   return (
     // The dashboard's column: one sentence, then the record. No desk
     // pattern, blobs, tape or tilt (critique, 2026-10-27).
     <div className="mx-auto max-w-4xl pb-4">
-      <header className="mb-8">
+      <header className="mb-12">
         {/* One sentence, in the dashboard's voice: the week in numbers. */}
         <h1 className={SENTENCE}>
           <span className="sr-only">Journal: </span>
@@ -152,187 +175,36 @@ export default function JournalPage() {
             ? "Every focus session, with what you worked on and how it felt."
             : "Finish a focus session and it lands here, with what you worked on and how it felt."}
         </p>
+        {sessions.length > 0 && (
+          <div className="mt-8">
+            <WeekOfAs days={week} dailyGoal={dailyGoal} dayHref={(key) => `#day-${key}`} className="-ml-1.5" />
+            {summary.length > 0 && (
+              <p className="mt-4 text-lg leading-snug font-semibold text-baltic-800 dark:text-baltic-100">
+                {summary.map((part, i) => (
+                  <span key={i}>
+                    {i > 0 && ", "}
+                    {part}
+                  </span>
+                ))}
+              </p>
+            )}
+          </div>
+        )}
       </header>
-
-      {sessions.length > 0 && (
-        <section className="paper-card relative mb-10 px-6 pt-7 pb-6 border border-lavender-200/60 dark:border-lavender-800/60">
-          {/* Eyebrow + one honest line on how to read the chart */}
-          <CardEyebrow>Last 7 days</CardEyebrow>
-          <p className="mt-1.5 mb-6 text-xs text-steel-500 dark:text-steel-400">
-            Each bar is a day&rsquo;s focus total — today is highlighted.
-          </p>
-
-          {/* Chart area with y-axis labels */}
-          <div className="flex gap-3 mb-2">
-            {/* Y-axis labels */}
-            <div className="flex flex-col justify-between text-[10px] text-steel-400 font-mono tabular-nums w-10 text-right py-1">
-              <span>{formatTime(heatmap.maxMins)}</span>
-              <span>{formatTime(Math.round(heatmap.maxMins / 2))}</span>
-              <span>0m</span>
-            </div>
-
-            {/* Bars area */}
-            <div className="flex-1 relative">
-              {/* Gridlines */}
-              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-                <div className="border-t border-dashed border-lavender-200 dark:border-lavender-800" />
-                <div className="border-t border-dashed border-lavender-200 dark:border-lavender-800" />
-                <div className="border-t-2 border-baltic-300 dark:border-baltic-700" />
-              </div>
-
-              {/* Bars */}
-              <div className="relative flex items-end justify-between gap-2 h-32 px-1">
-                {heatmap.days.map((day, idx) => {
-                  const heightPct = (day.minutes / heatmap.maxMins) * 100;
-                  return (
-                    <div
-                      key={idx}
-                      className="flex-1 flex flex-col items-center justify-end h-full group cursor-default"
-                    >
-                      {/* Always-visible value above bar */}
-                      <span
-                        className={cn(
-                          "text-[10px] font-bold tabular-nums mb-1 transition-colors",
-                          day.minutes === 0
-                            ? "text-steel-300 dark:text-steel-600"
-                            : day.isToday
-                            ? "text-baltic-700 dark:text-baltic-200"
-                            : "text-steel-500 dark:text-steel-400"
-                        )}
-                      >
-                        {day.minutes === 0 ? "—" : formatTime(day.minutes)}
-                      </span>
-
-                      {/* The bar itself */}
-                      <div
-                        className={cn(
-                          "w-full rounded-t-md transition-[height,background-color] duration-500 relative",
-                          day.isToday
-                            ? "bg-baltic-600 dark:bg-baltic-400 ring-2 ring-baltic-200 dark:ring-baltic-700/60"
-                            : day.minutes > 0
-                            ? "bg-baltic-300 dark:bg-baltic-700 group-hover:bg-baltic-400 dark:group-hover:bg-baltic-600"
-                            : "bg-lavender-100 dark:bg-lavender-800/40"
-                        )}
-                        style={{
-                          height:
-                            day.minutes > 0
-                              ? `${Math.max(heightPct, 6)}%`
-                              : "3px",
-                        }}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* X-axis labels */}
-          <div className="flex gap-3">
-            <div className="w-10" />
-            <div className="flex-1 flex justify-between gap-2 px-1">
-              {heatmap.days.map((day, idx) => (
-                <div
-                  key={idx}
-                  className="flex-1 flex flex-col items-center"
-                >
-                  <span
-                    className={cn(
-                      "text-[11px] font-bold uppercase",
-                      day.isToday
-                        ? "text-baltic-700 dark:text-baltic-200"
-                        : "text-steel-400"
-                    )}
-                  >
-                    {day.label}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-[10px] tabular-nums mt-0.5",
-                      day.isToday
-                        ? "text-baltic-700 dark:text-baltic-200 font-bold"
-                        : "text-steel-400"
-                    )}
-                  >
-                    {day.dayNum}
-                  </span>
-                  {day.isToday && (
-                    <span className="mt-1 text-[8px] font-bold uppercase tracking-wider text-baltic-600 dark:text-baltic-400 bg-baltic-100 dark:bg-baltic-900/50 px-1.5 py-0.5 rounded-full">
-                      Today
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Stats row with explainers */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-7 pt-5 border-t border-lavender-100 dark:border-lavender-800">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-baltic-100 dark:bg-baltic-900/40 flex items-center justify-center flex-shrink-0">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="text-baltic-600 dark:text-baltic-400">
-                  <circle cx="8" cy="8" r="6" />
-                  <path d="M8 5v3l2 2" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-xl font-bold text-baltic-800 dark:text-baltic-100 leading-tight">
-                  {weeklyStats.count}
-                </p>
-                <p className="text-[11px] text-steel-500 dark:text-steel-400">
-                  sessions this week
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-cream-100 dark:bg-cream-900/40 flex items-center justify-center flex-shrink-0">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-cream-600 dark:text-cream-400">
-                  <path d="M8 1.5c2 2.5 4 4.5 4 7a4 4 0 1 1-8 0c0-2.5 2-4.5 4-7Z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-xl font-bold text-baltic-800 dark:text-baltic-100 leading-tight">
-                  {formatTime(weeklyStats.totalMinutes)}
-                </p>
-                <p className="text-[11px] text-steel-500 dark:text-steel-400">
-                  total time focused
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-ash-100 dark:bg-ash-900/40 flex items-center justify-center flex-shrink-0">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-ash-600 dark:text-ash-400">
-                  <path d="M2 12s2-4 6-4 6 4 6 4" />
-                  <circle cx="8" cy="5" r="2" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-xl font-bold text-baltic-800 dark:text-baltic-100 leading-tight">
-                  {weeklyStats.avgQuality >= 3.5
-                    ? "Deep"
-                    : weeklyStats.avgQuality >= 2.5
-                    ? "Good"
-                    : weeklyStats.avgQuality > 0
-                    ? "Fair"
-                    : "—"}
-                </p>
-                <p className="text-[11px] text-steel-500 dark:text-steel-400">
-                  how focused you felt
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ── Entries: a plain list per day, like the dashboard's "After
             this", not a wall of cards. ── */}
       {grouped.length > 0 ? (
         <div className="space-y-8">
           {grouped.map((group, gi) => (
-            <section key={group.dateKey} aria-labelledby={`journal-day-${gi}`}>
+            <section
+              key={group.dateKey}
+              id={`day-${localDayKey(new Date(group.dateKey))}`}
+              aria-labelledby={`journal-day-${gi}`}
+              // Clear of the fixed 64px top bar when a day in the week row
+              // jumps here.
+              className="scroll-mt-24"
+            >
               <div className="flex items-baseline justify-between gap-4 px-1 mb-2">
                 <h2 id={`journal-day-${gi}`} className="text-sm font-semibold text-baltic-700 dark:text-baltic-200">
                   {group.label}
