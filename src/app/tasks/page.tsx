@@ -22,14 +22,13 @@ import {
   formatDate,
   isOverdue,
   dayLabel,
-  getWeekday,
-  getFormattedDate,
   generateId,
   todayISO,
 } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
+import { SENTENCE, Connect } from "@/components/ui/Sentence";
 
 type StatusFilter = "pending" | "completed" | "all";
 
@@ -384,6 +383,16 @@ export default function TasksPage() {
     return { all, bySubject };
   }, [tasks, subjects]);
 
+  // The soonest due date among open tasks, for the headline.
+  const nextDue = useMemo(
+    () =>
+      tasks
+        .filter((t) => !t.completed)
+        .map((t) => t.dueDate)
+        .sort()[0],
+    [tasks]
+  );
+
   const currentStats =
     activeSubjectLabel === null
       ? stats.all
@@ -469,47 +478,12 @@ export default function TasksPage() {
   }, [handleNewTask]);
 
   return (
-    <div className="desk-surface relative -mx-8 px-8 -mt-2 pt-2 pb-6">
-      {/* Two restrained desk-surface blobs — atmosphere, no work to do */}
-      <div
-        aria-hidden
-        className="absolute top-32 right-[-80px] w-72 h-72 blob-1 bg-baltic-200/25 dark:bg-baltic-700/15 float-slow pointer-events-none -z-10"
-      />
-      <div
-        aria-hidden
-        className="absolute bottom-24 left-[-50px] w-32 h-32 blob-2 bg-ash-200/30 dark:bg-ash-800/15 float-medium pointer-events-none -z-10"
-      />
-
-      {/* ── HEADER — orient + page-level status chip ── */}
-      <header
-        className="mb-6 sticky-enter"
-        style={{ "--delay": "0ms" } as CSSProperties}
-      >
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-cream-100 dark:bg-cream-900/40 border border-cream-200 dark:border-cream-800/60">
-            <span className="w-1.5 h-1.5 rounded-full bg-cream-500" />
-            <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-cream-700 dark:text-cream-300">
-              {getWeekday()}
-            </span>
-          </span>
-          <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-steel-400">
-            {getFormattedDate()}
-          </span>
-          {(stats.all.pending > 0 || stats.all.overdue > 0) && (
-            <StatusChip pending={stats.all.pending} overdue={stats.all.overdue} />
-          )}
-        </div>
-        {/* pt-1 gives the cap tops room: the typeface's natural line box
-            is taller than 1.1, so leading-[1.1] alone lets the glyph tops sit
-            above the box and clip. Padding (not a taller line-height)
-            keeps the highlighter swipe aligned to the text. */}
-        <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100 leading-[1.1] pt-1">
-          <span className="highlighter">Tasks</span>
-          <span className="text-baltic-600 dark:text-baltic-300">.</span>
-        </h1>
-        <p className="mt-3 text-sm text-steel-500 dark:text-steel-400 max-w-md">
-          {headlineSub(stats.all)}
-        </p>
+    // The app's full width, not the dashboard's narrower column: the
+    // subject tabs need it, or every label truncates. No desk pattern or
+    // blobs (critique, 2026-10-27).
+    <div className="pb-4">
+      <header className="mb-8">
+        <TasksHeadline stats={stats.all} nextDue={nextDue} />
       </header>
 
       {/* ── SUBJECT TABS — folder tabs along the top of the list. Each tab
@@ -532,30 +506,28 @@ export default function TasksPage() {
 
       {/* ── LIST — paper surface, top corners squared so the active folder
             tab dissolves into it with no seam. ── */}
-      <StickyCard topFlat delay={140}>
+      <StickyCard topFlat>
         <div
           id={TABPANEL_ID}
           role="tabpanel"
           aria-labelledby={TABLIST_ID}
         >
-        {/* Eyebrow row — context label, counts, status pills, new button */}
-        <div className="flex items-center gap-3 mb-5 flex-wrap">
-          <CardEyebrow>
+        {/* The view's name and counts, set like the dashboard's "After
+            this" header; the filter and New task on the right. */}
+        <div className="flex items-center gap-x-3 gap-y-2 mb-5 flex-wrap">
+          <h2 className="text-sm font-semibold text-baltic-700 dark:text-baltic-200">
             {activeTab && activeTab.subjectLabel === null && !activeTab.customLabel
               ? "All tasks"
               : activeTab
               ? tabDisplayLabel(activeTab)
               : "All tasks"}
-          </CardEyebrow>
-          <span aria-hidden className="text-steel-300 dark:text-steel-600 text-[10px]">
-            ·
-          </span>
-          <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-steel-400 tabular-nums">
-            {currentStats.pending} pending · {currentStats.completed} done
+          </h2>
+          <span className="text-sm text-steel-600 dark:text-steel-400 tabular-nums">
+            {currentStats.pending} to do · {currentStats.completed} done
             {currentStats.overdue > 0 && (
               <>
                 {" "}·{" "}
-                <span className="text-red-500 dark:text-red-400">
+                <span className="font-semibold text-red-700 dark:text-red-400">
                   {currentStats.overdue} overdue
                 </span>
               </>
@@ -568,7 +540,7 @@ export default function TasksPage() {
             />
             <button
               onClick={handleNewTask}
-              className="press inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-[11px] font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
+              className="press inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-baltic-600 dark:bg-baltic-500 text-white text-sm font-medium hover:bg-baltic-700 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
               style={{
                 transition:
                   "transform 160ms var(--ease-out), background-color 160ms ease",
@@ -601,7 +573,7 @@ export default function TasksPage() {
           />
         ) : (
           <div className="space-y-6">
-            {dayGroups.map((g, gi) => (
+            {dayGroups.map((g) => (
               <DayGroup
                 key={g.label}
                 label={g.label}
@@ -614,7 +586,6 @@ export default function TasksPage() {
                   toggleComplete(id);
                 }}
                 onUncomplete={(id) => toggleComplete(id)}
-                rowDelayBase={200 + gi * 30}
               />
             ))}
           </div>
@@ -701,74 +672,53 @@ export default function TasksPage() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   HEADLINE COPY — branches by state so the sub line teaches and
-   prioritizes instead of just repeating the count.
+   HEADLINE — one sentence, in the dashboard's voice: what's left to
+   do, and when the next of it is due (or how much is overdue). It
+   replaces the page title, the weekday and date chips and the
+   status chip, which said the same things in four places.
    ───────────────────────────────────────────────────────────── */
 
-function headlineSub(stats: {
-  pending: number;
-  completed: number;
-  overdue: number;
-  total: number;
-}): ReactNode {
-  if (stats.total === 0) {
-    return "Add your first task and your study plan starts taking shape.";
-  }
-  if (stats.pending === 0) {
-    return "Caught up — every task closed. Plan what's next.";
-  }
-  if (stats.overdue > 0) {
-    const remaining = stats.pending - stats.overdue;
+function TasksHeadline({
+  stats,
+  nextDue,
+}: {
+  stats: { pending: number; completed: number; overdue: number; total: number };
+  /** Due date of the soonest open task. */
+  nextDue?: string;
+}) {
+  // Nothing to do: the list's empty state below says what to do next,
+  // so the headline doesn't say it again.
+  if (stats.total === 0 || stats.pending === 0) {
     return (
-      <>
-        <span className="text-red-500 dark:text-red-400 font-semibold">
-          {stats.overdue} overdue
-        </span>
-        {remaining > 0 && (
+      <h1 className={SENTENCE}>
+        <span className="sr-only">Tasks: </span>
+        {stats.total === 0 ? (
           <>
-            {" "}· {remaining} more on the way
+            Nothing planned <Connect>yet</Connect>
           </>
+        ) : (
+          "All caught up"
         )}
-        . Tackle the urgent first.
-      </>
+      </h1>
     );
   }
-  if (stats.pending === 1) {
-    return "Just one thing on the list. Knock it out.";
-  }
-  return `${stats.pending} pending. One step at a time.`;
-}
-
-/* ─────────────────────────────────────────────────────────────
-   STATUS CHIP — a single page-level pill that speaks the most
-   urgent fact: overdue if any, otherwise pending count. Mirrors
-   the dashboard's StreakChip in form — colored dot + mono label.
-   ───────────────────────────────────────────────────────────── */
-
-function StatusChip({ pending, overdue }: { pending: number; overdue: number }) {
-  if (overdue > 0) {
-    return (
-      <span
-        className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200/60 dark:border-red-900/60"
-        title={`${overdue} overdue`}
-      >
-        <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-        <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-red-600 dark:text-red-400 tabular-nums">
-          {overdue} overdue
-        </span>
-      </span>
-    );
-  }
+  const day = nextDue ? dayLabel(nextDue) : undefined;
+  const due = day === "Today" || day === "Tomorrow" ? day.toLowerCase() : day;
   return (
-    <span
-      className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-baltic-50 dark:bg-baltic-900/40 border border-baltic-200/60 dark:border-baltic-800/60"
-      title={`${pending} pending`}
-    >
-      <span className="w-1.5 h-1.5 rounded-full bg-baltic-500" />
-      <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-baltic-700 dark:text-baltic-300 tabular-nums">
-        {pending} pending
-      </span>
-    </span>
+    <h1 className={SENTENCE}>
+      <span className="sr-only">Tasks: </span>
+      <span className="whitespace-nowrap tabular-nums">
+        {stats.pending} {stats.pending === 1 ? "task" : "tasks"}
+      </span>{" "}
+      <Connect>to do,</Connect>{" "}
+      {stats.overdue > 0 ? (
+        <span className="whitespace-nowrap tabular-nums text-red-700 dark:text-red-400">{stats.overdue} overdue</span>
+      ) : (
+        <>
+          <Connect>{stats.pending === 1 ? "due" : "the next due"}</Connect> {due}
+        </>
+      )}
+    </h1>
   );
 }
 
@@ -856,10 +806,7 @@ function SubjectTabs({
   );
 
   return (
-    <div
-      className="sticky-enter relative z-10 -mb-px"
-      style={{ "--delay": "70ms" } as CSSProperties}
-    >
+    <div className="relative z-10 -mb-px">
       {/* The folder edge — the hairline every inactive tab rests on. The
           active tab is opaque and paints over it, dissolving into the card
           below so the two read as one continuous surface. */}
@@ -1022,7 +969,7 @@ function SubjectTab({
         closable ? "pl-3.5 pr-1.5" : "px-3.5",
         isActive
           ? "flex-shrink-0 max-w-[18rem] overflow-hidden pt-3 pb-2 bg-white dark:bg-lavender-900 border-lavender-200/70 dark:border-lavender-700/70 font-semibold text-baltic-800 dark:text-baltic-100"
-          : "min-w-0 max-w-[12rem] py-2 border-lavender-200/40 dark:border-lavender-800/40 font-medium text-steel-500 dark:text-steel-400 hover:border-lavender-200/70 dark:hover:border-lavender-700/50 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-baltic-50/50 dark:hover:bg-baltic-900/25"
+          : "min-w-0 max-w-[12rem] py-2 border-lavender-200/40 dark:border-lavender-800/40 font-medium text-steel-600 dark:text-steel-400 hover:border-lavender-200/70 dark:hover:border-lavender-700/50 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-baltic-50/50 dark:hover:bg-baltic-900/25"
       )}
       style={{
         transition:
@@ -1098,10 +1045,10 @@ function SubjectTab({
       {!editing && pending > 0 && (
         <span
           className={cn(
-            "tabular-nums text-[10px] font-mono flex-shrink-0",
+            "tabular-nums text-xs flex-shrink-0",
             isActive
-              ? "text-baltic-500 dark:text-baltic-400"
-              : "text-steel-300 dark:text-steel-600"
+              ? "text-baltic-600 dark:text-baltic-400"
+              : "text-steel-600 dark:text-steel-400"
           )}
         >
           {pending}
@@ -1122,8 +1069,8 @@ function SubjectTab({
           className={cn(
             "press flex items-center justify-center w-[18px] h-[18px] rounded-full flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
             isActive
-              ? "text-steel-400 dark:text-steel-500 hover:bg-baltic-100 dark:hover:bg-baltic-800/60 hover:text-baltic-700 dark:hover:text-baltic-200 opacity-100"
-              : "text-steel-300 dark:text-steel-600 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-baltic-100 dark:hover:bg-baltic-800/60 hover:text-baltic-700 dark:hover:text-baltic-200"
+              ? "text-steel-500 dark:text-steel-500 hover:bg-baltic-100 dark:hover:bg-baltic-800/60 hover:text-baltic-700 dark:hover:text-baltic-200 opacity-100"
+              : "text-steel-500 dark:text-steel-600 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-baltic-100 dark:hover:bg-baltic-800/60 hover:text-baltic-700 dark:hover:text-baltic-200"
           )}
           style={{
             transition:
@@ -1226,7 +1173,7 @@ function AddTabButton({
           "press inline-flex items-center justify-center w-7 h-7 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950",
           open
             ? "bg-white dark:bg-lavender-900 text-baltic-700 dark:text-baltic-200 shadow-sm"
-            : "text-steel-400 dark:text-steel-500 hover:text-baltic-700 dark:hover:text-baltic-200 hover:bg-baltic-50/60 dark:hover:bg-baltic-900/30"
+            : "text-steel-500 dark:text-steel-500 hover:text-baltic-700 dark:hover:text-baltic-200 hover:bg-baltic-50/60 dark:hover:bg-baltic-900/30"
         )}
         style={{
           transition:
@@ -1260,13 +1207,13 @@ function AddTabButton({
           style={{ transformOrigin: alignRight ? "top right" : "top left" }}
         >
           <div className="px-3 pt-2.5 pb-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-steel-500 dark:text-steel-400">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-steel-600 dark:text-steel-400">
               Add tab for
             </p>
           </div>
           <ul className="max-h-64 overflow-y-auto pb-1">
             {subjects.length === 0 ? (
-              <li className="px-3 py-2 text-xs text-steel-400 dark:text-steel-500">
+              <li className="px-3 py-2 text-xs text-steel-600 dark:text-steel-500">
                 No subjects yet.
               </li>
             ) : (
@@ -1292,9 +1239,6 @@ function AddTabButton({
                     />
                     <span className="text-xs font-medium text-baltic-700 dark:text-baltic-300 truncate">
                       {s.label}
-                    </span>
-                    <span className="ml-auto text-[10px] font-mono text-steel-300 dark:text-steel-600">
-                      tab
                     </span>
                   </button>
                 </li>
@@ -1337,7 +1281,7 @@ function AddTabButton({
                   onManageSubjects();
                   setOpen(false);
                 }}
-                className="press w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-medium text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-lavender-50 dark:hover:bg-lavender-800/60 focus:outline-none focus:bg-lavender-50 dark:focus:bg-lavender-800/60"
+                className="press w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-medium text-steel-600 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-lavender-50 dark:hover:bg-lavender-800/60 focus:outline-none focus:bg-lavender-50 dark:focus:bg-lavender-800/60"
                 style={{
                   transition:
                     "background-color 160ms ease, color 160ms ease, transform 160ms var(--ease-out)",
@@ -1367,8 +1311,9 @@ function AddTabButton({
 }
 
 /* ─────────────────────────────────────────────────────────────
-   STATUS FILTER PILLS — Pending / All / Done segmented control.
-   Mono uppercase to read as a control, not as content.
+   STATUS FILTER — To do / All / Done, as the app's chips (the
+   same as Focus's length presets): text-only pills, the selected
+   one filled baltic-100.
    ───────────────────────────────────────────────────────────── */
 
 function StatusFilterPills({
@@ -1379,21 +1324,22 @@ function StatusFilterPills({
   onChange: (v: StatusFilter) => void;
 }) {
   const opts = [
-    { value: "pending", label: "Pending" },
+    { value: "pending", label: "To do" },
     { value: "all", label: "All" },
     { value: "completed", label: "Done" },
   ] as const;
   return (
-    <div className="inline-flex items-center gap-0.5 bg-baltic-50 dark:bg-baltic-900/40 rounded-full p-0.5">
+    <div className="inline-flex items-center gap-1" role="group" aria-label="Show">
       {opts.map((opt) => (
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
+          aria-pressed={value === opt.value}
           className={cn(
-            "press px-2.5 py-1 rounded-full text-[10px] font-mono uppercase tracking-[0.16em] focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
+            "press tap-target px-3 py-1 rounded-full text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
             value === opt.value
-              ? "bg-white dark:bg-lavender-900 shadow-sm text-baltic-800 dark:text-baltic-100"
-              : "text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300"
+              ? "bg-baltic-100 text-baltic-700 dark:bg-baltic-900/60 dark:text-baltic-200"
+              : "text-steel-600 hover:text-baltic-600 hover:bg-lavender-50 dark:text-steel-400 dark:hover:text-baltic-300 dark:hover:bg-lavender-800/40"
           )}
           style={{
             transition:
@@ -1408,9 +1354,8 @@ function StatusFilterPills({
 }
 
 /* ─────────────────────────────────────────────────────────────
-   DAY GROUP — Today / Tomorrow / weekday name / Overdue / Completed.
-   Mirrors the dashboard's WeekBody so the two pages teach the
-   same scanning pattern.
+   DAY GROUP — Today / Tomorrow / weekday name / Overdue / Completed,
+   headed like the dashboard's "After this".
    ───────────────────────────────────────────────────────────── */
 
 function DayGroup({
@@ -1421,7 +1366,6 @@ function DayGroup({
   onSelect,
   onComplete,
   onUncomplete,
-  rowDelayBase,
 }: {
   label: string;
   tasks: Task[];
@@ -1430,7 +1374,6 @@ function DayGroup({
   onSelect: (t: Task) => void;
   onComplete: (id: string, title: string) => void;
   onUncomplete: (id: string) => void;
-  rowDelayBase: number;
 }) {
   const isUrgent = label === "Overdue";
   const isDone = label === "Completed";
@@ -1439,29 +1382,23 @@ function DayGroup({
       <div className="flex items-baseline gap-2 mb-2">
         <h3
           className={cn(
-            "text-[10px] font-bold uppercase tracking-[0.22em]",
+            "text-sm font-semibold",
             isUrgent
-              ? "text-red-500 dark:text-red-400"
+              ? "text-red-700 dark:text-red-400"
               : isDone
-              ? "text-ash-600 dark:text-ash-400"
-              : "text-steel-500 dark:text-steel-400"
+              ? "text-ash-700 dark:text-ash-400"
+              : "text-baltic-700 dark:text-baltic-200"
           )}
         >
           {label}
         </h3>
-        <span className="text-[10px] font-mono text-steel-300 dark:text-steel-600 tabular-nums">
+        <span className="text-sm text-steel-600 dark:text-steel-400 tabular-nums">
           {tasks.length}
         </span>
       </div>
       <ul className="space-y-0.5 -mx-2">
-        {tasks.map((t, i) => (
-          <li
-            key={t.id}
-            className="sticky-enter"
-            style={
-              { "--delay": `${rowDelayBase + i * 25}ms` } as CSSProperties
-            }
-          >
+        {tasks.map((t) => (
+          <li key={t.id}>
             <TaskRow
               task={t}
               subject={getSubject(t.subject)}
@@ -1604,14 +1541,14 @@ function TaskRow({
             className={cn(
               "text-sm font-semibold truncate",
               task.completed
-                ? "text-steel-400 dark:text-steel-500 line-through"
+                ? "text-steel-600 dark:text-steel-500 line-through"
                 : "text-baltic-800 dark:text-baltic-100"
             )}
           >
             {task.title}
           </p>
         </div>
-        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-steel-500 dark:text-steel-400 min-w-0">
+        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-steel-600 dark:text-steel-400 min-w-0">
           {showSubject && (
             <>
               <span
@@ -1637,14 +1574,22 @@ function TaskRow({
         </div>
       </div>
 
-      {/* Hover arrow — same affordance as dashboard's TaskRow */}
-      <span
+      {/* The dashboard's row chevron: the row opens the task. An inline
+          SVG, not a "→" glyph (DESIGN.md: icons are SVG). */}
+      <svg
         aria-hidden
-        className="text-steel-300 dark:text-steel-600 group-hover:translate-x-0.5 group-hover:text-steel-400 dark:group-hover:text-steel-500 flex-shrink-0"
-        style={{ transition: "transform 160ms var(--ease-out), color 160ms ease" }}
+        width={14}
+        height={14}
+        viewBox="0 0 14 14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="flex-shrink-0 text-steel-500 group-hover:text-baltic-600 group-hover:translate-x-0.5 dark:text-steel-500 dark:group-hover:text-baltic-300 transition-[color,transform] duration-150"
       >
-        →
-      </span>
+        <path d="M5.5 3l4 4-4 4" />
+      </svg>
     </div>
   );
 }
@@ -1672,7 +1617,7 @@ function Empty({
   let sub: string;
   if (!hasAnyTasks) {
     title = "Nothing on the list yet.";
-    sub = "Add your first task to start a study plan.";
+    sub = "Add your first task and your study plan starts taking shape.";
   } else if (filterStatus === "completed") {
     title = "Nothing finished yet.";
     sub = "Once you mark something done, it lands here.";
@@ -1680,62 +1625,42 @@ function Empty({
     title = `No ${activeSubjectLabel} tasks.`;
     sub = "Add one to keep the subject moving.";
   } else if (activeSubjectLabel !== null) {
-    title = `No pending ${activeSubjectLabel} tasks.`;
-    sub = "All caught up here. Switch subjects or plan ahead.";
+    title = `Nothing to do in ${activeSubjectLabel}.`;
+    sub = "Switch subjects or plan ahead.";
   } else {
-    title = "Caught up.";
-    sub = "Every pending task is closed. Plan what's next.";
+    title = "All caught up.";
+    sub = "Every task is done. Plan what's next and it will be waiting on the dashboard.";
   }
 
+  // Plain text and a secondary pill: New task, above, is the page's one
+  // filled button. No icon badge; the words say it.
   return (
     <div className="flex flex-col items-center justify-center py-14 text-center">
-      <div className="w-12 h-12 rounded-full bg-cream-50 dark:bg-cream-900/30 border border-cream-200/60 dark:border-cream-800/60 flex items-center justify-center mb-4">
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 20 20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-cream-700 dark:text-cream-400"
-          aria-hidden
-        >
-          <path d="M3 10l3 3L17 5" />
-        </svg>
-      </div>
-      <p className="text-sm font-semibold text-baltic-800 dark:text-baltic-100">
+      <p className="text-base font-semibold text-baltic-800 dark:text-baltic-100">
         {title}
       </p>
-      <p className="text-xs text-steel-500 dark:text-steel-400 mt-1 max-w-xs">
+      <p className="text-sm text-steel-600 dark:text-steel-400 mt-1 max-w-sm">
         {sub}
       </p>
-      <div className="flex items-center gap-3 mt-5">
-        {filterStatus !== "pending" && hasAnyTasks && (
-          <button
-            onClick={onShowPending}
-            className="press text-xs font-semibold text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 rounded-md py-1.5 px-2 -my-1.5 -mx-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
-            style={{
-              transition: "color 160ms ease, transform 160ms var(--ease-out)",
-            }}
-          >
-            Show pending →
-          </button>
-        )}
+      <div className="flex items-center gap-5 mt-5">
         <button
           onClick={onAdd}
-          className="press inline-flex items-center gap-2 px-4 py-2 rounded-full bg-baltic-700 dark:bg-baltic-500 text-white text-xs font-semibold hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
+          className="press inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-lavender-200 text-sm font-medium text-baltic-700 hover:bg-lavender-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 dark:bg-lavender-900 dark:border-lavender-700 dark:text-baltic-200 dark:hover:bg-lavender-800/60"
           style={{
             transition:
               "transform 160ms var(--ease-out), background-color 160ms ease",
           }}
         >
           {hasAnyTasks ? "Add a task" : "Add your first task"}
-          <span aria-hidden className="text-base leading-none">
-            →
-          </span>
         </button>
+        {filterStatus !== "pending" && hasAnyTasks && (
+          <button
+            onClick={onShowPending}
+            className="press tap-target rounded-md px-1 -mx-1 text-sm font-medium text-steel-600 underline decoration-steel-300 underline-offset-2 hover:text-baltic-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 dark:text-steel-400 dark:hover:text-baltic-300"
+          >
+            Show to do
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1903,37 +1828,20 @@ function CloseTabUndoSlot({
 }
 
 /* ─────────────────────────────────────────────────────────────
-   STICKY CARD — flat panel with a thin top accent bar, mirrored
-   from the dashboard so the two pages compose as one space.
+   STICKY CARD — the list's paper panel, the same surface as the
+   dashboard's launcher card. topFlat squares its top corners so the
+   active subject tab merges flush into it.
    ───────────────────────────────────────────────────────────── */
-
-type Accent = "cream" | "ash" | "baltic";
-
-const ACCENT_FILLS: Record<Accent, { light: string; dark: string }> = {
-  cream: { light: "#c7ce64", dark: "#949b31" },
-  ash: { light: "#91a989", dark: "#5e7656" },
-  baltic: { light: "#808eb3", dark: "#4d5b80" },
-};
 
 function StickyCard({
   children,
-  accent,
-  delay = 0,
   className,
   topFlat = false,
 }: {
   children: ReactNode;
-  accent?: Accent;
-  delay?: number;
   className?: string;
-  /**
-   * When true, the card's top corners are squared and the cream/ash/baltic
-   * accent is suppressed — used by the tasks page so the active subject
-   * tab merges flush into the card's top edge.
-   */
   topFlat?: boolean;
 }) {
-  const fill = accent ? ACCENT_FILLS[accent] : null;
   return (
     <div
       className={cn(
@@ -1942,36 +1850,13 @@ function StickyCard({
         // tab row's z-10 above the card paints cleanly and any popover anchored
         // in the row (e.g. AddTabButton) renders over the card content instead
         // of slipping behind it.
-        "paper-card sticky-enter relative isolate px-6 pt-7 pb-6 border border-lavender-200/60 dark:border-lavender-800/60 overflow-hidden",
+        "paper-card relative isolate px-6 pt-7 pb-6 border border-lavender-200/60 dark:border-lavender-800/60 overflow-hidden",
         topFlat && "!rounded-t-none",
         className
       )}
-      style={{ "--delay": `${delay}ms` } as CSSProperties}
     >
-      {fill && !topFlat && (
-        <>
-          <div
-            aria-hidden
-            className="absolute inset-x-0 top-0 h-1 dark:hidden"
-            style={{ backgroundColor: fill.light }}
-          />
-          <div
-            aria-hidden
-            className="absolute inset-x-0 top-0 h-1 hidden dark:block"
-            style={{ backgroundColor: fill.dark }}
-          />
-        </>
-      )}
       <div className="relative z-10">{children}</div>
     </div>
-  );
-}
-
-function CardEyebrow({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-steel-500 dark:text-steel-400">
-      {children}
-    </p>
   );
 }
 
@@ -2076,8 +1961,8 @@ function AddSubjectModal({
           <span className="text-xs font-semibold text-baltic-800 dark:text-baltic-100 truncate">
             {label.trim() || "Subject preview"}
           </span>
-          <span className="ml-auto text-[10px] font-mono uppercase tracking-[0.18em] text-steel-400">
-            preview
+          <span className="ml-auto text-[11px] uppercase tracking-[0.18em] text-steel-600 dark:text-steel-400">
+            Preview
           </span>
         </div>
 
@@ -2172,7 +2057,7 @@ function ManageSubjectsModal({
   return (
     <Modal open={open} onClose={onClose} title="Manage subjects" width="sm">
       {subjects.length === 0 ? (
-        <p className="text-sm text-steel-500 dark:text-steel-400 py-2">
+        <p className="text-sm text-steel-600 dark:text-steel-400 py-2">
           No subjects yet. Add one from the + on the tab row.
         </p>
       ) : (
@@ -2207,7 +2092,7 @@ function ManageSubjectsModal({
                       }}
                       maxLength={30}
                       aria-label="Subject name"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-400 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth"
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-600 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth"
                     />
                     <div className="flex flex-wrap items-center gap-1.5">
                       {SUBJECT_COLORS.map((c) => {
@@ -2258,7 +2143,7 @@ function ManageSubjectsModal({
                           setEditingId(null);
                           setError("");
                         }}
-                        className="press px-3 py-1.5 text-xs font-medium rounded-full text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-lavender-100/60 dark:hover:bg-lavender-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
+                        className="press px-3 py-1.5 text-xs font-medium rounded-full text-steel-600 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-lavender-100/60 dark:hover:bg-lavender-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
                         style={{
                           transition:
                             "color 160ms ease, transform 160ms var(--ease-out)",
@@ -2279,14 +2164,14 @@ function ManageSubjectsModal({
                       <span className="flex-1 min-w-0 truncate text-sm font-medium text-baltic-800 dark:text-baltic-100">
                         {s.label}
                       </span>
-                      <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-steel-400 tabular-nums flex-shrink-0">
+                      <span className="text-xs text-steel-600 dark:text-steel-400 tabular-nums flex-shrink-0">
                         {count} {count === 1 ? "task" : "tasks"}
                       </span>
                       <button
                         type="button"
                         onClick={() => startEdit(s)}
                         aria-label={`Rename ${s.label}`}
-                        className="press flex-shrink-0 p-1.5 -m-0.5 rounded-md text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-200 hover:bg-lavender-100/70 dark:hover:bg-lavender-800/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
+                        className="press flex-shrink-0 p-1.5 -m-0.5 rounded-md text-steel-500 hover:text-baltic-700 dark:hover:text-baltic-200 hover:bg-lavender-100/70 dark:hover:bg-lavender-800/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
                         style={{
                           transition:
                             "color 160ms ease, background-color 160ms ease, transform 160ms var(--ease-out)",
@@ -2318,7 +2203,7 @@ function ManageSubjectsModal({
                           "press flex-shrink-0 p-1.5 -m-0.5 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600",
                           isConfirming
                             ? "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40"
-                            : "text-steel-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
+                            : "text-steel-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
                         )}
                         style={{
                           transition:
@@ -2506,7 +2391,7 @@ function AddTaskModal({
             Description
           </label>
           <textarea
-            className="w-full px-3 py-2 text-sm rounded-xl border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-400 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth resize-none"
+            className="w-full px-3 py-2 text-sm rounded-xl border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-600 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth resize-none"
             rows={2}
             placeholder="Additional details (optional)"
             value={description}
@@ -2533,7 +2418,7 @@ function AddTaskModal({
                     "press inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
                     isActive
                       ? "bg-white dark:bg-lavender-900 border-lavender-300 dark:border-lavender-700 shadow-sm text-baltic-800 dark:text-baltic-100"
-                      : "border-transparent text-steel-500 dark:text-steel-400 hover:bg-lavender-50 dark:hover:bg-lavender-900/40"
+                      : "border-transparent text-steel-600 dark:text-steel-400 hover:bg-lavender-50 dark:hover:bg-lavender-900/40"
                   )}
                   style={{
                     transition:
@@ -2566,7 +2451,7 @@ function AddTaskModal({
                 "press inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
                 addingSubject
                   ? "border-baltic-400 dark:border-baltic-500 bg-baltic-50 dark:bg-baltic-900/40 text-baltic-700 dark:text-baltic-200"
-                  : "border-lavender-300 dark:border-lavender-700 text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:border-lavender-400 dark:hover:border-lavender-600"
+                  : "border-lavender-300 dark:border-lavender-700 text-steel-600 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:border-lavender-400 dark:hover:border-lavender-600"
               )}
               style={{
                 transition:
@@ -2612,7 +2497,7 @@ function AddTaskModal({
                 placeholder="New subject name"
                 maxLength={30}
                 aria-label="New subject name"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-400 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-600 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth"
               />
               <div className="flex flex-wrap items-center gap-1.5">
                 {SUBJECT_COLORS.map((c) => {
@@ -2660,7 +2545,7 @@ function AddTaskModal({
                 <button
                   type="button"
                   onClick={cancelAddSubject}
-                  className="press px-3 py-1.5 text-xs font-medium rounded-full text-steel-500 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-lavender-100/60 dark:hover:bg-lavender-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
+                  className="press px-3 py-1.5 text-xs font-medium rounded-full text-steel-600 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-lavender-100/60 dark:hover:bg-lavender-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
                   style={{
                     transition:
                       "color 160ms ease, transform 160ms var(--ease-out)",
@@ -2673,7 +2558,7 @@ function AddTaskModal({
           )}
 
           {subjects.length === 0 && !addingSubject && (
-            <p className="text-xs text-steel-400 dark:text-steel-500">
+            <p className="text-xs text-steel-600 dark:text-steel-500">
               No subjects yet — add one to file this task.
             </p>
           )}
@@ -2713,7 +2598,7 @@ function AddTaskModal({
                       "press flex-1 py-2 rounded-xl text-xs font-medium border focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
                       isActive
                         ? "border-baltic-400 bg-baltic-50 text-baltic-800 dark:bg-baltic-900/60 dark:text-baltic-200 dark:border-baltic-600"
-                        : "border-lavender-200 dark:border-lavender-700 text-steel-500 hover:border-lavender-300 dark:hover:border-lavender-600"
+                        : "border-lavender-200 dark:border-lavender-700 text-steel-600 hover:border-lavender-300 dark:hover:border-lavender-600"
                     )}
                     style={{
                       transition:
@@ -2809,7 +2694,7 @@ function TaskDetailModal({
           </p>
         )}
 
-        <div className="flex items-center gap-3 text-[11px] font-mono uppercase tracking-[0.16em] text-steel-400 dark:text-steel-500">
+        <div className="flex items-center gap-3 text-sm text-steel-600 dark:text-steel-400">
           <span>
             Due {formatDate(task.dueDate)}
             {overdue && (

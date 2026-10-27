@@ -31,6 +31,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 import AimLogo from "@/components/layout/AimLogo";
+import { SENTENCE, Connect } from "@/components/ui/Sentence";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import type { Task, UserSubject } from "@/lib/types";
@@ -387,20 +388,6 @@ function StreakChip({ streak, last7 }: { streak: number; last7: boolean[] }) {
   );
 }
 
-/* The launcher's headlines are each one sentence at headline size:
-   "focus for 25m on Lab report", "just logged 45m of Science", "paused
-   on Linear algebra". What matters is in the grotesque; the words that
-   join it step back in an italic serif, like a note in a textbook's
-   margin. They used to sit on a line of their own in Caveat, a size
-   down, which read as a label over a title rather than a sentence
-   (critique, 2026-10-27). */
-const SENTENCE =
-  "text-3xl sm:text-4xl font-bold tracking-tight leading-[1.15] text-baltic-800 dark:text-baltic-100";
-
-function Connect({ children }: { children: ReactNode }) {
-  return <span className="font-connect text-baltic-600 dark:text-baltic-300">{children}</span>;
-}
-
 /* ─────────────────────────────────────────────────────────────
    HERO — the launcher. The Focus setup sentence, already filled
    in: "focus for 25m on <task>", read as one sentence at headline
@@ -521,7 +508,8 @@ function HeroBody({
   const loggedHeadline = justLogged && (
     <>
       <h1 id="launcher-headline" className={SENTENCE}>
-        <Connect>just logged</Connect> <span className="tabular-nums">{formatTime(justLogged.minutes)}</span>{" "}
+        <Connect>just logged</Connect>{" "}
+        <span className="whitespace-nowrap tabular-nums">{formatTime(justLogged.minutes)}</span>{" "}
         <Connect>of</Connect> {justLogged.label}
       </h1>
       {/* The session that reached the day's goal is the day's biggest

@@ -1,24 +1,18 @@
 "use client";
 
-import { useMemo, type CSSProperties, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
+import Link from "next/link";
 import { useFocus, useSubjects } from "@/lib/contexts";
-import { formatTime, getFormattedDate, getWeekday, cn } from "@/lib/utils";
+import { formatTime, cn } from "@/lib/utils";
 import QualityIndicator from "@/components/ui/QualityIndicator";
+import { SENTENCE, Connect } from "@/components/ui/Sentence";
+import type { FocusSession } from "@/lib/types";
 
-// Subtle rotations for the "polaroid" cards — deterministic by index
-const ROTATIONS = ["-rotate-1", "rotate-0", "rotate-1", "-rotate-[0.5deg]", "rotate-[0.5deg]"];
-const TAPE_COLORS = [
-  "bg-baltic-300/60 dark:bg-baltic-600/50",
-  "bg-cream-300/70 dark:bg-cream-600/50",
-  "bg-ash-300/60 dark:bg-ash-600/50",
-  "bg-lavender-300/70 dark:bg-lavender-600/50",
-];
-
-// Small uppercase section label — mirrors the dashboard/tasks CardEyebrow so
-// the journal's cards read in the same visual language.
+// Small uppercase label for the chart card. The chart is replaced by the
+// week of "a"s next (/arrange); until then it keeps its own label.
 function CardEyebrow({ children }: { children: ReactNode }) {
   return (
-    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-steel-500 dark:text-steel-400">
+    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-steel-600 dark:text-steel-400">
       {children}
     </p>
   );
@@ -127,77 +121,41 @@ export default function JournalPage() {
   }
 
   return (
-    <div className="desk-surface relative -mx-8 px-8 -mt-2 pt-2 pb-6">
-      {/* Two restrained desk-surface blobs — atmosphere, no work to do */}
-      <div
-        aria-hidden
-        className="absolute top-32 right-[-80px] w-72 h-72 blob-1 bg-cream-200/25 dark:bg-cream-800/15 float-slow pointer-events-none -z-10"
-      />
-      <div
-        aria-hidden
-        className="absolute bottom-24 left-[-50px] w-32 h-32 blob-2 bg-baltic-200/25 dark:bg-baltic-700/15 float-medium pointer-events-none -z-10"
-      />
-
-      {/* ── HEADER — orient + page-level status chip, matching dashboard/tasks ── */}
-      <header
-        className="mb-8 sticky-enter"
-        style={{ "--delay": "0ms" } as CSSProperties}
-      >
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-cream-100 dark:bg-cream-900/40 border border-cream-200 dark:border-cream-800/60">
-            <span className="w-1.5 h-1.5 rounded-full bg-cream-500" />
-            <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-cream-700 dark:text-cream-300">
-              {getWeekday()}
-            </span>
-          </span>
-          <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-steel-400">
-            {getFormattedDate()}
-          </span>
-          {sessions.length > 0 && (
-            <span
-              className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-baltic-50 dark:bg-baltic-900/40 border border-baltic-200/60 dark:border-baltic-800/60"
-              title={`${sessions.length} session${
-                sessions.length !== 1 ? "s" : ""
-              } recorded`}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-baltic-500" />
-              <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-baltic-700 dark:text-baltic-300 tabular-nums">
-                {sessions.length} logged
-              </span>
-            </span>
+    // The dashboard's column: one sentence, then the record. No desk
+    // pattern, blobs, tape or tilt (critique, 2026-10-27).
+    <div className="mx-auto max-w-4xl pb-4">
+      <header className="mb-8">
+        {/* One sentence, in the dashboard's voice: the week in numbers. */}
+        <h1 className={SENTENCE}>
+          <span className="sr-only">Journal: </span>
+          {weeklyStats.count > 0 ? (
+            <>
+              <Connect>this week,</Connect>{" "}
+              <span className="whitespace-nowrap tabular-nums">
+                {weeklyStats.count} {weeklyStats.count === 1 ? "session" : "sessions"}
+              </span>{" "}
+              <Connect>for</Connect>{" "}
+              <span className="whitespace-nowrap tabular-nums">{formatTime(weeklyStats.totalMinutes)}</span>
+            </>
+          ) : sessions.length > 0 ? (
+            <>
+              No sessions <Connect>yet this week</Connect>
+            </>
+          ) : (
+            <>
+              Nothing logged <Connect>yet</Connect>
+            </>
           )}
-        </div>
-        <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100 leading-[1.1] pt-1">
-          <span className="highlighter">Journal</span>
-          <span className="text-baltic-600 dark:text-baltic-300">.</span>
         </h1>
-        <p className="mt-3 text-sm text-steel-500 dark:text-steel-400 max-w-md">
+        <p className="mt-3 text-sm text-steel-600 dark:text-steel-400 max-w-md">
           {sessions.length > 0
             ? "Every focus session, with what you worked on and how it felt."
-            : "Finish a focus session and it starts filling in here."}
+            : "Finish a focus session and it lands here, with what you worked on and how it felt."}
         </p>
       </header>
 
-      {/* ── SECTION 2: Weekly rhythm (heatmap) + summary — paper-card so it
-            shares the dashboard's card system; baltic accent ties to the bars ── */}
       {sessions.length > 0 && (
-        <section
-          className="paper-card sticky-enter relative mb-8 px-6 pt-7 pb-6 border border-lavender-200/60 dark:border-lavender-800/60 overflow-hidden"
-          style={{ "--delay": "80ms" } as CSSProperties}
-        >
-          {/* Top accent — the only color that distinguishes one card from
-              another (light/dark inline, mirrors dashboard StickyCard) */}
-          <div
-            aria-hidden
-            className="absolute inset-x-0 top-0 h-1 dark:hidden"
-            style={{ backgroundColor: "#808eb3" }}
-          />
-          <div
-            aria-hidden
-            className="absolute inset-x-0 top-0 h-1 hidden dark:block"
-            style={{ backgroundColor: "#4d5b80" }}
-          />
-          <div className="relative z-10">
+        <section className="paper-card relative mb-10 px-6 pt-7 pb-6 border border-lavender-200/60 dark:border-lavender-800/60">
           {/* Eyebrow + one honest line on how to read the chart */}
           <CardEyebrow>Last 7 days</CardEyebrow>
           <p className="mt-1.5 mb-6 text-xs text-steel-500 dark:text-steel-400">
@@ -366,163 +324,91 @@ export default function JournalPage() {
               </div>
             </div>
           </div>
-          </div>
         </section>
       )}
 
-      {/* ─── SECTION 3: Journal entries — polaroid style ─── */}
+      {/* ── Entries: a plain list per day, like the dashboard's "After
+            this", not a wall of cards. ── */}
       {grouped.length > 0 ? (
-        <section
-          className="space-y-10 sticky-enter"
-          style={{ "--delay": "160ms" } as CSSProperties}
-        >
-          <div className="flex items-center gap-3 px-1">
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.22em] text-steel-500 dark:text-steel-400">
-              Entries
-            </h2>
-            <div className="flex-1 h-px bg-lavender-200 dark:bg-lavender-800" />
-          </div>
-
-          {grouped.map((group) => (
-            <div key={group.dateKey} className="relative">
-              {/* Date banner */}
-              <div className="flex items-center gap-4 mb-5">
-                <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-baltic-100 dark:bg-baltic-900/50 border border-baltic-200 dark:border-baltic-700/60">
-                  <span className="w-1.5 h-1.5 rounded-full bg-baltic-500" />
-                  <span className="text-xs font-bold text-baltic-700 dark:text-baltic-200 uppercase tracking-wider">
-                    {group.label}
-                  </span>
-                </div>
-                <span className="text-xs text-steel-400 font-medium">
-                  {group.sessions.length} session
-                  {group.sessions.length !== 1 ? "s" : ""} ·{" "}
+        <div className="space-y-8">
+          {grouped.map((group, gi) => (
+            <section key={group.dateKey} aria-labelledby={`journal-day-${gi}`}>
+              <div className="flex items-baseline justify-between gap-4 px-1 mb-2">
+                <h2 id={`journal-day-${gi}`} className="text-sm font-semibold text-baltic-700 dark:text-baltic-200">
+                  {group.label}
+                </h2>
+                <span className="text-sm text-steel-600 dark:text-steel-400 tabular-nums">
+                  {group.sessions.length} {group.sessions.length === 1 ? "session" : "sessions"} ·{" "}
                   {formatTime(group.totalMinutes)}
                 </span>
-                <div className="flex-1 h-px border-t border-dashed border-lavender-200 dark:border-lavender-800" />
               </div>
-
-              {/* Polaroid grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 px-2">
-                {group.sessions.map((session, idx) => {
-                  const sub = resolveSubject(session.subject);
-                  const time = new Date(session.completedAt).toLocaleTimeString(
-                    "en-US",
-                    { hour: "numeric", minute: "2-digit" }
-                  );
-                  const rotation = ROTATIONS[idx % ROTATIONS.length];
-                  const tapeColor = TAPE_COLORS[idx % TAPE_COLORS.length];
-
-                  return (
-                    <div
-                      key={session.id}
-                      className={cn(
-                        "journal-card relative rounded-xl bg-white dark:bg-lavender-900 border-2 border-lavender-200 dark:border-lavender-800 p-5 pt-7 shadow-md hover:shadow-lg hover:rotate-0 hover:z-10",
-                        rotation
-                      )}
-                      style={{
-                        transition:
-                          "transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out)",
-                      }}
-                    >
-                      {/* Tape strip */}
-                      <div
-                        className={cn(
-                          "absolute -top-2 left-1/2 -translate-x-1/2 w-16 h-4 rounded-sm shadow-sm",
-                          tapeColor
-                        )}
-                        style={{
-                          clipPath:
-                            "polygon(5% 0, 95% 0, 100% 100%, 0 100%)",
-                        }}
-                      />
-
-                      {/* Subject stripe */}
-                      <div
-                        className="absolute top-0 left-0 bottom-0 w-1.5 rounded-l-xl"
-                        style={{ backgroundColor: sub.color }}
-                      />
-
-                      {/* Header row */}
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span
-                              className="w-2 h-2 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: sub.color }}
-                            />
-                            <span className="text-xs font-bold text-baltic-700 dark:text-baltic-200 uppercase tracking-wider truncate">
-                              {sub.label}
-                            </span>
-                          </div>
-                          <p className="text-3xl font-bold text-baltic-800 dark:text-baltic-100 leading-none tracking-tight">
-                            {formatTime(session.duration)}
-                          </p>
-                        </div>
-                        <span className="text-[11px] font-mono text-steel-400 tabular-nums whitespace-nowrap bg-lavender-50 dark:bg-lavender-800/40 px-2 py-0.5 rounded">
-                          {time}
-                        </span>
-                      </div>
-
-                      {/* What they worked on */}
-                      {session.task && (
-                        <p className="text-sm font-medium text-baltic-700 dark:text-baltic-200 mb-2 truncate">
-                          {session.task}
-                        </p>
-                      )}
-
-                      {/* Quality */}
-                      {session.reflection && (
-                        <div className="flex items-center gap-2 mb-2">
-                          <QualityIndicator
-                            quality={session.reflection.quality}
-                            size={14}
-                            showLabel
-                          />
-                        </div>
-                      )}
-
-                      {/* Note */}
-                      {session.reflection?.note ? (
-                        <div className="mt-3 pt-3 border-t border-dashed border-lavender-200 dark:border-lavender-700">
-                          <p className="text-sm text-steel-600 dark:text-steel-300 italic leading-relaxed">
-                            &ldquo;{session.reflection.note}&rdquo;
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="mt-3 pt-3 border-t border-dashed border-lavender-200 dark:border-lavender-700">
-                          <p className="text-[11px] text-steel-400 italic">
-                            No reflection recorded
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+              <ul className="divide-y divide-lavender-200/70 dark:divide-lavender-800/60 border-y border-lavender-200/70 dark:border-lavender-800/60">
+                {group.sessions.map((session) => (
+                  <EntryRow key={session.id} session={session} subject={resolveSubject(session.subject)} />
+                ))}
+              </ul>
+            </section>
           ))}
-        </section>
+        </div>
       ) : (
-        <section
-          className="sticky-enter rounded-2xl border border-dashed border-lavender-300 dark:border-lavender-700 bg-white dark:bg-lavender-900 py-16 text-center"
-          style={{ "--delay": "80ms" } as CSSProperties}
+        <Link
+          href="/focus"
+          className="press inline-flex items-center gap-2 rounded-full border border-lavender-200 bg-white px-4 py-2 text-sm font-medium text-baltic-700 hover:bg-lavender-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 dark:border-lavender-700 dark:bg-lavender-900 dark:text-baltic-200"
         >
-          <div className="flex justify-center gap-2 mb-4">
-            <div className="w-5 h-5 rounded-full bg-lavender-200/60 dark:bg-lavender-700/30" />
-            <div className="w-3 h-3 rounded-full bg-cream-200/60 dark:bg-cream-700/30 mt-2" />
-            <div className="w-4 h-4 rounded-full bg-baltic-200/60 dark:bg-baltic-700/30 mt-0.5" />
-          </div>
-          <p className="text-sm font-medium text-baltic-700 dark:text-baltic-300">
-            No sessions recorded yet
-          </p>
-          <a
-            href="/focus"
-            className="mt-4 inline-block text-sm font-medium text-baltic-700 dark:text-baltic-300 underline decoration-steel-300 underline-offset-2 hover:text-baltic-800"
-          >
-            Start a focus session
-          </a>
-        </section>
+          Start a focus session
+        </Link>
       )}
     </div>
+  );
+}
+
+/* One logged session: when, how long, what it was for, and how it felt.
+   The subject's dot leads the row, as in the dashboard's lists. */
+function EntryRow({
+  session,
+  subject,
+}: {
+  session: FocusSession;
+  subject: { label: string; color: string };
+}) {
+  const time = new Date(session.completedAt).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const task = session.task?.trim();
+  const note = session.reflection?.note?.trim();
+  return (
+    <li className="flex items-start gap-3 px-1 py-3.5">
+      <span className="w-[4.5rem] flex-shrink-0 text-sm tabular-nums text-steel-600 dark:text-steel-400">{time}</span>
+      <span
+        aria-hidden
+        className="mt-[7px] w-2 h-2 rounded-full flex-shrink-0"
+        style={{ backgroundColor: subject.color }}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="flex items-baseline gap-2 min-w-0 text-[15px] text-baltic-800 dark:text-baltic-100">
+          <span className="font-semibold tabular-nums flex-shrink-0">{formatTime(session.duration)}</span>
+          {/* What it was for; with no task noted, the subject is the title. */}
+          <span title={task || subject.label} className="truncate">
+            {task || subject.label}
+          </span>
+        </p>
+        {(task || session.reflection) && (
+          // A div: the quality mark inside it is a div of its own.
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-steel-600 dark:text-steel-400">
+            {task && <span>{subject.label}</span>}
+            {task && session.reflection && (
+              <span aria-hidden className="text-steel-300 dark:text-steel-600">·</span>
+            )}
+            {session.reflection && <QualityIndicator quality={session.reflection.quality} size={14} showLabel />}
+          </div>
+        )}
+        {note && (
+          <p className="mt-1.5 text-sm leading-relaxed text-baltic-700 dark:text-baltic-200">
+            &ldquo;{note}&rdquo;
+          </p>
+        )}
+      </div>
+    </li>
   );
 }

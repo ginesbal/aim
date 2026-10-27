@@ -45,12 +45,10 @@ export default function SettingsPage() {
 
   return (
     <div className="relative space-y-6 max-w-2xl mx-auto">
-      {/* Decorative blob */}
-      <div className="absolute -top-8 -right-20 w-36 h-36 blob-2 bg-ash-200/20 dark:bg-ash-700/10 float-slow pointer-events-none" />
 
       <div>
         <h1 className="text-display text-baltic-800 dark:text-baltic-100">Settings</h1>
-        <p className="text-sm text-steel-400 mt-1">Manage your preferences</p>
+        <p className="text-sm text-steel-600 dark:text-steel-400 mt-1">Manage your preferences</p>
       </div>
 
       {/* Profile */}

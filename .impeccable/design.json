@@ -28,7 +28,7 @@
       "title": { "displayName": "Title", "purpose": "The greeting." },
       "body": { "displayName": "Body", "purpose": "Status lines, lists and help text." },
       "label": { "displayName": "Label", "purpose": "Uppercase captions on Focus and in menus, in steel-600." },
-      "mono-label": { "displayName": "Mono label", "purpose": "Dates, counts and filter chips on Tasks and Journal (JetBrains Mono, 10-11px, uppercase)." }
+      "mono-label": { "displayName": "Mono label", "purpose": "Retired from Tasks and Journal (critique, 2026-10-27); left only on the Journal chart axis and the parked day chips (JetBrains Mono, 10-11px, uppercase)." }
     },
     "shadows": [
       { "name": "resting-paper", "value": "0 1px 1px rgba(38,45,64,.04), 0 4px 8px -2px rgba(38,45,64,.06), 0 14px 28px -10px rgba(38,45,64,.10)", "purpose": "Dashboard cards resting on the desk." },

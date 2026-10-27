@@ -56,7 +56,9 @@ export default function QualityIndicator({
         )}
       </svg>
       {showLabel && (
-        <span className="text-xs text-steel-500 dark:text-steel-400">{level.label}</span>
+        // Sized by the line it sits in; steel-600 is the lightest text colour
+        // that holds 4.5:1 on white.
+        <span className="text-steel-600 dark:text-steel-400">{level.label}</span>
       )}
     </div>
   );

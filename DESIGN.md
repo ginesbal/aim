@@ -164,7 +164,7 @@ Ten muted colours that students assign to their subjects: Baltic blue `#60729f`,
 
 **Body Font:** Bricolage Grotesque (with system-ui fallback)
 **Connecting Font:** Newsreader italic 400, for the words that join a sentence only
-**Label/Mono Font:** JetBrains Mono, for small uppercase captions on Tasks and Journal
+**Mono Font:** JetBrains Mono, now only on the Journal chart's axis and the parked day chips (both due to go)
 
 **Character:** A warm, slightly irregular grotesque carries all content and controls; a reading serif, in italic, joins the words of a sentence, so the headline reads like a line of annotated notes. It replaced Caveat, whose handwriting read as a kid's notebook and sat a size down on a line of its own, so the headline read as a label over a title (critique, 2026-10-27).
 
@@ -175,7 +175,7 @@ Ten muted colours that students assign to their subjects: Baltic blue `#60729f`,
 - **Title** (600, 1.25rem): the greeting. Also 1.125rem 500 for "How focused were you?" on the ending card.
 - **Body** (400, 0.875rem, line-height 1.5): status lines, lists, help text. Button labels are 15px 500.
 - **Label** (400, 11px, uppercase, tracking 0.18em to 0.22em, `steel-600`): small captions on Focus and in menus ("Focusing on", "of 25:00", "Pattern").
-- **Mono label** (JetBrains Mono 400, 10px to 11px, uppercase, tracking 0.16em to 0.18em, tabular figures): dates, counts and filter chips on Tasks and Journal, and the parked day chips on the dashboard. Not used on Focus or in the launcher.
+- **Mono label** (JetBrains Mono 400, 10px to 11px, uppercase, tracking 0.16em to 0.18em, tabular figures): retired from Tasks and Journal, where it read as decoration rather than information (critique, 2026-10-27); their dates, counts and filters are set in the body font, and their section headings like the dashboard's ("After this": 14px 600 `baltic-700`). Left only on the Journal chart's axis, which `/arrange` replaces, and the parked day chips on the dashboard.
 
 **The Connecting Words Rule.** The italic serif only joins the words of a sentence. It never carries content, a number or a control label.
 
@@ -184,6 +184,8 @@ Ten muted colours that students assign to their subjects: Baltic blue `#60729f`,
 The dashboard is a single centred column, 896px wide at most, inside a page frame of 1152px with 16px gutters on phones and 32px from 640px. A fixed 64px top bar holds the logo, the page navigation, help and profile; on phones the navigation moves to a bottom tab bar.
 
 The launcher card is a two-column grid from 1024px: the sentence and its button on the left, the "a" meter (144px) in an 11rem column on the right. Below 1024px the meter drops under the sentence. "After this" is a plain list under the card, not more cards.
+
+Tasks and Journal open the way the dashboard does, with one sentence as the headline ("5 tasks to do, the next due today", "this week, 4 sessions for 2h 30m"), and no page title, date chips or status chips. Journal sits in the dashboard's 896px column; its entries are plain rows grouped by day, headed like "After this", not cards. Tasks uses the full frame width, because its subject tabs truncate in the narrower column; its list sits on one paper card, the active tab merging into its top edge. Neither page has a desk pattern, blobs, tape or tilted cards.
 
 Focus is a full-screen canvas. Its stage is centred and scrolls when it is taller than the window, so nothing is ever cut off. Controls sit at the top right; the session's context pill sits at the top left (on phones, on its own row below the controls). During a session, "Hide timer" (top right) clears the clock and its controls so the backdrop shows whole; the pill then carries the countdown (and "Paused") and brings the timer back when clicked. The timer returns by itself when the session ends.
 
@@ -219,7 +221,7 @@ Soft and tactile: fully rounded pills that press in slightly (scale 0.97 over 16
 - **Focus:** a 2px `baltic-500` outline, offset 2px, on every control; links and menu rows draw the same colour as a 2px ring.
 
 ### Chips
-- **Style:** text-only pills for duration presets (25m, 45m, 1h, 1h 30m).
+- **Style:** text-only pills for duration presets (25m, 45m, 1h, 1h 30m) and the Tasks filter (To do, All, Done), in the body font.
 - **State:** the selected chip fills with `baltic-100` and darkens its label to `baltic-700`.
 
 ### Cards / Containers
