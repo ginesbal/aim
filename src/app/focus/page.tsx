@@ -146,6 +146,13 @@ export default function FocusPage() {
   const backdropMenuRef = useRef<HTMLDivElement>(null);
   const backdropBtnRef = useRef<HTMLButtonElement>(null);
 
+  // "Hide timer": the clock and its controls step away so the backdrop
+  // can be seen whole, and the session pill carries the countdown
+  // instead. Only while a session runs or is paused; it resets when the
+  // session ends, so the completion moment and the next setup are seen.
+  const [timerHidden, setTimerHidden] = useState(false);
+  const hideTimerBtnRef = useRef<HTMLButtonElement>(null);
+
   const [topoPreset, selectPreset] = useStoredChoice(TOPO_STORAGE_KEY, TOPO_PRESETS.map((p) => p.key), "baltic");
   const activePreset = TOPO_PRESETS.find((p) => p.key === topoPreset) ?? TOPO_PRESETS[0];
   // Fog by default: the calmest moving pattern, and the one that keeps
@@ -530,6 +537,18 @@ export default function FocusPage() {
       ?.focus();
   }, [backdropOpen]);
 
+  const sessionActive = timerState === "running" || timerState === "paused";
+  useEffect(() => {
+    if (!sessionActive) setTimerHidden(false);
+  }, [sessionActive]);
+
+  // Bringing the timer back from the pill: the pill turns back into a
+  // plain label, so focus moves to the toggle that hides it again.
+  const showTimer = useCallback(() => {
+    setTimerHidden(false);
+    hideTimerBtnRef.current?.focus();
+  }, []);
+
   // Leaving a running session pauses it, so the button says so up front.
   const leaveLabel = timerState === "idle" ? "Exit" : timerState === "running" ? "Pause & leave" : "Leave";
 
@@ -600,37 +619,83 @@ export default function FocusPage() {
           drops to its own centred row beneath them. ── */}
       {timerState !== "idle" && (
         <header className="absolute top-[5.25rem] inset-x-4 flex justify-center sm:top-6 sm:left-6 sm:right-auto sm:block z-10 focus-stage-enter">
-          <div className="focus-panel rounded-full px-4 py-2 flex items-center gap-3 min-w-0">
-            {/* Paused has no word here: the label under the clock and the
-                dimmed ring already say it, and once is enough. */}
-            {timerState !== "paused" && (
-              <span className="whitespace-nowrap text-[11px] uppercase tracking-[0.2em] text-steel-600">
-                {/* Keyed so the label re-mounts and blur-fades in on each state
-                    change, bridging the swap instead of snapping. */}
-                <span key={timerState} className="focus-label-swap inline-block">
-                  {timerState === "running" && "Focusing on"}
-                  {timerState === "done" && "Session complete"}
-                  {timerState === "reflecting" && "Reflecting"}
+          {timerHidden ? (
+            // With the timer hidden, the pill is the clock: the countdown
+            // first, then what it's for. Clicking it brings the timer back.
+            <button
+              onClick={showTimer}
+              className="focus-panel focus-label-swap tap-target rounded-full pl-4 pr-3 py-2 flex items-center gap-3 min-w-0 hover:bg-white transition-colors duration-150 press"
+            >
+              <span className="sr-only">Show timer, </span>
+              <span className="text-sm font-medium tabular-nums text-baltic-800">
+                {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+              </span>
+              {/* The clock that would say "Paused" is hidden, so the pill does. */}
+              {timerState === "paused" && (
+                <span className="whitespace-nowrap text-[11px] uppercase tracking-[0.2em] text-steel-600">Paused</span>
+              )}
+              <span className="flex items-center gap-2 min-w-0">
+                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: subjectColor }} aria-hidden />
+                <span title={pillSubtitle} className="text-sm text-baltic-700 truncate max-w-[22ch] lg:max-w-[40ch]">
+                  {pillSubtitle}
                 </span>
               </span>
-            )}
-            <div className="flex items-center gap-2 min-w-0">
-              <div
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors duration-300"
-                style={{ backgroundColor: subjectColor }}
-                aria-hidden
-              />
-              {/* Wider where there's room; the full name on hover when cut. */}
-              <span title={pillSubtitle} className="text-sm text-baltic-700 truncate max-w-[22ch] lg:max-w-[40ch]">
-                {pillSubtitle}
-              </span>
+              <svg aria-hidden width={14} height={14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-steel-600">
+                <path d="M10 2.5h3.5V6M6 13.5H2.5V10M13.5 2.5L9 7M2.5 13.5L7 9" />
+              </svg>
+            </button>
+          ) : (
+            <div className="focus-panel rounded-full px-4 py-2 flex items-center gap-3 min-w-0">
+              {/* Paused has no word here: the label under the clock and the
+                  dimmed ring already say it, and once is enough. */}
+              {timerState !== "paused" && (
+                <span className="whitespace-nowrap text-[11px] uppercase tracking-[0.2em] text-steel-600">
+                  {/* Keyed so the label re-mounts and blur-fades in on each state
+                      change, bridging the swap instead of snapping. */}
+                  <span key={timerState} className="focus-label-swap inline-block">
+                    {timerState === "running" && "Focusing on"}
+                    {timerState === "done" && "Session complete"}
+                    {timerState === "reflecting" && "Reflecting"}
+                  </span>
+                </span>
+              )}
+              <div className="flex items-center gap-2 min-w-0">
+                <div
+                  className="w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors duration-300"
+                  style={{ backgroundColor: subjectColor }}
+                  aria-hidden
+                />
+                {/* Wider where there's room; the full name on hover when cut. */}
+                <span title={pillSubtitle} className="text-sm text-baltic-700 truncate max-w-[22ch] lg:max-w-[40ch]">
+                  {pillSubtitle}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
         </header>
       )}
 
-      {/* ── Top-right: backdrop + music + exit ── */}
+      {/* ── Top-right: hide timer + backdrop + music + help + exit ── */}
       <div className="absolute top-6 right-6 z-20 flex items-center gap-2">
+        {/* Hide / show the timer, so the backdrop can be seen whole. */}
+        {sessionActive && (
+          <button
+            ref={hideTimerBtnRef}
+            onClick={() => setTimerHidden((v) => !v)}
+            aria-label={timerHidden ? "Show timer" : "Hide timer"}
+            title={timerHidden ? "Show timer" : "Hide timer and see the backdrop"}
+            className="focus-btn tap-target !p-0 w-10 h-10 !rounded-full"
+          >
+            <svg aria-hidden width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              {timerHidden ? (
+                <path d="M10 2.5h3.5V6M6 13.5H2.5V10M13.5 2.5L9 7M2.5 13.5L7 9" />
+              ) : (
+                <path d="M3 9.5h3.5V13M13 6.5H9.5V3M9.5 6.5l4-4M2.5 13.5l4-4" />
+              )}
+            </svg>
+          </button>
+        )}
+
         {/* Backdrop: pattern and colour */}
         <div className="relative" ref={backdropMenuRef}>
           {/* A disclosure (button + lists of pressable buttons), not an
@@ -769,7 +834,7 @@ export default function FocusPage() {
           />
         )}
 
-        {(timerState === "running" || timerState === "paused" || timerState === "done") && (
+        {(timerState === "running" || timerState === "paused" || timerState === "done") && !timerHidden && (
           <SessionStage
             timerState={timerState}
             minutes={minutes}

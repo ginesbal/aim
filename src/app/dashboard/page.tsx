@@ -3,7 +3,6 @@
 import {
   useEffect,
   useId,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -523,7 +522,7 @@ function HeroBody({
       );
     }
     return (
-      <div className="grid gap-6 lg:gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_13rem]">
+      <div className="grid gap-6 lg:gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_11rem]">
         <div className="min-w-0">
           <h1 id="launcher-headline" className="text-baltic-800 dark:text-baltic-100">
             <span className="block text-2xl font-semibold leading-tight">
@@ -563,7 +562,7 @@ function HeroBody({
   if (!nextTask) {
     const fresh = !hasAnySessions;
     return (
-      <div className="grid gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_13rem]">
+      <div className="grid gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_11rem]">
         <div>
           {loggedHeadline ?? (
             <h1 id="launcher-headline" className="text-3xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100 leading-tight">
@@ -606,20 +605,21 @@ function HeroBody({
     ? "overdue"
     : `due ${day === "Today" || day === "Tomorrow" ? day.toLowerCase() : day}`;
 
-  // Where the day stands, in one quiet line under the actions. The one
-  // highlighter swipe on the page lands on the number that matters.
+  // Where the day stands, in one quiet line under the actions. No
+  // highlighter here: at 14px the swipe read as a stray underline, not
+  // emphasis (critique, 2026-10-27). Semibold carries the numbers.
   let status: ReactNode;
   if (focusPct >= 100) {
     status = (
       <>
-        <span className="highlighter text-baltic-700 dark:text-baltic-200">Goal hit</span> · {formatTime(todayMinutes)} of focus today, anything more is bonus
+        <span className="font-semibold text-baltic-700 dark:text-baltic-200">Goal hit</span> · {formatTime(todayMinutes)} of focus today, anything more is bonus
       </>
     );
   } else if (todayMinutes === 0) {
     const finish = projectedFinishTime(focusBlockMin);
     status = (
       <>
-        Aim for <span className="highlighter text-baltic-700 dark:text-baltic-200">{formatTime(dailyGoal)}</span> today
+        Aim for <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-200">{formatTime(dailyGoal)}</span> today
         {finish && (
           <>
             {" "}· this session ends at{" "}
@@ -632,7 +632,7 @@ function HeroBody({
     const finish = projectedFinishTime(minutesToGoal);
     status = (
       <>
-        <span className="highlighter text-baltic-700 dark:text-baltic-200">{formatTime(minutesToGoal)} to go</span>
+        <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-200">{formatTime(minutesToGoal)} to go</span>
         {finish && (
           <>
             {" "}· hit your goal by{" "}
@@ -644,7 +644,7 @@ function HeroBody({
   }
 
   return (
-    <div className="grid gap-6 lg:gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_13rem]">
+    <div className="grid gap-6 lg:gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_11rem]">
       <div ref={columnRef} className="relative min-w-0">
         {loggedHeadline ? (
           <>
@@ -1023,11 +1023,16 @@ function StickyCard({
 
 /* ─────────────────────────────────────────────────────────────
    FOCUS TARGET — the full "a" of aim, as today's meter. Bowl + tail
-   silhouette pulled directly from the AimLogo paths. Each focus
-   session today stacks in from the bottom as its own band, sized
-   by its share of the daily goal and coloured by its subject, so
-   the fill says what the time went into. The counter shows the
-   percentage; the legend names the subjects.
+   silhouette pulled directly from the AimLogo paths, filled from the
+   bottom with one ink, the logo's own colour, up to today's share of
+   the goal. The counter stays the logo's white dot. The numbers sit
+   under it once ("1h 10m of 2h"), and the legend names the subjects.
+
+   It used to stack a band per session in each subject's colour, with
+   the percentage in a white disc over the counter. Out of the
+   wordmark that read as a striped chart behind a mask, not a letter
+   filling with ink, and the disc hid the middle third of the fill
+   (critique, 2026-10-27).
    ───────────────────────────────────────────────────────────── */
 
 const A_BOWL_CX = 241.5;
@@ -1045,9 +1050,6 @@ const A_VB_SIZE = 142;
 const A_TOP = A_BOWL_CY - A_BOWL_R;
 const A_HEIGHT = 2 * A_BOWL_R;
 const A_BOTTOM = A_TOP + A_HEIGHT;
-// Hairline of card showing between bands, so two sessions of the same
-// subject still read as two sessions.
-const BAND_GAP = 1.5;
 
 interface MeterSegment {
   id: string;
@@ -1075,41 +1077,24 @@ function FocusTarget({
   /** No session ever finished: say what the "a" is for, once. */
   firstUse?: boolean;
 }) {
-  // Right after "Save session", the percentage counts up from where the
-  // day stood before, on the same 300ms wait and 900ms run as the band
-  // growing into the "a", so number and letter move as one. A layout
-  // effect sets the starting value before the first paint (no flash of
-  // the final number); reduced motion just shows the result.
+  // The session that took the day past its goal gets a settle once its
+  // ink has landed.
   const fromPct = justLogged
     ? Math.min(Math.round(((todayMinutes - justLogged.minutes) / Math.max(dailyGoal, 1)) * 100), 100)
     : undefined;
-  const [shownPct, setShownPct] = useState(focusPct);
-  useLayoutEffect(() => {
-    if (fromPct === undefined || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setShownPct(focusPct);
-      return;
-    }
-    setShownPct(fromPct);
-    const start = performance.now() + 300;
-    let raf = requestAnimationFrame(function step(now) {
-      const t = Math.min(Math.max((now - start) / 900, 0), 1);
-      setShownPct(Math.round(fromPct + (focusPct - fromPct) * (1 - (1 - t) ** 3)));
-      if (t < 1) raf = requestAnimationFrame(step);
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [focusPct, fromPct]);
   const crossedGoal = fromPct !== undefined && fromPct < 100 && focusPct >= 100;
 
-  // Stack bands bottom-up; anything past the goal is capped at a full "a".
-  const bands: (MeterSegment & { y: number; h: number })[] = [];
-  let filled = 0;
-  for (const seg of segments) {
-    const share = Math.min(seg.minutes / Math.max(dailyGoal, 1), 1 - filled);
-    if (share <= 0) break;
-    const h = share * A_HEIGHT;
-    bands.push({ ...seg, y: A_BOTTOM - filled * A_HEIGHT - h, h });
-    filled += share;
-  }
+  // One ink, as two layers of the same colour: what the "a" already held,
+  // and on top of it the session just saved, which grows in once. Past
+  // the goal the "a" is simply full.
+  const shareOf = (minutes: number) => minutes / Math.max(dailyGoal, 1);
+  const newSeg = newSegmentId ? segments.find((s) => s.id === newSegmentId) : undefined;
+  const before = Math.min(
+    segments.reduce((sum, s) => (s === newSeg ? sum : sum + shareOf(s.minutes)), 0),
+    1
+  );
+  const added = newSeg ? Math.min(shareOf(newSeg.minutes), 1 - before) : 0;
+  const inkTop = A_BOTTOM - (before + added) * A_HEIGHT;
 
   // Legend: minutes per subject today, largest first.
   const legend = Array.from(
@@ -1130,13 +1115,15 @@ function FocusTarget({
   // smaller screens it becomes the card's footer: the "a" on the left,
   // the numbers beside it, which saves a screen-height of scrolling.
   return (
-    <div className="flex items-center gap-5 pt-6 border-t border-lavender-200/60 dark:border-lavender-800/60 lg:block lg:pt-0 lg:border-0 lg:mx-auto lg:w-full lg:max-w-[13rem] lg:text-center">
+    <div className="flex items-center gap-5 pt-6 border-t border-lavender-200/60 dark:border-lavender-800/60 lg:block lg:pt-0 lg:border-0 lg:mx-auto lg:w-full lg:max-w-[11rem] lg:text-center">
       <div
         className={cn(
-          "relative flex-shrink-0 w-28 h-28 lg:mx-auto lg:w-48 lg:h-48",
+          // 144px beside the launcher: at 192px the "a" outweighed the
+          // headline and Begin, the two things the card is for.
+          "relative flex-shrink-0 w-28 h-28 lg:mx-auto lg:w-36 lg:h-36",
           crossedGoal && "focus-complete-settle"
         )}
-        // After the band has landed (300ms wait + 900ms growth).
+        // After the ink has landed (300ms wait + 900ms growth).
         style={crossedGoal ? { animationDelay: "1200ms", animationFillMode: "forwards" } : undefined}
       >
         <svg
@@ -1148,6 +1135,10 @@ function FocusTarget({
             <clipPath id="aim-a-silhouette">
               <circle cx={A_BOWL_CX} cy={A_BOWL_CY} r={A_BOWL_R} />
               <path d={A_TAIL_PATH} />
+            </clipPath>
+            {/* The part of the "a" the ink hasn't reached yet. */}
+            <clipPath id="aim-a-unfilled">
+              <rect x={A_VB_X} y={A_VB_Y} width={A_VB_SIZE} height={Math.max(inkTop - A_VB_Y, 0)} />
             </clipPath>
           </defs>
 
@@ -1170,52 +1161,40 @@ function FocusTarget({
             <path d={A_TAIL_PATH} />
           </g>
 
-          <g clipPath="url(#aim-a-silhouette)">
-            {bands.map((b) => (
+          <g clipPath="url(#aim-a-silhouette)" className="fill-baltic-700 dark:fill-baltic-200">
+            {before > 0 && (
+              <rect x={A_VB_X} y={A_BOTTOM - before * A_HEIGHT} width={A_VB_SIZE} height={before * A_HEIGHT} />
+            )}
+            {added > 0 && (
               <rect
-                key={b.id}
                 // The session just saved grows in from its bottom edge,
                 // once: the moment the time you put in lands in the "a".
-                className={b.id === newSegmentId ? "meter-band-in" : undefined}
+                // It reaches 2 units into the layer below, so the two never
+                // show an anti-aliased seam (half a unit still did while it
+                // grew).
+                className="meter-band-in"
                 x={A_VB_X}
-                y={b.y + BAND_GAP / 2}
+                y={inkTop}
                 width={A_VB_SIZE}
-                height={Math.max(b.h - BAND_GAP, 0.75)}
-                fill={b.color}
+                height={added * A_HEIGHT + (before > 0 ? 2 : 0)}
               />
-            ))}
+            )}
           </g>
 
+          {/* The counter: the logo's white dot, over the ink. Where the ink
+              hasn't reached it yet, it keeps the outline, so the empty "a"
+              still reads as a letter. */}
+          <circle cx={A_COUNTER_CX} cy={A_COUNTER_CY} r={A_COUNTER_R} className="fill-white dark:fill-lavender-900" />
           <circle
             cx={A_COUNTER_CX}
             cy={A_COUNTER_CY}
             r={A_COUNTER_R}
+            fill="none"
             strokeWidth={1.5}
             vectorEffect="non-scaling-stroke"
-            className="fill-white stroke-lavender-400 dark:fill-lavender-900 dark:stroke-lavender-600"
+            clipPath="url(#aim-a-unfilled)"
+            className="stroke-lavender-400 dark:stroke-lavender-600"
           />
-          {shownPct >= 100 ? (
-            <path
-              d={`M${A_COUNTER_CX - 8} ${A_COUNTER_CY + 0.5}l5.5 5.5l10.5 -11.5`}
-              fill="none"
-              strokeWidth={3}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="stroke-baltic-800 dark:stroke-baltic-100"
-            />
-          ) : (
-            <text
-              x={A_COUNTER_CX}
-              y={A_COUNTER_CY}
-              textAnchor="middle"
-              dominantBaseline="central"
-              // Sizes are in viewBox units, so the smaller "a" gets a
-              // bigger number: about 12px on screen there, 16px in the large "a".
-              className="fill-baltic-800 dark:fill-baltic-100 tabular-nums font-bold text-[15px] lg:text-[12px]"
-            >
-              {shownPct}%
-            </text>
-          )}
         </svg>
       </div>
 

@@ -40,7 +40,7 @@
       { "name": "ease-out", "value": "cubic-bezier(0.23, 1, 0.32, 1)", "purpose": "Default easing for entrances and state changes." },
       { "name": "ease-in-out", "value": "cubic-bezier(0.77, 0, 0.175, 1)", "purpose": "Two-way transitions." },
       { "name": "press", "value": "transform: scale(0.97) over 160ms ease-out", "purpose": "Buttons press in when held." },
-      { "name": "meter-band-in", "value": "900ms, 300ms delay", "purpose": "A newly saved session's band grows into the 'a'." }
+      { "name": "meter-band-in", "value": "900ms, 300ms delay", "purpose": "A newly saved session's ink grows into the 'a'." }
     ],
     "breakpoints": [
       { "name": "sm", "value": "640px" },
@@ -115,17 +115,17 @@
   ],
   "narrative": {
     "northStar": "The Annotated Notebook",
-    "overview": "aim looks like study material marked up by hand, kept calm. White paper cards with a faint grain rest on a pale blue-grey desk. The words that join a sentence (\"focus for\", \"on\", \"just logged\") are handwritten, while what matters (the task, the length, the time) is set in a clear grotesque. A highlighter swipe marks the one number worth noticing, and the day's progress fills the \"a\" of the logo like ink.\n\nThe north star describes what is already there; it is not a licence to add notebook props. The system is quiet by default: one card, one sentence, one filled button per screen, and everything else steps back. Focus, where the session runs, is the same desk with the furniture cleared away, keeping only the clock, the controls and an optional slow backdrop.\n\nThe rejected direction is the generic productivity dashboard: grids of same-size stat cards, competing accents, decoration added to fill space. It was tried, felt AI-generated and overwhelming, and was taken out.",
+    "overview": "aim looks like study material marked up by hand, kept calm. White paper cards with a faint grain rest on a pale blue-grey desk. The words that join a sentence (\"focus for\", \"on\", \"just logged\") are handwritten, while what matters (the task, the length, the time) is set in a clear grotesque. The day's progress fills the \"a\" of the logo like ink.\n\nThe north star describes what is already there; it is not a licence to add notebook props. The system is quiet by default: one card, one sentence, one filled button per screen, and everything else steps back. Focus, where the session runs, is the same desk with the furniture cleared away, keeping only the clock, the controls and an optional slow backdrop.\n\nThe rejected direction is the generic productivity dashboard: grids of same-size stat cards, competing accents, decoration added to fill space. It was tried, felt AI-generated and overwhelming, and was taken out.",
     "keyCharacteristics": [
       "A sentence as the headline, with handwritten connecting words.",
       "Paper cards with soft, layered shadows on a pale blue-grey surface.",
       "One filled, fully rounded primary button per screen, coloured by the subject.",
-      "Colour carries meaning: a subject's colour, the progress band, the primary action.",
+      "Colour carries meaning: a subject's colour, the ink in the \"a\", the primary action.",
       "Light theme only for now; motion is slow, optional, and off under \"reduce motion\"."
     ],
     "rules": [
       { "name": "The Reason Rule", "body": "Every visual change states the reason it serves (a finding, a user need, a measured problem). A change that only makes something look more like a notebook does not ship.", "section": "overview" },
-      { "name": "The Subject Colour Rule", "body": "A subject's colour appears where that subject is: its dot, its band in the \"a\", the Begin button for it. It is never used decoratively.", "section": "colors" },
+      { "name": "The Subject Colour Rule", "body": "A subject's colour appears where that subject is: its dot (in lists, the launcher and the meter's legend), the Begin button for it. It is never used decoratively. The \"a\" itself fills in one ink, the logo's colour, not in subject colours.", "section": "colors" },
       { "name": "The Script Connects Rule", "body": "Handwriting only joins the words of a sentence. It never carries content, a number or a control label.", "section": "typography" },
       { "name": "The One Filled Button Rule", "body": "Each screen has exactly one filled primary button. Everything else is a secondary pill, an underlined text link or a plain row.", "section": "layout" },
       { "name": "The Rest and Float Rule", "body": "Things on the page rest; only things above the page float. A card never gets a floating shadow.", "section": "elevation" }

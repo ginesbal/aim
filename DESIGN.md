@@ -119,7 +119,7 @@ components:
 
 **Creative North Star: "The Annotated Notebook"**
 
-aim looks like study material marked up by hand, kept calm. White paper cards with a faint grain rest on a pale blue-grey desk. The words that join a sentence ("focus for", "on", "just logged") are handwritten, while what matters (the task, the length, the time) is set in a clear grotesque. A highlighter swipe marks the one number worth noticing, and the day's progress fills the "a" of the logo like ink.
+aim looks like study material marked up by hand, kept calm. White paper cards with a faint grain rest on a pale blue-grey desk. The words that join a sentence ("focus for", "on", "just logged") are handwritten, while what matters (the task, the length, the time) is set in a clear grotesque. The day's progress fills the "a" of the logo like ink.
 
 The north star describes what is already there; it is not a licence to add notebook props. The system is quiet by default: one card, one sentence, one filled button per screen, and everything else steps back. Focus, where the session runs, is the same desk with the furniture cleared away, keeping only the clock, the controls and an optional slow backdrop.
 
@@ -129,7 +129,7 @@ The rejected direction is the generic productivity dashboard: grids of same-size
 - A sentence as the headline, with handwritten connecting words.
 - Paper cards with soft, layered shadows on a pale blue-grey surface.
 - One filled, fully rounded primary button per screen, coloured by the subject.
-- Colour carries meaning: a subject's colour, the progress band, the primary action.
+- Colour carries meaning: a subject's colour, the ink in the "a", the primary action.
 - Light theme only for now; motion is slow, optional, and off under "reduce motion".
 
 **The Reason Rule.** Every visual change states the reason it serves (a finding, a user need, a measured problem). A change that only makes something look more like a notebook does not ship.
@@ -139,14 +139,14 @@ The rejected direction is the generic productivity dashboard: grids of same-size
 A cool, low-saturation palette: blue-grey for the voice of the product, grey-violet and grey-green for structure and secondary text, with sage and cream as the only warm notes.
 
 ### Primary
-- **Baltic** (`baltic-500`): the product's accent. The handwritten connecting words, the keyboard focus outline, the "a" meter's default band and the Begin button when no subject colour applies.
+- **Baltic** (`baltic-500`): the product's accent. The handwritten connecting words, the keyboard focus outline and the Begin button when no subject colour applies.
 - **Deep Baltic** (`baltic-600`, hover `baltic-700`): filled primary buttons on Focus and in dialogs, the active page in the navigation.
 - **Baltic Night** (`baltic-800`): body and heading text.
 - **Baltic Desk** (`baltic-50`): the app surface everything rests on, and the Focus canvas. `baltic-100` marks a selected chip.
 
 ### Secondary
 - **Ash** (`ash-500`): sage. A subject colour and a backdrop colour; never used as a general accent.
-- **Cream** (`cream-300`): the highlighter, laid at 55% opacity under a number in the dashboard's status line. `cream-600` is the Cream backdrop colour.
+- **Cream** (`cream-300`): the highlighter, laid at 55% opacity under a word of a display heading (the empty dashboard's "first aim"). It is not used on small text: at 14px in the status line it read as a stray underline (critique, 2026-10-27). `cream-600` is the Cream backdrop colour.
 
 ### Neutral
 - **Lavender** (`lavender-200` hairlines, `lavender-400` control edges, `lavender-50` hover): structure. Control edges use `lavender-400` because it is the lightest step that holds 3:1 on white.
@@ -157,7 +157,7 @@ A cool, low-saturation palette: blue-grey for the voice of the product, grey-vio
 ### Subject colours
 Ten muted colours that students assign to their subjects: Baltic blue `#60729f`, sage `#76946b`, dusty rose `#b47692`, mustard `#b9a23d`, soft teal `#6ba9bd`, terracotta `#a96249`, ink violet `#4e4d78`, olive `#676e3d`, pale sage `#91a989`, slate `#586074`. They were chosen to stay distinguishable from each other, including for red-green colour blindness. When one fills a button, it is darkened as far as needed for white text to read.
 
-**The Subject Colour Rule.** A subject's colour appears where that subject is: its dot, its band in the "a", the Begin button for it. It is never used decoratively.
+**The Subject Colour Rule.** A subject's colour appears where that subject is: its dot (in lists, the launcher and the meter's legend), the Begin button for it. It is never used decoratively. The "a" itself fills in one ink, the logo's colour, not in subject colours.
 
 ## Typography
 
@@ -182,9 +182,9 @@ Ten muted colours that students assign to their subjects: Baltic blue `#60729f`,
 
 The dashboard is a single centred column, 896px wide at most, inside a page frame of 1152px with 16px gutters on phones and 32px from 640px. A fixed 64px top bar holds the logo, the page navigation, help and profile; on phones the navigation moves to a bottom tab bar.
 
-The launcher card is a two-column grid from 1024px: the sentence and its button on the left, the "a" meter in a 13rem column on the right. Below 1024px the meter drops under the sentence. "After this" is a plain list under the card, not more cards.
+The launcher card is a two-column grid from 1024px: the sentence and its button on the left, the "a" meter (144px) in an 11rem column on the right. Below 1024px the meter drops under the sentence. "After this" is a plain list under the card, not more cards.
 
-Focus is a full-screen canvas. Its stage is centred and scrolls when it is taller than the window, so nothing is ever cut off. Controls sit at the top right; the session's context pill sits at the top left (on phones, on its own row below the controls).
+Focus is a full-screen canvas. Its stage is centred and scrolls when it is taller than the window, so nothing is ever cut off. Controls sit at the top right; the session's context pill sits at the top left (on phones, on its own row below the controls). During a session, "Hide timer" (top right) clears the clock and its controls so the backdrop shows whole; the pill then carries the countdown (and "Paused") and brings the timer back when clicked. The timer returns by itself when the session ends.
 
 **The One Filled Button Rule.** Each screen has exactly one filled primary button. Everything else is a secondary pill, an underlined text link or a plain row.
 
@@ -238,7 +238,9 @@ Soft and tactile: fully rounded pills that press in slightly (scale 0.97 over 16
 - **Phone:** a four-item bottom tab bar with an underline marker on the active page.
 
 ### The "a" meter
-The logo's "a" drawn as an outline and filled from the bottom with one band per finished session, in that session's subject colour, up to the day's goal. A newly saved session's band grows in; reaching the goal turns the percentage into a check. It is the dashboard's only data display.
+The logo's "a" drawn as an outline (counter included, so the empty letter still reads as an "a") and filled from the bottom with one ink, `baltic-700`, the logo's colour, up to today's share of the goal. The counter stays the logo's white dot; there is no percentage inside it. A newly saved session's ink grows in on top; reaching the goal gives the letter a small settle, and a full day looks exactly like the logo. The numbers appear once, under it ("1h 10m of 2h"), with the subjects in a legend. It is the dashboard's only data display.
+
+It used to stack one band per session in its subject's colour, with the percentage in a white disc. Out of the wordmark that read as a striped chart behind a mask, and the disc hid the middle third of the fill (critique, 2026-10-27).
 
 ### The launcher sentence
 "focus for [25m] on [task]": the dashboard's headline and its main control in one. The length opens a small menu; the task is the next one due. The same sentence reappears on the Focus setup card.
