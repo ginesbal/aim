@@ -9,14 +9,15 @@ import { cn } from "@/lib/utils";
 // without taking over the screen, even mid-session. It opens from its
 // button only; a bare "?" key working anywhere on the page couldn't be
 // switched off (WCAG 2.1.4).
-// Each key says where it works: Enter and 1–4 only act on the control
-// that has focus.
+// Each key says where it works. Enter takes the screen's one step when
+// no control has focus; on a control it acts on that control. 1–4 only
+// work on the rating.
 const KEYS: [string, string][] = [
-  ["Enter", "On Begin focusing, starts the session"],
+  ["Enter", "Begins the session the dashboard or Focus card proposes"],
   ["Space", "Pause or resume"],
   ["Esc", "Pause and leave; the session is kept"],
   ["1–4", "On the rating, picks how focused you were"],
-  ["Enter", "On Save session or in the note, saves"],
+  ["Enter", "On the ending card or in the note, saves the session"],
 ];
 
 const ENDINGS: [string, string][] = [

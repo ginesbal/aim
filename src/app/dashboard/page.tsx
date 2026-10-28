@@ -34,11 +34,13 @@ import Link from "next/link";
 import {
   A_BOWL_CX,
   A_BOWL_CY,
-  A_BOWL_R,
+  A_BOWL_RX,
+  A_BOWL_RY,
   A_TAIL_PATH,
   A_COUNTER_CX,
   A_COUNTER_CY,
-  A_COUNTER_R,
+  A_COUNTER_RX,
+  A_COUNTER_RY,
   A_VB_X,
   A_VB_Y,
   A_VB_SIZE,
@@ -316,10 +318,7 @@ export default function DashboardPage() {
           getSubject={getSubject}
           onPickTask={(t) => setPickedTaskId(t.id)}
           hasAnySessions={sessions.length > 0}
-          // Remounted when the welcome dialog closes, so the main button
-          // takes focus then, the same as on any later arrival.
-          key={showWelcome ? "welcome" : "ready"}
-          focusPrimary={!showWelcome}
+          enterStarts={!showWelcome}
           segments={segments}
           newSegmentId={justLogged ? justLoggedId ?? undefined : undefined}
           justLogged={justLogged}
@@ -397,7 +396,7 @@ function HeroBody({
   getSubject,
   onPickTask,
   hasAnySessions,
-  focusPrimary,
+  enterStarts,
   segments,
   newSegmentId,
   justLogged,
@@ -422,9 +421,9 @@ function HeroBody({
   getSubject: (idOrLabel: string) => UserSubject | undefined;
   onPickTask: (task: Task) => void;
   hasAnySessions: boolean;
-  /** The main button takes focus on arrival. Off while the welcome
-      dialog is open, so it can't pull focus out from under it. */
-  focusPrimary: boolean;
+  /** Enter presses the main button. Off while the welcome dialog is
+      open, where Enter belongs to its form. */
+  enterStarts: boolean;
   segments: MeterSegment[];
   /** The session just saved on Focus, whose band grows into the "a". */
   newSegmentId?: string;
@@ -445,24 +444,30 @@ function HeroBody({
   // inside the <h1>, so the heading still reads as one sentence.
   const columnRef = useRef<HTMLDivElement>(null);
 
+  // Enter presses the main button (Begin, Return to focus, or Add your
+  // first task) from anywhere on the page that isn't a control. It
+  // replaces focusing that button on arrival, which drew its focus ring
+  // for mouse users too, on every load (critique, 2026-10-27). A Tab
+  // still lands on it with the ring, and on any other control Enter
+  // stays that control's.
+  const primaryRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!enterStarts) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Enter" || e.defaultPrevented || e.repeat || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target && target !== document.body && target.id !== "main") return;
+      e.preventDefault();
+      primaryRef.current?.click();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [enterStarts]);
+
   // Begin shows what it would add to the "a" while it's pointed at: on
-  // hover, and on keyboard focus once the page has been used. Not on the
-  // focus it takes on arrival, or the preview would stay up until
-  // something else took focus.
+  // hover, and on keyboard focus.
   const [hoverBegin, setHoverBegin] = useState(false);
   const [focusBegin, setFocusBegin] = useState(false);
-  const usedPage = useRef(false);
-  useEffect(() => {
-    const mark = () => {
-      usedPage.current = true;
-    };
-    window.addEventListener("keydown", mark, { once: true });
-    window.addEventListener("pointerdown", mark, { once: true });
-    return () => {
-      window.removeEventListener("keydown", mark);
-      window.removeEventListener("pointerdown", mark);
-    };
-  }, []);
   const launching = Boolean(nextTask) && !live;
 
   const meter = (
@@ -569,7 +574,8 @@ function HeroBody({
           <div className="mt-7">
             <button
               onClick={onReturnToFocus}
-              autoFocus={focusPrimary}
+              ref={primaryRef}
+              aria-keyshortcuts="Enter"
               aria-describedby="launcher-headline"
               style={{ backgroundColor: readableFill(color) }}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-medium text-white hover:brightness-[0.94] active:scale-[0.98] shadow-[0_6px_16px_-8px_rgba(38,45,64,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950 transition-[filter,transform] duration-150 ease-out"
@@ -609,7 +615,8 @@ function HeroBody({
           </p>
           <button
             onClick={onPlanStep}
-            autoFocus={focusPrimary}
+            ref={primaryRef}
+            aria-keyshortcuts="Enter"
             aria-describedby="launcher-headline"
             className="press mt-6 inline-flex items-center gap-2 rounded-full px-6 py-3 bg-baltic-700 dark:bg-baltic-500 text-white text-[15px] font-medium hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
             style={{ transition: "transform 160ms var(--ease-out), background-color 160ms ease" }}
@@ -729,18 +736,19 @@ function HeroBody({
         )}
 
         <div className="mt-7 flex items-center gap-5 flex-wrap">
-          {/* Same button as Focus's Begin: subject colour, play mark. The
-              launcher's main button takes focus on arrival (here and in
-              the other two states), so Enter acts on it. It is described by
-              the sentence it starts, so a screen reader landing here still
-              hears it: the headline, or after a save the "Next, focus
-              for…" line (the headline then names what was just logged). */}
+          {/* Same button as Focus's Begin: subject colour, play mark.
+              Enter anywhere on the page presses it (here and in the
+              other two states). It is described by the sentence it
+              starts, so a screen reader landing here still hears it: the
+              headline, or after a save the "next, focus for…" line (the
+              headline then names what was just logged). */}
           <button
             onClick={onFocus}
-            autoFocus={focusPrimary}
+            ref={primaryRef}
+            aria-keyshortcuts="Enter"
             onPointerEnter={() => setHoverBegin(true)}
             onPointerLeave={() => setHoverBegin(false)}
-            onFocus={(e) => setFocusBegin(usedPage.current && e.currentTarget.matches(":focus-visible"))}
+            onFocus={(e) => setFocusBegin(e.currentTarget.matches(":focus-visible"))}
             onBlur={() => setFocusBegin(false)}
             aria-describedby={`${loggedHeadline ? "launcher-next" : "launcher-headline"} launcher-projection`}
             style={{ backgroundColor: fill }}
@@ -1298,7 +1306,7 @@ function FocusTarget({
         >
           <defs>
             <clipPath id="aim-a-silhouette">
-              <circle cx={A_BOWL_CX} cy={A_BOWL_CY} r={A_BOWL_R} />
+              <ellipse cx={A_BOWL_CX} cy={A_BOWL_CY} rx={A_BOWL_RX} ry={A_BOWL_RY} />
               <path d={A_TAIL_PATH} />
             </clipPath>
             {/* The part of the "a" the ink hasn't reached yet. */}
@@ -1318,11 +1326,11 @@ function FocusTarget({
             vectorEffect="non-scaling-stroke"
             className="stroke-lavender-400 dark:stroke-lavender-600"
           >
-            <circle cx={A_BOWL_CX} cy={A_BOWL_CY} r={A_BOWL_R} vectorEffect="non-scaling-stroke" />
+            <ellipse cx={A_BOWL_CX} cy={A_BOWL_CY} rx={A_BOWL_RX} ry={A_BOWL_RY} vectorEffect="non-scaling-stroke" />
             <path d={A_TAIL_PATH} vectorEffect="non-scaling-stroke" />
           </g>
           <g className="fill-white dark:fill-lavender-900">
-            <circle cx={A_BOWL_CX} cy={A_BOWL_CY} r={A_BOWL_R} />
+            <ellipse cx={A_BOWL_CX} cy={A_BOWL_CY} rx={A_BOWL_RX} ry={A_BOWL_RY} />
             <path d={A_TAIL_PATH} />
           </g>
 
@@ -1368,11 +1376,12 @@ function FocusTarget({
           {/* The counter: the logo's white dot, over the ink. Where the ink
               hasn't reached it yet, it keeps the outline, so the empty "a"
               still reads as a letter. */}
-          <circle cx={A_COUNTER_CX} cy={A_COUNTER_CY} r={A_COUNTER_R} className="fill-white dark:fill-lavender-900" />
-          <circle
+          <ellipse cx={A_COUNTER_CX} cy={A_COUNTER_CY} rx={A_COUNTER_RX} ry={A_COUNTER_RY} className="fill-white dark:fill-lavender-900" />
+          <ellipse
             cx={A_COUNTER_CX}
             cy={A_COUNTER_CY}
-            r={A_COUNTER_R}
+            rx={A_COUNTER_RX}
+            ry={A_COUNTER_RY}
             fill="none"
             strokeWidth={1.5}
             vectorEffect="non-scaling-stroke"

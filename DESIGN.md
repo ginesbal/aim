@@ -214,6 +214,7 @@ Soft and tactile: fully rounded pills that press in slightly (scale 0.97 over 16
 - **Text links:** `steel-600`, 14px 500, underlined; for quieter alternatives ("or focus without a task", "Adjust goal", "Keep going").
 - **Discard:** plain `steel-600` text that turns red on hover and asks once more ("Confirm discard") before acting.
 - **Focus:** a 2px `baltic-500` outline, offset 2px, on every control; links and menu rows draw the same colour as a 2px ring.
+- **Enter:** no control takes focus on arrival; that drew the focus ring for mouse users too, on every load (critique, 2026-10-27). Instead, Enter pressed on the page itself (not on a control, a menu or the help panel) presses the screen's one filled button: Begin, Return to focus or Add your first task on the dashboard, Begin on the Focus card once a subject is set, Save session on the ending card. Those buttons carry `aria-keyshortcuts="Enter"`, and the help panel lists it.
 
 ### Chips
 - **Style:** text-only pills for duration presets (25m, 45m, 1h, 1h 30m) and the Tasks filter (To do, All, Done), in the body font.
@@ -236,7 +237,7 @@ Soft and tactile: fully rounded pills that press in slightly (scale 0.97 over 16
 - **Phone:** a four-item bottom tab bar with an underline marker on the active page.
 
 ### The "a" meter
-The logo's "a" drawn as an outline (counter included, so the empty letter still reads as an "a") and filled from the bottom with one ink, `baltic-700`, the logo's colour, up to today's share of the goal. The ink is sized by area, not height, so half the goal inks half the letter. The counter stays the logo's white dot; there is no percentage inside it. A newly saved session's ink grows in on top; reaching the goal gives the letter a small settle, and a full day looks exactly like the logo. The numbers appear once, under it ("1h 10m of 2h"), with the subjects in a legend. With the week of small "a"s, it is the dashboard's only data display.
+The logo's "a" drawn as an outline (counter included, so the empty letter still reads as an "a"; the tail's base starts at the bowl's lowest point, so the outline has no notch where the logo's bowl overshoots its baseline) and filled from the bottom with one ink, `baltic-700`, the logo's colour, up to today's share of the goal. The ink is sized by area, not height, so half the goal inks half the letter. The counter stays the logo's white dot; there is no percentage inside it. A newly saved session's ink grows in on top; reaching the goal gives the letter a small settle, and a full day looks exactly like the logo. The numbers appear once, under it ("1h 10m of 2h"), with the subjects in a legend. With the week of small "a"s, it is the dashboard's only data display.
 
 Above the ink, a ghost of the same ink at 14% opacity is the session Begin would start, sized by the length in the launcher sentence (picking 45m raises it). While Begin is hovered or keyboard-focused, the ghost deepens to 30% and the line under the "a" says what it would add ("+25m → 79%", "+25m → goal", or "+25m bonus" past the goal); Begin's description says the same for screen readers. The preview is not shown for the focus Begin takes on arrival. No ghost while a session is still open, or without a task to start.
 

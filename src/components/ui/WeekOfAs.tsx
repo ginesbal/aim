@@ -7,11 +7,13 @@ import type { FocusSession } from "@/lib/types";
 import {
   A_BOWL_CX,
   A_BOWL_CY,
-  A_BOWL_R,
+  A_BOWL_RX,
+  A_BOWL_RY,
   A_TAIL_PATH,
   A_COUNTER_CX,
   A_COUNTER_CY,
-  A_COUNTER_R,
+  A_COUNTER_RX,
+  A_COUNTER_RY,
   A_VB_X,
   A_VB_Y,
   A_VB_SIZE,
@@ -72,7 +74,7 @@ function MiniA({ share }: { share: number }) {
     <svg aria-hidden viewBox={`${A_VB_X} ${A_VB_Y} ${A_VB_SIZE} ${A_VB_SIZE}`} className="w-full h-full">
       <defs>
         <clipPath id={`${id}-letter`}>
-          <circle cx={A_BOWL_CX} cy={A_BOWL_CY} r={A_BOWL_R} />
+          <ellipse cx={A_BOWL_CX} cy={A_BOWL_CY} rx={A_BOWL_RX} ry={A_BOWL_RY} />
           <path d={A_TAIL_PATH} />
         </clipPath>
         <clipPath id={`${id}-open`}>
@@ -80,11 +82,11 @@ function MiniA({ share }: { share: number }) {
         </clipPath>
       </defs>
       <g fill="none" strokeWidth={2} className="stroke-lavender-400 dark:stroke-lavender-600">
-        <circle cx={A_BOWL_CX} cy={A_BOWL_CY} r={A_BOWL_R} vectorEffect="non-scaling-stroke" />
+        <ellipse cx={A_BOWL_CX} cy={A_BOWL_CY} rx={A_BOWL_RX} ry={A_BOWL_RY} vectorEffect="non-scaling-stroke" />
         <path d={A_TAIL_PATH} vectorEffect="non-scaling-stroke" />
       </g>
       <g className="fill-white dark:fill-lavender-900">
-        <circle cx={A_BOWL_CX} cy={A_BOWL_CY} r={A_BOWL_R} />
+        <ellipse cx={A_BOWL_CX} cy={A_BOWL_CY} rx={A_BOWL_RX} ry={A_BOWL_RY} />
         <path d={A_TAIL_PATH} />
       </g>
       {share > 0 && (
@@ -97,11 +99,12 @@ function MiniA({ share }: { share: number }) {
           className="fill-baltic-700 dark:fill-baltic-200"
         />
       )}
-      <circle cx={A_COUNTER_CX} cy={A_COUNTER_CY} r={A_COUNTER_R} className="fill-white dark:fill-lavender-900" />
-      <circle
+      <ellipse cx={A_COUNTER_CX} cy={A_COUNTER_CY} rx={A_COUNTER_RX} ry={A_COUNTER_RY} className="fill-white dark:fill-lavender-900" />
+      <ellipse
         cx={A_COUNTER_CX}
         cy={A_COUNTER_CY}
-        r={A_COUNTER_R}
+        rx={A_COUNTER_RX}
+        ry={A_COUNTER_RY}
         fill="none"
         strokeWidth={1}
         vectorEffect="non-scaling-stroke"

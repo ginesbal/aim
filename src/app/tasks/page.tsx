@@ -1457,8 +1457,10 @@ function TaskRow({
         }
       }}
       className={cn(
-        "press group flex items-center gap-3 py-2 px-2 rounded-lg cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-baltic-950 hover:bg-baltic-50/70 dark:hover:bg-baltic-900/30",
-        task.completed && "opacity-50 hover:opacity-70"
+        // A done task reads as done by its strikethrough and filled
+        // check, not by fading the row: half opacity took its text below
+        // 3:1.
+        "press group flex items-center gap-3 py-2 px-2 rounded-lg cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-baltic-950 hover:bg-baltic-50/70 dark:hover:bg-baltic-900/30"
       )}
       style={{
         transition:
@@ -1473,7 +1475,7 @@ function TaskRow({
         }}
         aria-label={task.completed ? "Mark pending" : "Mark complete"}
         className={cn(
-          "w-[18px] h-[18px] rounded-full border-[1.5px] flex-shrink-0 flex items-center justify-center hover:scale-110",
+          "tap-target w-[18px] h-[18px] rounded-full border-[1.5px] flex-shrink-0 flex items-center justify-center hover:scale-110",
           task.completed && "bg-ash-500 border-ash-500"
         )}
         style={
@@ -1548,12 +1550,12 @@ function TaskRow({
             {task.title}
           </p>
         </div>
-        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-steel-600 dark:text-steel-400 min-w-0">
+        <div className="flex items-center gap-1.5 mt-0.5 text-xs text-steel-600 dark:text-steel-400 min-w-0">
           {showSubject && (
             <>
               <span
                 aria-hidden
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                className="w-2 h-2 rounded-full flex-shrink-0"
                 style={{ backgroundColor: color }}
               />
               <span className="truncate">{subjectLabel}</span>
@@ -1565,7 +1567,7 @@ function TaskRow({
             </span>
           )}
           {overdue ? (
-            <span className="text-red-500 dark:text-red-400 font-semibold flex-shrink-0">
+            <span className="text-red-700 dark:text-red-400 font-semibold flex-shrink-0">
               {formatDate(task.dueDate)}
             </span>
           ) : showDate ? (
@@ -2120,7 +2122,7 @@ function ManageSubjectsModal({
                       })}
                     </div>
                     {error && (
-                      <p className="text-xs text-red-500 dark:text-red-400">
+                      <p className="text-xs text-red-600 dark:text-red-400">
                         {error}
                       </p>
                     )}
@@ -2202,7 +2204,7 @@ function ManageSubjectsModal({
                         className={cn(
                           "press flex-shrink-0 p-1.5 -m-0.5 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600",
                           isConfirming
-                            ? "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40"
+                            ? "text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/40"
                             : "text-steel-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
                         )}
                         style={{
@@ -2226,7 +2228,7 @@ function ManageSubjectsModal({
                       </button>
                     </div>
                     {isConfirming && (
-                      <p className="mt-2 text-[11px] text-red-500 dark:text-red-400">
+                      <p className="mt-2 text-xs text-red-600 dark:text-red-400">
                         {count > 0
                           ? `${count} ${count === 1 ? "task" : "tasks"} will become unfiled. `
                           : ""}
@@ -2525,7 +2527,7 @@ function AddTaskModal({
                 })}
               </div>
               {subjectError && (
-                <p className="text-xs text-red-500 dark:text-red-400">
+                <p className="text-xs text-red-600 dark:text-red-400">
                   {subjectError}
                 </p>
               )}
@@ -2698,7 +2700,7 @@ function TaskDetailModal({
           <span>
             Due {formatDate(task.dueDate)}
             {overdue && (
-              <span className="text-red-500 dark:text-red-400 ml-1.5 font-semibold normal-case tracking-normal">
+              <span className="text-red-700 dark:text-red-400 ml-1.5 font-semibold normal-case tracking-normal">
                 · Overdue
               </span>
             )}

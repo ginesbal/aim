@@ -310,7 +310,6 @@ export default function FocusPage() {
   // length starts at the user's default session length from Settings.
   // Read once on mount; after that the setup is the user's to change.
   const prefilled = useRef(false);
-  const [prefilledSubject, setPrefilledSubject] = useState(false);
   const [autoStart, setAutoStart] = useState(false);
   const [resumeRunning, setResumeRunning] = useState(false);
   const resumeEndRef = useRef<number | null>(null);
@@ -363,7 +362,6 @@ export default function FocusPage() {
     const match = requestedSubject ? getSubject(requestedSubject) : undefined;
     if (match) {
       setSubject(match.label);
-      setPrefilledSubject(true);
     }
     const requestedTask = params.get("task")?.trim();
     if (requestedTask) setTask(requestedTask.slice(0, 60));
@@ -483,6 +481,22 @@ export default function FocusPage() {
       }
       if (tag === "BUTTON") return;
 
+      // Enter on the page itself (not a control, menu or the help panel)
+      // takes the screen's one step: Begin on the setup card once a subject
+      // is set, Save session on the ending card. It replaces focusing those
+      // buttons on arrival, which drew their focus ring for mouse users
+      // too (critique, 2026-10-27). Not a character key, so not 2.1.4.
+      if (e.key === "Enter" && !e.repeat && (el === document.body || el?.id === "main")) {
+        if (timerState === "idle" && subject !== null) {
+          e.preventDefault();
+          startTimer();
+        } else if (timerState === "reflecting") {
+          e.preventDefault();
+          saveSession();
+        }
+        return;
+      }
+
       if (e.code === "Space") {
         if (timerState === "running") {
           e.preventDefault();
@@ -495,7 +509,7 @@ export default function FocusPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [timerState, musicOpen, backdropOpen, pauseTimer, startTimer, handleExit]);
+  }, [timerState, musicOpen, backdropOpen, pauseTimer, startTimer, handleExit, subject, saveSession]);
 
   // Top-bar popovers (music, backdrop) — close on outside click + Esc
   useEffect(() => {
@@ -828,7 +842,6 @@ export default function FocusPage() {
             task={task}
             onTaskChange={setTask}
             canBegin={canBegin}
-            prefilled={prefilledSubject}
             accentColor={subjectColor}
             onBegin={startTimer}
           />
@@ -884,8 +897,6 @@ interface SetupStageProps {
   task: string;
   onTaskChange: (s: string) => void;
   canBegin: boolean;
-  /** The subject arrived filled in from the dashboard. */
-  prefilled: boolean;
   accentColor: string;
   onBegin: () => void;
 }
@@ -894,19 +905,10 @@ function SetupStage({
   duration, onDurationChange,
   subject, onSubjectChange,
   task, onTaskChange,
-  canBegin, prefilled, accentColor, onBegin,
+  canBegin, accentColor, onBegin,
 }: SetupStageProps) {
   const [showTask, setShowTask] = useState(false);
   const showTaskInput = showTask || task.length > 0;
-
-  // With the sentence already complete, Begin is the next step, so it
-  // takes focus and Enter starts. Runs when the setup appears (also after
-  // a discard) and when the prefill lands; never when a subject is picked
-  // by hand, which would pull focus away from the picker.
-  const beginRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (canBegin) beginRef.current?.focus();
-  }, [prefilled]);
 
   return (
     <div className="focus-stage-enter w-full max-w-sm">
@@ -971,8 +973,9 @@ function SetupStage({
 
           {/* Begin — fills with the subject's colour once a subject is set. */}
           <button
-            ref={beginRef}
             onClick={onBegin}
+            // Enter on the page presses it once a subject is set.
+            aria-keyshortcuts="Enter"
             disabled={!canBegin}
             style={
               canBegin
@@ -1307,10 +1310,11 @@ function ReflectionStage({
         </label>
       )}
 
-      {/* Focused on arrival, so Enter saves straight away; rating stays
-          optional (Shift+Tab reaches it, and 1–4 work there). Focusing
-          the scale instead made Enter record "Scattered" by accident. */}
-      <button onClick={onSave} autoFocus className="focus-btn focus-btn-primary tap-target !px-6 mt-6">
+      {/* Enter on the page saves, without this button taking focus on
+          arrival (which drew its ring for mouse users). The rating stays
+          optional: nothing is focused, so Enter can't record "Scattered"
+          by accident, as it once did when the scale had focus. */}
+      <button onClick={onSave} aria-keyshortcuts="Enter" className="focus-btn focus-btn-primary tap-target !px-6 mt-6">
         Save session
       </button>
       {onKeepGoing && (
