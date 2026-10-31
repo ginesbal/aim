@@ -85,8 +85,8 @@
       "kind": "input",
       "refersTo": "input",
       "description": "White field with a 3:1 edge; focus uses the shared outline.",
-      "html": "<input class=\"ds-input\" placeholder=\"What should we call you?\" />",
-      "css": ".ds-input { width: 280px; padding: 8px 12px; border: 1px solid #8b93a7; border-radius: 6px; background: #ffffff; color: #262d40; font: 400 14px/1.5 'Bricolage Grotesque', system-ui, sans-serif; } .ds-input::placeholder { color: #616b6b; } .ds-input:focus-visible { border-color: #808eb3; outline: 2px solid #60729f; outline-offset: 2px; }"
+      "html": "<label class=\"ds-label\" for=\"ds-name\">Your name</label><input id=\"ds-name\" class=\"ds-input\" placeholder=\"What should we call you?\" />",
+      "css": ".ds-label { display: block; margin-bottom: 6px; font: 500 14px/1.4 'Bricolage Grotesque', system-ui, sans-serif; color: #394460; } .ds-input { width: 280px; padding: 8px 12px; border: 1px solid #8b93a7; border-radius: 6px; background: #ffffff; color: #262d40; font: 400 14px/1.5 'Bricolage Grotesque', system-ui, sans-serif; } .ds-input::placeholder { color: #616b6b; } .ds-input:focus-visible { border-color: #808eb3; outline: 2px solid #60729f; outline-offset: 2px; }"
     },
     {
       "name": "Paper Card",

@@ -595,7 +595,7 @@
     display: none;
   }
 
-  /* Type scale — bolder, more playful */
+  /* Type scale */
   .text-display {
     @apply text-3xl font-bold tracking-tight;
   }
@@ -606,19 +606,5 @@
 
   .text-body {
     @apply text-sm font-normal leading-relaxed;
-  }
-
-  .text-caption {
-    @apply text-xs font-medium text-steel-500;
-  }
-
-  .text-label {
-    /* No colour here: it overrode the one each label sets (and was 2.75:1). */
-    @apply text-[11px] font-semibold uppercase tracking-wider;
-  }
-
-  /* Stats — large and bold */
-  .text-stat {
-    @apply text-4xl font-bold tracking-tight;
   }
 }

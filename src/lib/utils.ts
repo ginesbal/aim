@@ -7,6 +7,29 @@ export function generateId() {
 }
 
 /**
+ * Focus, set up for a task: its subject, its title, its id (so Focus can
+ * offer "Mark done" at the end) and the session length. With `start` the
+ * timer starts on arrival, as the dashboard's Begin does; without it,
+ * Focus opens set up and waits (an "After this" row, the task dialog's
+ * "Focus on this").
+ */
+export function focusHref(
+  task: { id: string; title: string },
+  subjectLabel: string,
+  minutes: number,
+  start = false
+): string {
+  const params = new URLSearchParams({
+    subject: subjectLabel,
+    task: task.title,
+    taskId: task.id,
+    min: String(minutes),
+  });
+  if (start) params.set("start", "1");
+  return `/focus?${params}`;
+}
+
+/**
  * Parse a date string into a *local* Date. A bare "YYYY-MM-DD" is otherwise
  * parsed as UTC midnight by the Date constructor, which shifts the day for
  * anyone behind UTC (a task due today reads as yesterday / overdue). Full

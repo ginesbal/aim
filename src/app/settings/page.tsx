@@ -81,7 +81,7 @@ export default function SettingsPage() {
           <div className="flex items-center gap-3">
             <Button type="submit" size="sm">Save</Button>
             {feedback && (
-              <span className={`text-xs font-medium ${feedback.type === "error" ? "text-red-500" : "text-ash-600"}`}>
+              <span className={`text-xs font-medium ${feedback.type === "error" ? "text-red-600" : "text-ash-700"}`}>
                 {feedback.message}
               </span>
             )}
@@ -92,7 +92,7 @@ export default function SettingsPage() {
       {/* Data */}
       <Card padding="lg">
         <h2 className="text-title text-baltic-800 dark:text-baltic-100 mb-4">Data</h2>
-        <p className="text-sm text-steel-400 mb-3">
+        <p className="text-sm text-steel-600 dark:text-steel-400 mb-3">
           All data is stored locally in your browser.
         </p>
         <Button

@@ -3,7 +3,9 @@
 import { useState, useRef, useEffect, useId } from "react";
 import { cn } from "@/lib/utils";
 import { useSubjects } from "@/lib/contexts";
-import { SUBJECT_COLORS, SUBJECT_COLOR_NAMES, type UserSubject } from "@/lib/types";
+import { SUBJECT_COLORS, type UserSubject } from "@/lib/types";
+import Button from "@/components/ui/Button";
+import ColorSwatches from "@/components/ui/ColorSwatches";
 
 interface SubjectSelectorProps {
   value: string | null;
@@ -226,38 +228,20 @@ export default function SubjectSelector({ value, onChange, disabled }: SubjectSe
                   {addError}
                 </p>
               )}
-              <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Subject colour">
-                {SUBJECT_COLORS.map((c, i) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setNewColor(c)}
-                    aria-label={SUBJECT_COLOR_NAMES[c] ?? `Colour ${i + 1}`}
-                    aria-pressed={newColor === c}
-                    className={cn(
-                      "w-6 h-6 rounded-full transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-baltic-600",
-                      newColor === c ? "ring-2 ring-offset-2 ring-baltic-400 ring-offset-white" : "hover:scale-110"
-                    )}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
-              </div>
+              <ColorSwatches value={newColor} onChange={setNewColor} size="sm" />
+              {/* Secondary: Begin is the card's one filled button. */}
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleAdd}
-                  disabled={!newLabel.trim()}
-                  className="px-3 py-1 text-xs font-medium rounded-full bg-baltic-600 text-white hover:bg-baltic-700 disabled:bg-baltic-200 disabled:cursor-not-allowed transition-colors duration-150 press"
-                >
+                <Button type="button" variant="secondary" size="sm" onClick={handleAdd} disabled={!newLabel.trim()}>
                   Add
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => { setAdding(false); setNewLabel(""); setAddError(null); }}
-                  className="px-3 py-1 text-xs font-medium rounded-full text-steel-600 hover:text-baltic-600 hover:bg-lavender-50 transition-colors duration-150 press"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           ) : (

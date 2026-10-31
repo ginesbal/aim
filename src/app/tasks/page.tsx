@@ -10,7 +10,8 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { useTasks, useSubjects } from "@/lib/contexts";
+import { useRouter } from "next/navigation";
+import { useTasks, useSubjects, usePreferences } from "@/lib/contexts";
 import {
   PRIORITIES,
   SUBJECT_COLORS,
@@ -24,10 +25,13 @@ import {
   dayLabel,
   generateId,
   todayISO,
+  focusHref,
 } from "@/lib/utils";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
+import Input, { FIELD, FIELD_EDGE, FIELD_LABEL } from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
+import ColorSwatches from "@/components/ui/ColorSwatches";
+import { loadLiveSession } from "@/lib/liveSession";
 import { SENTENCE, Connect } from "@/components/ui/Sentence";
 
 type StatusFilter = "pending" | "completed" | "all";
@@ -155,6 +159,8 @@ export default function TasksPage() {
     useTasks();
   const { subjects, getSubject, addSubject, updateSubject, deleteSubject } =
     useSubjects();
+  const { focusBlockMin } = usePreferences();
+  const router = useRouter();
 
   // Tabs are saved views. They live in their own collection so closing
   // a tab is non-destructive — the underlying subject and its tasks
@@ -648,6 +654,18 @@ export default function TasksPage() {
           task={selectedTask}
           subject={getSubject(selectedTask.subject)}
           onClose={() => setSelectedTask(null)}
+          // Focus set up for this task, not started: the same as an "After
+          // this" row on the dashboard, so "Mark done" is offered at the end.
+          onFocus={() =>
+            router.push(
+              focusHref(
+                selectedTask,
+                getSubject(selectedTask.subject)?.label ?? selectedTask.subject,
+                focusBlockMin
+              )
+            )
+          }
+          onReturnToFocus={() => router.push("/focus")}
           onEdit={() => {
             setEditingTask(selectedTask);
             setSelectedTask(null);
@@ -1310,6 +1328,16 @@ function AddTabButton({
   );
 }
 
+/* The app's chips (DESIGN.md, Chips; Focus's length presets): text-only
+   pills, the picked one filled baltic-100. The Tasks filter and the task
+   form's Subject and Priority use them; the form's used to be bordered
+   segments and a white "lifted" chip that each looked different. */
+const CHIP =
+  "press tap-target inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium transition-[background-color,color,transform] duration-150";
+const CHIP_ON = "bg-baltic-100 text-baltic-700 dark:bg-baltic-900/60 dark:text-baltic-200";
+const CHIP_OFF =
+  "text-steel-600 hover:text-baltic-600 hover:bg-lavender-50 dark:text-steel-400 dark:hover:text-baltic-300 dark:hover:bg-lavender-800/40";
+
 /* ─────────────────────────────────────────────────────────────
    STATUS FILTER — To do / All / Done, as the app's chips (the
    same as Focus's length presets): text-only pills, the selected
@@ -1335,16 +1363,7 @@ function StatusFilterPills({
           key={opt.value}
           onClick={() => onChange(opt.value)}
           aria-pressed={value === opt.value}
-          className={cn(
-            "press tap-target px-3 py-1 rounded-full text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
-            value === opt.value
-              ? "bg-baltic-100 text-baltic-700 dark:bg-baltic-900/60 dark:text-baltic-200"
-              : "text-steel-600 hover:text-baltic-600 hover:bg-lavender-50 dark:text-steel-400 dark:hover:text-baltic-300 dark:hover:bg-lavender-800/40"
-          )}
-          style={{
-            transition:
-              "background-color 160ms ease, color 160ms ease, transform 160ms var(--ease-out)",
-          }}
+          className={cn(CHIP, value === opt.value ? CHIP_ON : CHIP_OFF)}
         >
           {opt.label}
         </button>
@@ -1923,34 +1942,10 @@ function AddSubjectModal({
         />
 
         <div className="space-y-2">
-          <label className="text-label text-baltic-600 dark:text-baltic-300">
-            Color
-          </label>
-          <div className="flex flex-wrap items-center gap-2">
-            {SUBJECT_COLORS.map((c) => {
-              const isSelected = color === c;
-              return (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setColor(c)}
-                  aria-label={`Use color ${c}`}
-                  aria-pressed={isSelected}
-                  className={cn(
-                    "press relative w-7 h-7 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-lavender-900",
-                    isSelected
-                      ? "ring-2 ring-offset-2 ring-baltic-500 dark:ring-baltic-400 dark:ring-offset-lavender-900"
-                      : "hover:scale-110"
-                  )}
-                  style={{
-                    backgroundColor: c,
-                    transition:
-                      "transform 160ms var(--ease-out), box-shadow 160ms ease",
-                  }}
-                />
-              );
-            })}
-          </div>
+          <p className={FIELD_LABEL}>
+            Colour
+          </p>
+          <ColorSwatches value={color} onChange={setColor} label="Colour" />
         </div>
 
         {/* Quiet preview row so the user sees the tab they're about to make */}
@@ -2094,65 +2089,34 @@ function ManageSubjectsModal({
                       }}
                       maxLength={30}
                       aria-label="Subject name"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-600 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth"
+                      className={cn(FIELD, FIELD_EDGE)}
                     />
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {SUBJECT_COLORS.map((c) => {
-                        const sel = draftColor === c;
-                        return (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => setDraftColor(c)}
-                            aria-label={`Use color ${c}`}
-                            aria-pressed={sel}
-                            className={cn(
-                              "press w-7 h-7 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-lavender-900",
-                              sel
-                                ? "ring-2 ring-offset-2 ring-baltic-500 dark:ring-baltic-400 dark:ring-offset-lavender-900"
-                                : "hover:scale-110"
-                            )}
-                            style={{
-                              backgroundColor: c,
-                              transition:
-                                "transform 160ms var(--ease-out), box-shadow 160ms ease",
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
+                    <ColorSwatches value={draftColor} onChange={setDraftColor} />
                     {error && (
                       <p className="text-xs text-red-600 dark:text-red-400">
                         {error}
                       </p>
                     )}
                     <div className="flex items-center gap-2">
-                      <button
+                      <Button
                         type="button"
+                        size="sm"
                         onClick={() => commitEdit(s)}
                         disabled={!draftLabel.trim()}
-                        className="press px-3 py-1.5 text-xs font-semibold rounded-full bg-baltic-700 dark:bg-baltic-500 text-white hover:bg-baltic-800 dark:hover:bg-baltic-400 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
-                        style={{
-                          transition:
-                            "background-color 160ms ease, transform 160ms var(--ease-out)",
-                        }}
                       >
                         Save
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={() => {
                           setEditingId(null);
                           setError("");
                         }}
-                        className="press px-3 py-1.5 text-xs font-medium rounded-full text-steel-600 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-lavender-100/60 dark:hover:bg-lavender-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
-                        style={{
-                          transition:
-                            "color 160ms ease, transform 160ms var(--ease-out)",
-                        }}
                       >
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -2389,11 +2353,12 @@ function AddTaskModal({
         />
 
         <div className="space-y-1.5">
-          <label className="text-label text-baltic-600 dark:text-baltic-300">
+          <label htmlFor="task-description" className={FIELD_LABEL}>
             Description
           </label>
           <textarea
-            className="w-full px-3 py-2 text-sm rounded-xl border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-600 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth resize-none"
+            id="task-description"
+            className={cn(FIELD, FIELD_EDGE, "resize-none")}
             rows={2}
             placeholder="Additional details (optional)"
             value={description}
@@ -2405,10 +2370,10 @@ function AddTaskModal({
             "New" chip so a missing subject can be created without leaving
             the form. */}
         <div className="space-y-1.5">
-          <label className="text-label text-baltic-600 dark:text-baltic-300">
+          <p id="task-subject-label" className={FIELD_LABEL}>
             Subject
-          </label>
-          <div className="flex flex-wrap gap-1.5">
+          </p>
+          <div role="group" aria-labelledby="task-subject-label" className="flex flex-wrap gap-1.5">
             {subjects.map((sub) => {
               const isActive = subject === sub.label;
               return (
@@ -2416,24 +2381,13 @@ function AddTaskModal({
                   key={sub.id}
                   type="button"
                   onClick={() => setSubject(sub.label)}
-                  className={cn(
-                    "press inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
-                    isActive
-                      ? "bg-white dark:bg-lavender-900 border-lavender-300 dark:border-lavender-700 shadow-sm text-baltic-800 dark:text-baltic-100"
-                      : "border-transparent text-steel-600 dark:text-steel-400 hover:bg-lavender-50 dark:hover:bg-lavender-900/40"
-                  )}
-                  style={{
-                    transition:
-                      "background-color 160ms ease, color 160ms ease, transform 160ms var(--ease-out), border-color 160ms ease",
-                  }}
+                  aria-pressed={isActive}
+                  className={cn(CHIP, isActive ? CHIP_ON : CHIP_OFF)}
                 >
                   <span
                     aria-hidden
                     className="w-1.5 h-1.5 rounded-full"
-                    style={{
-                      backgroundColor: sub.color,
-                      opacity: isActive ? 1 : 0.55,
-                    }}
+                    style={{ backgroundColor: sub.color }}
                   />
                   {sub.label}
                 </button>
@@ -2450,10 +2404,10 @@ function AddTaskModal({
               }}
               aria-expanded={addingSubject}
               className={cn(
-                "press inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-dashed focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
+                "press tap-target inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border border-dashed",
                 addingSubject
                   ? "border-baltic-400 dark:border-baltic-500 bg-baltic-50 dark:bg-baltic-900/40 text-baltic-700 dark:text-baltic-200"
-                  : "border-lavender-300 dark:border-lavender-700 text-steel-600 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:border-lavender-400 dark:hover:border-lavender-600"
+                  : "border-lavender-400 dark:border-lavender-600 text-steel-600 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:border-baltic-400"
               )}
               style={{
                 transition:
@@ -2499,62 +2453,27 @@ function AddTaskModal({
                 placeholder="New subject name"
                 maxLength={30}
                 aria-label="New subject name"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 placeholder:text-steel-600 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth"
+                className={cn(FIELD, FIELD_EDGE)}
               />
-              <div className="flex flex-wrap items-center gap-1.5">
-                {SUBJECT_COLORS.map((c) => {
-                  const isSelected = newSubjectColor === c;
-                  return (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setNewSubjectColor(c)}
-                      aria-label={`Use color ${c}`}
-                      aria-pressed={isSelected}
-                      className={cn(
-                        "press w-7 h-7 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-lavender-900",
-                        isSelected
-                          ? "ring-2 ring-offset-2 ring-baltic-500 dark:ring-baltic-400 dark:ring-offset-lavender-900"
-                          : "hover:scale-110"
-                      )}
-                      style={{
-                        backgroundColor: c,
-                        transition:
-                          "transform 160ms var(--ease-out), box-shadow 160ms ease",
-                      }}
-                    />
-                  );
-                })}
-              </div>
+              <ColorSwatches value={newSubjectColor} onChange={setNewSubjectColor} />
               {subjectError && (
                 <p className="text-xs text-red-600 dark:text-red-400">
                   {subjectError}
                 </p>
               )}
               <div className="flex items-center gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="sm"
                   onClick={handleAddSubject}
                   disabled={!newSubjectLabel.trim()}
-                  className="press px-3 py-1.5 text-xs font-semibold rounded-full bg-baltic-700 dark:bg-baltic-500 text-white hover:bg-baltic-800 dark:hover:bg-baltic-400 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
-                  style={{
-                    transition:
-                      "background-color 160ms ease, transform 160ms var(--ease-out)",
-                  }}
                 >
                   Add subject
-                </button>
-                <button
-                  type="button"
-                  onClick={cancelAddSubject}
-                  className="press px-3 py-1.5 text-xs font-medium rounded-full text-steel-600 dark:text-steel-400 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-lavender-100/60 dark:hover:bg-lavender-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500"
-                  style={{
-                    transition:
-                      "color 160ms ease, transform 160ms var(--ease-out)",
-                  }}
-                >
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={cancelAddSubject}>
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -2568,27 +2487,28 @@ function AddTaskModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-label text-baltic-600 dark:text-baltic-300">
+            <label htmlFor="task-due" className={FIELD_LABEL}>
               Due date
             </label>
             <input
+              id="task-due"
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-lavender-200 dark:border-lavender-700 bg-white dark:bg-lavender-900 text-baltic-800 dark:text-baltic-100 outline-none focus:ring-2 focus:ring-baltic-400/30 focus:border-baltic-400 transition-smooth"
+              className={cn(FIELD, FIELD_EDGE)}
             />
             {(!editingTask || !editingTask.completed) && dueDate < todayISO() && (
-              <p className="text-[11px] text-cream-700 dark:text-cream-400">
+              <p className="text-xs text-cream-700 dark:text-cream-400">
                 In the past — this task will show as overdue.
               </p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-label text-baltic-600 dark:text-baltic-300">
+            <p id="task-priority-label" className={FIELD_LABEL}>
               Priority
-            </label>
-            <div className="flex gap-1">
+            </p>
+            <div role="group" aria-labelledby="task-priority-label" className="flex flex-wrap gap-1.5">
               {(["low", "medium", "high"] as const).map((p) => {
                 const isActive = priority === p;
                 return (
@@ -2596,16 +2516,8 @@ function AddTaskModal({
                     key={p}
                     type="button"
                     onClick={() => setPriority(p)}
-                    className={cn(
-                      "press flex-1 py-2 rounded-xl text-xs font-medium border focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
-                      isActive
-                        ? "border-baltic-400 bg-baltic-50 text-baltic-800 dark:bg-baltic-900/60 dark:text-baltic-200 dark:border-baltic-600"
-                        : "border-lavender-200 dark:border-lavender-700 text-steel-600 hover:border-lavender-300 dark:hover:border-lavender-600"
-                    )}
-                    style={{
-                      transition:
-                        "background-color 160ms ease, color 160ms ease, transform 160ms var(--ease-out), border-color 160ms ease",
-                    }}
+                    aria-pressed={isActive}
+                    className={cn(CHIP, isActive ? CHIP_ON : CHIP_OFF)}
                   >
                     {PRIORITIES[p].label}
                   </button>
@@ -2629,9 +2541,12 @@ function AddTaskModal({
 }
 
 /* ─────────────────────────────────────────────────────────────
-   TASK DETAIL MODAL — quiet meta row of chips, description
-   block, then the action row. Subject + priority + due read as
-   facts, not as decoration.
+   TASK DETAIL MODAL — the task's facts (subject, priority, due),
+   then what to do with it. Its one filled button is "Focus on this"
+   (Focus set up for the task), because every screen should lead to a
+   session; Tasks used to be the one page that couldn't (critique,
+   2026-10-27). Mark complete and Edit task are secondary; Delete task
+   is quiet text, like Focus's Discard.
    ───────────────────────────────────────────────────────────── */
 
 function TaskDetailModal({
@@ -2641,6 +2556,8 @@ function TaskDetailModal({
   onEdit,
   onToggle,
   onDelete,
+  onFocus,
+  onReturnToFocus,
 }: {
   task: Task;
   subject: UserSubject | undefined;
@@ -2648,38 +2565,32 @@ function TaskDetailModal({
   onEdit: () => void;
   onToggle: () => void;
   onDelete: () => void;
+  onFocus: () => void;
+  onReturnToFocus: () => void;
 }) {
   const color = subject?.color || "#9faac6";
   const overdue = !task.completed && isOverdue(task.dueDate);
   const priorityColor = PRIORITIES[task.priority].color;
+  // A session left open in this tab wins on Focus, whatever the link asks
+  // for, so the dialog says so instead of offering a session it can't
+  // start.
+  const [openSession] = useState(() => loadLiveSession());
+
+  // Chips are facts, not decoration: the same quiet pill for each, with
+  // the colour only on the dot.
+  const chip =
+    "inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium bg-baltic-50 dark:bg-baltic-900/40 text-baltic-700 dark:text-baltic-300";
 
   return (
     <Modal open={true} onClose={onClose} title={task.title} width="sm">
       <div className="space-y-5">
-        {/* Meta chip row */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span
-            className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium bg-baltic-50 dark:bg-baltic-900/40 text-baltic-700 dark:text-baltic-300"
-          >
-            <span
-              aria-hidden
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ backgroundColor: color }}
-            />
+          <span className={chip}>
+            <span aria-hidden className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
             {subject?.label || task.subject}
           </span>
-          <span
-            className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium"
-            style={{
-              backgroundColor: priorityColor + "1a",
-              color: priorityColor,
-            }}
-          >
-            <span
-              aria-hidden
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ backgroundColor: priorityColor }}
-            />
+          <span className={chip}>
+            <span aria-hidden className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: priorityColor }} />
             {PRIORITIES[task.priority].label} priority
           </span>
           {task.completed && (
@@ -2700,7 +2611,7 @@ function TaskDetailModal({
           <span>
             Due {formatDate(task.dueDate)}
             {overdue && (
-              <span className="text-red-700 dark:text-red-400 ml-1.5 font-semibold normal-case tracking-normal">
+              <span className="text-red-700 dark:text-red-400 ml-1.5 font-semibold">
                 · Overdue
               </span>
             )}
@@ -2718,15 +2629,38 @@ function TaskDetailModal({
         </div>
 
         <div className="space-y-3 pt-4 border-t border-lavender-100 dark:border-lavender-800/60">
-          <Button variant="secondary" onClick={onToggle} className="w-full">
-            {task.completed ? "Mark pending" : "Mark complete"}
-          </Button>
+          {!task.completed &&
+            (openSession ? (
+              <>
+                <p className="text-sm text-steel-600 dark:text-steel-400">
+                  A session is still open
+                  {openSession.task.trim() ? (
+                    <>
+                      {" "}on <span className="font-medium text-baltic-700 dark:text-baltic-200">{openSession.task.trim()}</span>
+                    </>
+                  ) : null}
+                  . Finish or leave it before starting another.
+                </p>
+                <Button onClick={onReturnToFocus} className="w-full">
+                  Return to focus
+                </Button>
+              </>
+            ) : (
+              <Button onClick={onFocus} className="w-full">
+                Focus on this
+              </Button>
+            ))}
           <div className="flex gap-3">
+            <Button variant="secondary" onClick={onToggle} className="flex-1">
+              {task.completed ? "Mark pending" : "Mark complete"}
+            </Button>
             <Button variant="secondary" onClick={onEdit} className="flex-1">
               Edit task
             </Button>
-            <Button variant="danger" onClick={onDelete} className="flex-1">
-              Delete
+          </div>
+          <div className="flex justify-center">
+            <Button variant="danger" size="sm" onClick={onDelete}>
+              Delete task
             </Button>
           </div>
         </div>

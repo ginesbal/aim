@@ -130,8 +130,10 @@ export default function Modal({
         aria-label={title || labelledBy ? undefined : "Dialog"}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
+        // Floats above the page, so it wears the Floating shadow, the
+        // same as menus and popovers (DESIGN.md, Rest and Float).
         className={cn(
-          "modal-panel-enter relative bg-white dark:bg-lavender-900 rounded-2xl shadow-lg p-6 outline-none",
+          "modal-panel-enter relative bg-white dark:bg-lavender-900 rounded-2xl border border-lavender-200/70 dark:border-lavender-700 shadow-[0_16px_36px_-12px_rgba(38,45,64,0.28)] p-6 outline-none",
           width === "sm" && "w-full max-w-sm",
           width === "md" && "w-full max-w-lg",
           width === "lg" && "w-full max-w-2xl",
@@ -139,12 +141,14 @@ export default function Modal({
         )}
       >
         {title && (
-          <div className="flex items-center justify-between mb-5">
-            <h2 id={titleId} className="text-title text-baltic-800 dark:text-baltic-100">{title}</h2>
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <h2 id={titleId} className="text-lg font-semibold tracking-tight leading-snug text-baltic-800 dark:text-baltic-100">{title}</h2>
+            {/* steel-600: steel-400 left the icon at 2.7:1, under the 3:1
+                an icon needs. The tap target grows it to 44px. */}
             <button
               onClick={onClose}
               aria-label="Close"
-              className="text-steel-400 hover:text-baltic-600 dark:hover:text-baltic-300 transition-smooth p-1"
+              className="tap-target flex-shrink-0 -m-1 p-1.5 rounded-full text-steel-600 hover:text-baltic-700 hover:bg-lavender-50 dark:text-steel-400 dark:hover:text-baltic-300 dark:hover:bg-lavender-800/60 transition-smooth"
             >
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                 <path d="M4 4l10 10M14 4L4 14" />

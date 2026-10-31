@@ -22,6 +22,7 @@ import {
   parseLocalDate,
   projectedFinishTime,
   readableFill,
+  focusHref,
   cn,
 } from "@/lib/utils";
 import Button from "@/components/ui/Button";
@@ -196,19 +197,10 @@ export default function DashboardPage() {
     [pendingTasks, nextTask]
   );
 
-  // Focus, set up for a task. taskId lets Focus offer "Mark done" at the
-  // end of the session; start=1 (the launcher's Begin) also starts the
-  // timer on arrival.
-  function focusHref(task: Task, start: boolean) {
-    const params = new URLSearchParams({
-      subject: getSubject(task.subject)?.label ?? task.subject,
-      task: task.title,
-      taskId: task.id,
-      min: String(focusBlockMin),
-    });
-    if (start) params.set("start", "1");
-    return `/focus?${params}`;
-  }
+  // Focus, set up for a task (the shared link the task dialog uses too).
+  // The launcher's Begin also starts the timer on arrival.
+  const focusFor = (task: Task, start: boolean) =>
+    focusHref(task, getSubject(task.subject)?.label ?? task.subject, focusBlockMin, start);
 
   function handleWelcomeSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -269,7 +261,7 @@ export default function DashboardPage() {
               autoComplete="given-name"
               className="text-center"
             />
-            <Button type="submit" pill className="w-full press">
+            <Button type="submit" className="w-full">
               Get started
             </Button>
           </form>
@@ -331,7 +323,7 @@ export default function DashboardPage() {
             // Begin means begin: Focus opens set up for this task and
             // starts the timer (Focus strips start=1 so a reload won't
             // restart it).
-            router.push(nextTask ? focusHref(nextTask, true) : "/focus")
+            router.push(nextTask ? focusFor(nextTask, true) : "/focus")
           }
           onPlanStep={() => router.push("/tasks?new=1")}
           onEditGoal={() => router.push("/settings")}
@@ -345,7 +337,7 @@ export default function DashboardPage() {
         <AfterThis
           tasks={afterThis}
           getSubject={getSubject}
-          onFocusOn={(t) => router.push(focusHref(t, false))}
+          onFocusOn={(t) => router.push(focusFor(t, false))}
           onOpenAll={() => router.push("/tasks")}
         />
       )}
