@@ -1,4 +1,5 @@
 import type { FocusQuality } from "./types";
+import { readKey, writeKey, removeKey } from "./storage";
 
 export type TimerState = "idle" | "running" | "paused" | "done" | "reflecting";
 
@@ -25,30 +26,32 @@ export interface LiveSession {
 }
 
 export function saveLiveSession(live: LiveSession) {
-  try {
-    window.sessionStorage.setItem(LIVE_SESSION_KEY, JSON.stringify(live));
-  } catch {
-    // Storage full or blocked: the session still runs, it just won't
-    // survive a reload.
-  }
+  // Storage full or blocked: the session still runs, it just won't
+  // survive a reload, and StorageNotice says so.
+  writeKey(LIVE_SESSION_KEY, JSON.stringify(live), "session");
 }
 
 export function loadLiveSession(): LiveSession | null {
   try {
-    const raw = window.sessionStorage.getItem(LIVE_SESSION_KEY);
+    const raw = readKey(LIVE_SESSION_KEY, "session");
     if (!raw) return null;
     const live = JSON.parse(raw) as LiveSession;
     const states: LiveSession["state"][] = ["running", "paused", "done", "reflecting"];
-    return states.includes(live.state) && typeof live.subject === "string" ? live : null;
+    // Every field the dashboard and Focus read, checked: a malformed
+    // record (another version, a hand edit) is ignored, not crashed on.
+    return states.includes(live.state) &&
+      typeof live.subject === "string" &&
+      typeof live.task === "string" &&
+      Number.isFinite(live.duration) &&
+      Number.isFinite(live.secondsLeft) &&
+      Number.isFinite(live.endTime)
+      ? live
+      : null;
   } catch {
     return null;
   }
 }
 
 export function clearLiveSession() {
-  try {
-    window.sessionStorage.removeItem(LIVE_SESSION_KEY);
-  } catch {
-    // Nothing to clear if storage is unavailable.
-  }
+  removeKey(LIVE_SESSION_KEY, "session");
 }

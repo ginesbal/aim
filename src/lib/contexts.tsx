@@ -10,33 +10,36 @@ import {
 } from "react";
 import { Task, FocusSession, Reflection, UserSubject, DEFAULT_USER_SUBJECTS, PREVIOUS_DEFAULT_COLORS } from "./types";
 import { generateId } from "./utils";
+import { readKey, writeKey } from "./storage";
+import { clampDuration, clampGoal } from "./durations";
 
 // ─── Storage helpers ───
+// Through lib/storage, which never throws: a failed save is reported
+// once (StorageNotice says so) instead of being silently accepted.
 function load<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
+  const raw = readKey(key);
+  if (!raw) return fallback;
   try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
+    return JSON.parse(raw);
   } catch {
     return fallback;
   }
 }
 
+// A stored list, or the fallback if what's there isn't a list of
+// records: one bad value shouldn't blank the whole app.
+function loadList<T>(key: string, fallback: T[]): T[] {
+  const value = load<unknown>(key, fallback);
+  if (!Array.isArray(value)) return fallback;
+  return value.filter((item) => item !== null && typeof item === "object") as T[];
+}
+
 function hasStored(key: string) {
-  try {
-    return localStorage.getItem(key) !== null;
-  } catch {
-    return false;
-  }
+  return readKey(key) !== null;
 }
 
 function save(key: string, value: unknown) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* quota exceeded / privacy mode — accept the loss rather than crash */
-  }
+  writeKey(key, JSON.stringify(value));
 }
 
 // ─── Preferences Context (replaces Auth) ───
@@ -58,10 +61,14 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [focusBlockMin, setFocusBlockMinState] = useState(25);
   const [mounted, setMounted] = useState(false);
 
+  // Stored values are checked, not trusted: a name that isn't text, or a
+  // length outside 5m-2h (Settings once allowed 3h, which Focus can't
+  // run), falls back or is brought into range.
   useEffect(() => {
-    setNameState(load<string>("aim_name", ""));
-    setDailyGoalState(load<number>("aim_daily_goal", 120));
-    setFocusBlockMinState(load<number>("aim_focus_block_min", 25));
+    const storedName = load<unknown>("aim_name", "");
+    setNameState(typeof storedName === "string" ? storedName : "");
+    setDailyGoalState(clampGoal(Number(load<unknown>("aim_daily_goal", 120))));
+    setFocusBlockMinState(clampDuration(Number(load<unknown>("aim_focus_block_min", 25))));
     setMounted(true);
   }, []);
 
@@ -71,13 +78,15 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setDailyGoal = useCallback((m: number) => {
-    setDailyGoalState(m);
-    save("aim_daily_goal", m);
+    const goal = clampGoal(m);
+    setDailyGoalState(goal);
+    save("aim_daily_goal", goal);
   }, []);
 
   const setFocusBlockMin = useCallback((m: number) => {
-    setFocusBlockMinState(m);
-    save("aim_focus_block_min", m);
+    const minutes = clampDuration(m);
+    setFocusBlockMinState(minutes);
+    save("aim_focus_block_min", minutes);
   }, []);
 
   if (!mounted) return null;
@@ -111,6 +120,9 @@ interface TasksState {
   addTask: (task: Omit<Task, "id" | "createdAt" | "completed">) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
+  /** Put a deleted task back exactly as it was (same id, so links to it
+   *  still hold), at its old place in the list. */
+  restoreTask: (task: Task, index: number) => void;
   toggleComplete: (id: string) => void;
   /** Move every task filed under `fromLabel` to `toLabel` (subject rename). */
   reassignTasks: (fromLabel: string, toLabel: string) => void;
@@ -196,7 +208,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Samples are for a first visit only. Once a list has been saved, even
     // an empty one (every task deleted), what's stored is the truth.
-    setTasks(hasStored("aim_tasks") ? load<Task[]>("aim_tasks", []) : SAMPLE_TASKS);
+    setTasks(hasStored("aim_tasks") ? loadList<Task>("aim_tasks", []) : SAMPLE_TASKS);
     setMounted(true);
   }, []);
 
@@ -222,6 +234,15 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     setTasks((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const restoreTask = useCallback((task: Task, index: number) => {
+    setTasks((prev) => {
+      if (prev.some((t) => t.id === task.id)) return prev;
+      const next = [...prev];
+      next.splice(Math.max(0, Math.min(index, next.length)), 0, task);
+      return next;
+    });
+  }, []);
+
   const toggleComplete = useCallback((id: string) => {
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
@@ -239,7 +260,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
   return (
     <TasksContext.Provider
-      value={{ tasks, addTask, updateTask, deleteTask, toggleComplete, reassignTasks }}
+      value={{ tasks, addTask, updateTask, deleteTask, restoreTask, toggleComplete, reassignTasks }}
     >
       {children}
     </TasksContext.Provider>
@@ -272,7 +293,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     // No sample sessions: a first visit starts with an empty "a", so the
     // first session a visitor finishes is its first band. (Sample tasks
     // stay, so there's still something to focus on.)
-    setSessions(load<FocusSession[]>("aim_sessions", []));
+    setSessions(loadList<FocusSession>("aim_sessions", []));
     setMounted(true);
   }, []);
 
@@ -354,7 +375,7 @@ export function SubjectsProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = load<UserSubject[]>("aim_user_subjects", []);
+    const stored = loadList<UserSubject>("aim_user_subjects", []);
     // Default subjects still on their original colour move to the new,
     // more distinct palette (see PREVIOUS_DEFAULT_COLORS).
     const migrated = stored.map((s) => {

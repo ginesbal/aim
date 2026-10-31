@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn, initialOf } from "@/lib/utils";
 import { usePreferences } from "@/lib/contexts";
 import AnimatedAimLogo from "./AnimatedAimLogo";
 import HelpButton from "@/components/ui/HelpButton";
@@ -19,6 +19,8 @@ export default function TopNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { name } = usePreferences();
+  // A whole emoji or accented letter: charAt(0) split an emoji in half.
+  const initial = initialOf(name);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -94,8 +96,8 @@ export default function TopNav() {
         >
           {/* No name yet (the welcome can be skipped): a person mark, not
               "?", which would read as a second help button beside Help. */}
-          {name ? (
-            name.charAt(0).toUpperCase()
+          {initial ? (
+            initial
           ) : (
             <svg aria-hidden width={16} height={16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
               <circle cx="8" cy="5.5" r="2.75" />

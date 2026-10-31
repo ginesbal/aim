@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import TopNav from "./TopNav";
+import StorageNotice from "@/components/ui/StorageNotice";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -48,6 +49,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       >
         {children}
       </main>
+      <StorageNotice />
     </div>
   );
 }

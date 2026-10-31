@@ -18,6 +18,7 @@ colors:
   cream-600: "#949b31"
   paper: "#ffffff"
   error: "#dc2626"
+  error-strong: "#b91c1c"
 typography:
   countdown:
     fontFamily: "Bricolage Grotesque, system-ui, sans-serif"
@@ -83,6 +84,16 @@ components:
     padding: "8px 16px"
   button-secondary-hover:
     backgroundColor: "{colors.lavender-50}"
+  button-destructive:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.error-strong}"
+    rounded: "{rounded.full}"
+    padding: "6px 16px"
+  notice:
+    backgroundColor: "{colors.baltic-800}"
+    textColor: "{colors.paper}"
+    rounded: "{rounded.2xl}"
+    padding: "12px 16px"
   input:
     backgroundColor: "{colors.paper}"
     textColor: "{colors.baltic-800}"
@@ -207,13 +218,14 @@ Soft and round, never sharp. Buttons, chips, navigation items and the context pi
 Soft and tactile: fully rounded pills that press in slightly (scale 0.97 over 160ms), soft paper shadows, one coloured action per screen.
 
 ### Buttons
-- **Shape:** fully rounded, every button. The shared `Button` component (primary, secondary, ghost, danger) draws them; it used to default to 12px corners, a grey-filled secondary and a red-filled delete.
+- **Shape:** fully rounded, every button. The shared `Button` component (primary, secondary, ghost, danger, destructive) draws them; it used to default to 12px corners, a grey-filled secondary and a red-filled delete.
 - **Begin** (`button-begin`): filled with the subject's colour (Baltic by default), white 15px label with a play mark, primary lift shadow. The only filled button on the dashboard.
 - **Primary** (`button-primary`): `baltic-600`, white label, used on Focus (Pause / Resume, Save session) and as a dialog's one filled button (Focus on this, Create task, Add subject, Save).
 - **Secondary** (`button-secondary`): white with a 1px `lavender-200` edge and `baltic-700` label; hover `lavender-50`. Finish early, Pause & leave, the backdrop and help buttons; in dialogs Mark complete and Edit task; an inline Add subject (the dialog or card it sits in already has its filled button).
 - **Ghost:** `steel-600` text, `lavender-50` on hover: Cancel, Done.
 - **Text links:** `steel-600`, 14px 500, underlined; for quieter alternatives ("or focus without a task", "Adjust goal", "Keep going").
 - **Discard:** plain `steel-600` text that turns red on hover and asks once more ("Confirm discard") before acting. The shared `danger` button is the same quiet text (red-700 on hover): Delete task, Clear all data. A destructive action is never the loudest thing on screen.
+- **Undo or a second step, never neither:** Delete task acts at once and offers Undo for five seconds; the task returns whole, at its old place and with its id. Clear all data can't be undone, so its first click only arms it: a short warning saying what goes, then `destructive` (`button-destructive`: white, a 1px `red-300` edge, an `error-strong` label) "Clear everything" beside a ghost "Keep my data", which takes focus; Esc backs out. Never `window.confirm()`.
 - **Focus:** a 2px `baltic-500` outline, offset 2px, on every control; links and menu rows draw the same colour as a 2px ring.
 - **Enter:** no control takes focus on arrival; that drew the focus ring for mouse users too, on every load (critique, 2026-10-27). Instead, Enter pressed on the page itself (not on a control, a menu or the help panel) presses the screen's one filled button: Begin, Return to focus or Add your first task on the dashboard, Begin on the Focus card once a subject is set, Save session on the ending card. Those buttons carry `aria-keyshortcuts="Enter"`, and the help panel lists it.
 
@@ -232,13 +244,18 @@ Soft and tactile: fully rounded pills that press in slightly (scale 0.97 over 16
 - **Style:** white, 1px `lavender-400` edge, 6px corners (fully rounded on the Focus card), 14px text, `steel-600` placeholder. Text fields, the textarea and the date field all share it (`FIELD` in `Input.tsx`).
 - **Label:** 14px 500 `baltic-700`, sentence case, above its field and tied to it; a group of chips or swatches is labelled the same way. It replaced an 11px uppercase label that read as decoration (critique, 2026-10-27).
 - **Focus:** the shared `baltic-500` outline, plus the edge shifting to `baltic-400`.
-- **Error:** `error` edge and a short message below that says what to do.
+- **Error:** `error` edge and a short message below that says what to do, with the range when there is one ("Enter whole minutes, from 5 to 120 (2h)."). It stays until its field is edited (Settings' errors used to vanish after 3 seconds); on submit, focus moves to the first field in error. A field with a range names it in its label. Forms set `noValidate`, so these messages replace the browser's bubbles.
+- **Status:** a save is confirmed in words beside its button ("Saved."), in a live region that is always mounted, until the next edit. If the browser isn't keeping data, it says so instead.
 
 ### Colour swatches
 One shared row of the ten subject colours, wherever a subject gets one (New subject, Manage subjects, the task form, the Focus card's subject list). Each swatch is named for screen readers ("Colour 3" until the palette is named in `types.ts`, never a hex code); the picked one wears a 2px `baltic-500` ring, and the keyboard outline sits further out, so the two never overlap.
 
 ### Dialogs
 16px corners, a hairline edge and the Floating shadow, an 18px 600 title and a close button in `steel-600` with a 44px tap area. One filled button each. The task dialog leads to a session: its filled button is Focus on this (Focus set up for the task, as an "After this" row does), or Return to focus while a session is still open; Mark complete and Edit task are secondary; Delete task is quiet.
+
+### Notices
+- **Undo banner:** a `baltic-700` pill in a reserved row under the Tasks list: a cream icon, "Marked done." or "Deleted.", the task's title (truncated) and Undo. Five seconds of visible time; the count pauses while the tab is hidden and starts over for each new action. Only the latest action can be undone.
+- **Storage notice** (`notice`): when the browser won't keep aim's data (site data blocked, storage full, some private windows), a `baltic-800` card with a red dot fixed to the bottom of every page, Focus included, says so once: "This browser isn't saving aim. Tasks and sessions from this tab will be gone when it closes. Allowing site data for this site fixes it." It can be dismissed. Until then aim carried on as if it had saved, and pages that read storage directly crashed when it was blocked (critique, 2026-10-28).
 
 ### Navigation
 - **Desktop:** page names as pills inside a `baltic-50` track; the active page fills `baltic-600` with a white label; inactive pages are `steel-600`.
@@ -265,6 +282,7 @@ It used to stack one band per session in its subject's colour, with the percenta
 - **Do** keep text at 4.5:1 or better (`steel-600` on white is the floor) and control edges and icons at 3:1 (`lavender-400`).
 - **Do** use the shared `baltic-500` focus outline; a custom ring must use the same colour.
 - **Do** honour "reduce motion": animated backdrops don't start and entrance animations are off.
+- **Do** let long text wrap or truncate, never overflow: a task title can be 120 characters with no spaces (a pasted link). Headlines, the day line and dialog titles break anywhere if they must; single-line rows truncate. Initials come from the first whole character, so an emoji or accented name shows one glyph, not half of one.
 
 ### Don't:
 - **Don't** add notebook props (tape, doodles, ruled lines, stickers) to express the north star.

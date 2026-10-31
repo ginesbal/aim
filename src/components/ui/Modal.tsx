@@ -142,7 +142,8 @@ export default function Modal({
       >
         {title && (
           <div className="flex items-start justify-between gap-4 mb-5">
-            <h2 id={titleId} className="text-lg font-semibold tracking-tight leading-snug text-baltic-800 dark:text-baltic-100">{title}</h2>
+            {/* A task's title can be 120 characters with no spaces. */}
+            <h2 id={titleId} className="min-w-0 [overflow-wrap:anywhere] text-lg font-semibold tracking-tight leading-snug text-baltic-800 dark:text-baltic-100">{title}</h2>
             {/* steel-600: steel-400 left the icon at 2.7:1, under the 3:1
                 an icon needs. The tap target grows it to 44px. */}
             <button

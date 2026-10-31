@@ -2,6 +2,21 @@ export function cn(...classes: (string | false | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
+/**
+ * A name's first letter as a person sees it: a whole emoji or accented
+ * letter, never half of one. charAt(0) split an emoji's surrogate pair
+ * and the avatar showed a broken glyph.
+ */
+export function initialOf(name: string): string {
+  const text = name.trim();
+  if (!text) return "";
+  const first =
+    typeof Intl !== "undefined" && "Segmenter" in Intl
+      ? new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text)[Symbol.iterator]().next().value?.segment
+      : Array.from(text)[0];
+  return (first ?? "").toLocaleUpperCase();
+}
+
 export function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }

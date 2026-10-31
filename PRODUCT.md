@@ -23,14 +23,14 @@ The focus session is the centre of the product. Tasks exist to give sessions som
 
 ## Operating Context
 
-- Sessions run 25 to 90 minutes, often with aim in a background tab: the tab title counts down in minutes and a soft chime marks the end.
+- Sessions run 5 to 120 minutes (25, 45, 60 and 90 are the quick picks; Settings keeps to the same range), often with aim in a background tab: the tab title counts down in minutes and a soft chime marks the end.
 - Pages: Dashboard, Tasks, Focus, Journal, Settings.
 - A first visit asks for a name and starts with six sample tasks (marked "sample task"); there are no sample sessions.
 - A session left mid-way (paused, or finished but not saved) survives leaving Focus and reloading, and the dashboard offers the way back to it.
 
 ## Capabilities and Constraints
 
-- **No accounts; data stays in the browser.** Everything is in localStorage, plus sessionStorage for a live session. No server, no sign-in, no sync.
+- **No accounts; data stays in the browser.** Everything is in localStorage under `aim_` keys, plus sessionStorage for a live session, all read and written through `src/lib/storage.ts`. No server, no sign-in, no sync. If the browser won't keep it (site data blocked, storage full), aim still works for the tab and says plainly that nothing will be kept. Clear all data removes every `aim_` key, so aim starts over exactly as on a first visit.
 - **Desktop web first.** Phone layouts exist for the dashboard and Focus; Tasks, Journal and Settings wait until the owner asks.
 - **Light theme only for now.** Dark mode is parked behind `DARK_MODE_ENABLED = false`.
 - **Unfinished features are parked behind flags, not deleted:** `SHOW_AMBIENT`, `DARK_MODE_ENABLED`. (`SHOW_DAY_CHIPS` is gone: the week of small "a"s replaced the day and streak chips it parked.)

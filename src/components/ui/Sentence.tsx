@@ -8,9 +8,10 @@ import type { ReactNode } from "react";
    line of their own in Caveat, a size down, which read as a label over a
    title rather than a sentence (critique, 2026-10-27). A figure in the
    sentence ("2h 30m", "5 tasks") is kept whole with whitespace-nowrap, so
-   a phone never breaks it across lines. */
+   a phone never breaks it across lines. A task title with no spaces (a
+   pasted link) breaks anywhere rather than running off the screen. */
 export const SENTENCE =
-  "text-3xl sm:text-4xl font-bold tracking-tight leading-[1.15] text-baltic-800 dark:text-baltic-100";
+  "text-3xl sm:text-4xl font-bold tracking-tight leading-[1.15] text-baltic-800 dark:text-baltic-100 [overflow-wrap:anywhere]";
 
 /** The connecting words of a sentence. Never content, a number or a control. */
 export function Connect({ children }: { children: ReactNode }) {

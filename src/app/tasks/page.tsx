@@ -32,6 +32,7 @@ import Input, { FIELD, FIELD_EDGE, FIELD_LABEL } from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 import ColorSwatches from "@/components/ui/ColorSwatches";
 import { loadLiveSession } from "@/lib/liveSession";
+import { readKey, writeKey } from "@/lib/storage";
 import { SENTENCE, Connect } from "@/components/ui/Sentence";
 
 type StatusFilter = "pending" | "completed" | "all";
@@ -60,10 +61,13 @@ const UNDO_TIMEOUT_MS = 5000;
  * Run `onFire` after `ms` of *visible* time, not wall time. When the tab is
  * hidden mid-countdown we freeze the timer; on return we resume with whatever
  * time was left. The principle: a 5-second undo should mean five seconds the
- * user could actually see — Sonner does the same for toasts.
+ * user could actually see — Sonner does the same for toasts. The count
+ * runs while `item` isn't null, and a new item starts it over: a second
+ * Mark done or Delete within the five seconds used to get only what was
+ * left of the first one's.
  */
 function useVisibilityAwareTimeout(
-  active: boolean,
+  item: object | null,
   ms: number,
   onFire: () => void
 ) {
@@ -73,7 +77,7 @@ function useVisibilityAwareTimeout(
   onFireRef.current = onFire;
 
   useEffect(() => {
-    if (!active) return;
+    if (item === null) return;
     let remaining = ms;
     let startedAt = performance.now();
     let id: ReturnType<typeof setTimeout> | null = null;
@@ -105,13 +109,12 @@ function useVisibilityAwareTimeout(
       if (id !== null) clearTimeout(id);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [active, ms]);
+  }, [item, ms]);
 }
 
 function loadStoredTabs(): SubjectTab[] | null {
-  if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(TABS_STORAGE_KEY);
+    const raw = readKey(TABS_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return null;
@@ -122,12 +125,8 @@ function loadStoredTabs(): SubjectTab[] | null {
 }
 
 function persistTabs(tabs: SubjectTab[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(tabs));
-  } catch {
-    /* quota / privacy mode — accept the loss */
-  }
+  // A failed save is reported once by lib/storage (StorageNotice).
+  writeKey(TABS_STORAGE_KEY, JSON.stringify(tabs));
 }
 
 function buildDefaultTabs(subjects: UserSubject[]): SubjectTab[] {
@@ -155,7 +154,7 @@ function tabDisplayLabel(tab: SubjectTab): string {
 }
 
 export default function TasksPage() {
-  const { tasks, addTask, updateTask, toggleComplete, deleteTask, reassignTasks } =
+  const { tasks, addTask, updateTask, toggleComplete, deleteTask, restoreTask, reassignTasks } =
     useTasks();
   const { subjects, getSubject, addSubject, updateSubject, deleteSubject } =
     useSubjects();
@@ -169,7 +168,7 @@ export default function TasksPage() {
   // Initialise synchronously via a ref so tabs + activeTabId share the
   // same seed (buildDefaultTabs generates fresh ids per call, so we'd
   // otherwise risk a mismatch). The providers gate render until they're
-  // mounted, so localStorage is always available here.
+  // mounted, so this only runs in the browser.
   const initialTabsRef = useRef<SubjectTab[] | null>(null);
   if (initialTabsRef.current === null) {
     const stored = loadStoredTabs();
@@ -220,12 +219,15 @@ export default function TasksPage() {
     }
   }, [tabs, activeTabId]);
 
-  // Inline undo for Mark done. Visibility-aware: the 5s pauses while the
-  // tab is hidden, so a user who alt-tabs away still sees the banner on
-  // return instead of finding it silently expired.
-  const [lastDone, setLastDone] = useState<{ id: string; title: string } | null>(null);
-  useVisibilityAwareTimeout(lastDone !== null, UNDO_TIMEOUT_MS, () =>
-    setLastDone(null)
+  // Inline undo for Mark done and Delete. Visibility-aware: the 5s pauses
+  // while the tab is hidden, so a user who alt-tabs away still sees the
+  // banner on return instead of finding it silently expired. Delete used
+  // to be immediate and final, one click from Mark complete (critique,
+  // 2026-10-28); a deleted task now comes back whole, at its old place in
+  // the list and with its id, so its logged sessions still point at it.
+  const [lastUndo, setLastUndo] = useState<UndoItem | null>(null);
+  useVisibilityAwareTimeout(lastUndo, UNDO_TIMEOUT_MS, () =>
+    setLastUndo(null)
   );
 
   // Inline undo for closing a tab. Captures the position too so undo
@@ -234,7 +236,7 @@ export default function TasksPage() {
     tab: SubjectTab;
     position: number;
   } | null>(null);
-  useVisibilityAwareTimeout(lastClosedTab !== null, UNDO_TIMEOUT_MS, () =>
+  useVisibilityAwareTimeout(lastClosedTab, UNDO_TIMEOUT_MS, () =>
     setLastClosedTab(null)
   );
 
@@ -588,7 +590,7 @@ export default function TasksPage() {
                 getSubject={getSubject}
                 onSelect={setSelectedTask}
                 onComplete={(id, title) => {
-                  setLastDone({ id, title });
+                  setLastUndo({ kind: "done", id, title });
                   toggleComplete(id);
                 }}
                 onUncomplete={(id) => toggleComplete(id)}
@@ -601,13 +603,14 @@ export default function TasksPage() {
 
       {/* Undo banner — slot reserved so the layout stays still */}
       <UndoSlot
-        item={lastDone}
+        item={lastUndo}
         onUndo={() => {
-          if (!lastDone) return;
-          toggleComplete(lastDone.id);
-          setLastDone(null);
+          if (!lastUndo) return;
+          if (lastUndo.kind === "done") toggleComplete(lastUndo.id);
+          else restoreTask(lastUndo.task, lastUndo.index);
+          setLastUndo(null);
         }}
-        onDismiss={() => setLastDone(null)}
+        onDismiss={() => setLastUndo(null)}
       />
 
       {/* Tab-close undo — restores the closed tab at its original
@@ -674,12 +677,14 @@ export default function TasksPage() {
             // Completing from the detail modal gets the same 5s undo as the
             // row checkbox; marking pending again just toggles.
             if (!selectedTask.completed) {
-              setLastDone({ id: selectedTask.id, title: selectedTask.title });
+              setLastUndo({ kind: "done", id: selectedTask.id, title: selectedTask.title });
             }
             toggleComplete(selectedTask.id);
             setSelectedTask(null);
           }}
           onDelete={() => {
+            const index = tasks.findIndex((t) => t.id === selectedTask.id);
+            setLastUndo({ kind: "deleted", task: selectedTask, index });
             deleteTask(selectedTask.id);
             setSelectedTask(null);
           }}
@@ -1690,18 +1695,24 @@ function Empty({
 /* ─────────────────────────────────────────────────────────────
    UNDO SLOT — same behavior as the dashboard. A reserved row
    between the list and the page bottom keeps the layout still
-   whether or not an undo is pending.
+   whether or not an undo is pending. It undoes the last Mark done
+   or Delete, whichever came last.
    ───────────────────────────────────────────────────────────── */
+
+type UndoItem =
+  | { kind: "done"; id: string; title: string }
+  | { kind: "deleted"; task: Task; index: number };
 
 function UndoSlot({
   item,
   onUndo,
   onDismiss,
 }: {
-  item: { id: string; title: string } | null;
+  item: UndoItem | null;
   onUndo: () => void;
   onDismiss: () => void;
 }) {
+  const title = item === null ? "" : item.kind === "done" ? item.title : item.task.title;
   return (
     <div className="min-h-[2.75rem] mt-3 flex items-center" aria-live="polite">
       {item && (
@@ -1723,10 +1734,16 @@ function UndoSlot({
               aria-hidden
               className="flex-shrink-0 text-cream-400"
             >
-              <path d="M2.5 6.5l2.5 2.5L9.5 4" />
+              {item.kind === "done" ? (
+                <path d="M2.5 6.5l2.5 2.5L9.5 4" />
+              ) : (
+                <path d="M2.5 3.5h7M5 3.5V2.25h2V3.5M3.5 3.5l.5 6.25h4l.5-6.25" />
+              )}
             </svg>
-            <span className="font-semibold flex-shrink-0">Marked done.</span>
-            <span className="truncate text-white/70">{item.title}</span>
+            <span className="font-semibold flex-shrink-0">
+              {item.kind === "done" ? "Marked done." : "Deleted."}
+            </span>
+            <span className="truncate text-white/70">{title}</span>
           </span>
           <span className="inline-flex items-center gap-1 flex-shrink-0">
             <button

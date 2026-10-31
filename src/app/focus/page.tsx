@@ -6,8 +6,10 @@ import dynamic from "next/dynamic";
 import { useFocus, useSubjects, usePreferences, useTasks } from "@/lib/contexts";
 import { SUBJECTS, type SubjectKey, type FocusQuality } from "@/lib/types";
 import { cn, formatTime, readableFill } from "@/lib/utils";
+import { readKey, writeKey } from "@/lib/storage";
 import { QualitySelector } from "@/components/ui/QualityIndicator";
-import DurationPicker, { DURATION_MAX, DURATION_MIN } from "@/components/ui/DurationPicker";
+import DurationPicker from "@/components/ui/DurationPicker";
+import { DURATION_MAX, DURATION_MIN } from "@/lib/durations";
 import SubjectSelector from "@/components/ui/SubjectSelector";
 import HelpButton from "@/components/ui/HelpButton";
 import type { VantaEffectName } from "@/components/ui/VantaBg";
@@ -51,14 +53,15 @@ const PATTERN_STORAGE_KEY = "aim_focus_pattern";
 
 // One of a fixed set of keys, remembered in localStorage.
 function useStoredChoice<K extends string>(storageKey: string, keys: readonly K[], fallback: K) {
+  // Through lib/storage: reading blocked storage directly threw, and the
+  // whole Focus page failed to draw.
   const [value, setValue] = useState<K>(() => {
-    if (typeof window === "undefined") return fallback;
-    const saved = window.localStorage.getItem(storageKey) as K;
+    const saved = readKey(storageKey) as K;
     return keys.includes(saved) ? saved : fallback;
   });
   const select = useCallback((key: K) => {
     setValue(key);
-    window.localStorage.setItem(storageKey, key);
+    writeKey(storageKey, key);
   }, [storageKey]);
   return [value, select] as const;
 }

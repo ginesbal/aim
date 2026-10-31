@@ -9,10 +9,12 @@ import { ButtonHTMLAttributes, forwardRef } from "react";
    - ghost: steel-600 text (Cancel, Done).
    - danger: quiet steel-600 text that turns red on hover, like Focus's
      Discard. A destructive action is never the loudest thing on screen.
+   - destructive: the armed second step of one ("Clear everything"):
+     red-700 text with a red edge, shown only after the first click.
    Focus is the app's shared outline (2px baltic-500, offset 2px). */
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "ghost" | "danger";
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "destructive";
   size?: "sm" | "md";
 }
 
@@ -31,6 +33,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             "text-steel-600 hover:text-baltic-700 hover:bg-lavender-50 dark:text-steel-400 dark:hover:text-baltic-300 dark:hover:bg-lavender-900",
           variant === "danger" &&
             "text-steel-600 hover:text-red-700 hover:bg-red-50 dark:text-steel-400 dark:hover:text-red-400 dark:hover:bg-red-950/40",
+          variant === "destructive" &&
+            "border border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40",
           size === "sm" && "text-sm px-4 py-1.5 gap-1.5",
           size === "md" && "text-sm px-5 py-2 gap-2",
           className

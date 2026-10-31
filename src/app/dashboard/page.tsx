@@ -54,9 +54,9 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import type { Task, UserSubject } from "@/lib/types";
 import { loadLiveSession, type LiveSession } from "@/lib/liveSession";
-import { DURATION_PRESETS } from "@/components/ui/DurationPicker";
+import { DURATION_PRESETS } from "@/lib/durations";
+import { readKey, writeKey, WELCOME_SKIPPED_KEY } from "@/lib/storage";
 
-const WELCOME_SKIPPED_KEY = "aim_welcome_skipped";
 
 /* Tick the dashboard once a minute so the header date / weekday and any
    time-of-day-derived copy ("Hit your goal by 4:30 PM") stay current
@@ -93,14 +93,14 @@ export default function DashboardPage() {
 
   // The welcome dialog asks for a name but doesn't insist: "Skip for now"
   // (or Esc) is remembered, so it doesn't come back on every visit. The
-  // name can still be set in Settings; until then the greeting says "there".
+  // name can still be set in Settings; until then the day line leaves it out.
   const [showWelcome, setShowWelcome] = useState(
-    () => isFirstVisit && !(typeof window !== "undefined" && window.localStorage.getItem(WELCOME_SKIPPED_KEY))
+    () => isFirstVisit && !readKey(WELCOME_SKIPPED_KEY)
   );
   const [welcomeName, setWelcomeName] = useState("");
   const [welcomeError, setWelcomeError] = useState<string | null>(null);
 
-  const firstName = name ? name.split(" ")[0] : "";
+  const firstName = name.trim().split(/\s+/)[0] ?? "";
 
   const pendingTasks = useMemo(
     () =>
@@ -214,7 +214,7 @@ export default function DashboardPage() {
   }
 
   function skipWelcome() {
-    window.localStorage.setItem(WELCOME_SKIPPED_KEY, "1");
+    writeKey(WELCOME_SKIPPED_KEY, "1");
     setShowWelcome(false);
   }
 
@@ -250,6 +250,7 @@ export default function DashboardPage() {
             <Input
               id="welcome-name"
               label="Your name"
+              maxLength={40}
               placeholder="What should we call you?"
               value={welcomeName}
               onChange={(e) => {
@@ -277,7 +278,7 @@ export default function DashboardPage() {
 
       {/* ── HEADER — the day: "Tuesday evening, Maya · 1 due today" ── */}
       <header className="mb-5 sm:mb-8">
-        <p className="text-lg text-steel-600 dark:text-steel-400">
+        <p className="text-lg text-steel-600 dark:text-steel-400 [overflow-wrap:anywhere]">
           <span className="font-semibold text-baltic-700 dark:text-baltic-200">
             {weekday} {dayPart}
             {firstName && `, ${firstName}`}

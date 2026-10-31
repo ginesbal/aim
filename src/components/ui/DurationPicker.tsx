@@ -3,12 +3,7 @@
 import { useCallback } from "react";
 import { cn, formatTime } from "@/lib/utils";
 
-export const DURATION_MIN = 5;
-export const DURATION_MAX = 120;
-export const DURATION_STEP = 5;
-
-// The quick lengths offered on Focus and in the dashboard launcher.
-export const DURATION_PRESETS = [25, 45, 60, 90];
+import { DURATION_MIN, DURATION_MAX, DURATION_STEP, DURATION_PRESETS, clampDuration } from "@/lib/durations";
 
 interface DurationPickerProps {
   value: number;
@@ -16,13 +11,9 @@ interface DurationPickerProps {
   disabled?: boolean;
 }
 
-function clamp(v: number) {
-  return Math.max(DURATION_MIN, Math.min(DURATION_MAX, v));
-}
-
 export default function DurationPicker({ value, onChange, disabled }: DurationPickerProps) {
-  const increment = useCallback(() => onChange(clamp(value + DURATION_STEP)), [value, onChange]);
-  const decrement = useCallback(() => onChange(clamp(value - DURATION_STEP)), [value, onChange]);
+  const increment = useCallback(() => onChange(clampDuration(value + DURATION_STEP)), [value, onChange]);
+  const decrement = useCallback(() => onChange(clampDuration(value - DURATION_STEP)), [value, onChange]);
 
   const formatDisplay = (mins: number) => {
     if (mins >= 60) {
