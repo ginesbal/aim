@@ -187,15 +187,17 @@ Ten muted colours that students assign to their subjects: Baltic blue `#60729f`,
 
 ## Layout
 
-The dashboard is a single centred column, 896px wide at most, inside a page frame of 1152px with 16px gutters on phones and 32px from 640px. A fixed 64px top bar holds the logo, the page navigation, help and profile; on phones the navigation moves to a bottom tab bar.
+Every page (Dashboard, Tasks, Journal, Settings) sits in one centred column, 896px wide at most, inside a page frame of 1152px with 16px gutters on phones and 32px from 640px, so each page's first line starts at the same point and switching pages doesn't move it. The headline used to start at x=272 on the Dashboard and Journal, 176 on Tasks and 384 on Settings (critique, 2026-10-28). A fixed 64px top bar holds the logo, the page navigation, help and profile; on phones the navigation moves to a bottom tab bar.
 
 The launcher card is a two-column grid from 1024px: the sentence and its button on the left, the "a" meter (144px) in an 11rem column on the right. Below 1024px the meter drops under the sentence. "After this" is a plain list under the card, not more cards, and "This week" (the week of small "a"s, below) sits under it with the same header, its days linking to their entries in the Journal. It shows from the first finished session.
 
-Tasks and Journal open the way the dashboard does, with one sentence as the headline ("5 tasks to do, the next due today", "this week, 4 sessions for 2h 30m"), and no page title, date chips or status chips. Journal sits in the dashboard's 896px column. Under its headline, the week of small "a"s and a one-line summary ("mostly Science, 2 days at your goal, and felt focused") replace the bar chart and stat tiles, with no card around them; its entries are plain rows grouped by day, headed like "After this", not cards. Tasks uses the full frame width, because its subject tabs truncate in the narrower column; its list sits on one paper card, the active tab merging into its top edge. Neither page has a desk pattern, blobs, tape or tilted cards.
+Tasks and Journal open the way the dashboard does, with one sentence as the headline ("5 tasks to do, the next due today", "this week, 4 sessions for 2h 30m"), and no page title, date chips or status chips. Under the Journal's headline, the week of small "a"s and a one-line summary ("mostly Science, 2 days at your goal, and felt focused") replace the bar chart and stat tiles, with no card around them; its entries are plain rows grouped by day, headed like "After this", not cards. Tasks' list sits on one paper card, the active tab merging into its top edge. Its subject tabs keep their full labels (one past 12rem truncates) and the strip scrolls sideways instead of squeezing them: squeezed, every label truncated in the column and shrank to a bare dot on a phone. A fade marks an edge with more tabs past it, ending where a small round arrow sits for a mouse (touch screens swipe; the keyboard moves through the tabs with the arrow keys, Home and End); the active tab is kept in view. Neither page has a desk pattern, blobs, tape or tilted cards.
+
+Settings opens the way the dashboard does: "Settings" where the day line sits (it has no tab in the navigation), then one sentence as the headline, "aim for [2h] a day, [25m] at a time", whose blanks are slots like the launcher's. Each pick saves at once, and the line under the sentence says what was saved ("Saved: 3h a day."). Below it, quiet rows between hairlines, with the label in a 10rem column beside its setting (above it on phones): Your name, saved as it's typed and optional, and Your data, with Clear all data. It replaced a card of number fields in minutes and a Save button, in a 672px column of its own.
 
 Focus is a full-screen canvas. Its stage is centred and scrolls when it is taller than the window, so nothing is ever cut off. Controls sit at the top right; the session's context pill sits at the top left (on phones, on its own row below the controls). During a session, "Hide timer" (top right) clears the clock and its controls so the backdrop shows whole; the pill then carries the countdown (and "Paused") and brings the timer back when clicked. The timer returns by itself when the session ends.
 
-**The One Filled Button Rule.** Each screen has exactly one filled primary button. Everything else is a secondary pill, an underlined text link or a plain row.
+**The One Filled Button Rule.** Each screen has exactly one filled primary button. Everything else is a secondary pill, an underlined text link or a plain row. Settings has none: every change saves as it's made, so there is nothing to submit.
 
 ## Elevation & Depth
 
@@ -273,6 +275,8 @@ It used to stack one band per session in its subject's colour, with the percenta
 
 ### The launcher sentence
 "focus for [25m] on [task]": the dashboard's headline and its main control in one. Both the length and the task are slots: words of the sentence underlined like blanks, each opening a short list under itself. The length list offers the quick lengths and becomes the default length. The task list offers the next five tasks by due date; a pick lasts for the visit, and Begin, the meta line and "After this" follow it. With only one task open, the task is plain text. After a save, the same sentence steps down to 1.125rem as "next, focus for [25m] on [task]". The same sentence reappears on the Focus setup card.
+
+Settings uses the same slots (`SentenceSlot.tsx`) for the daily goal (30m, 1h, 1h 30m, 2h, 3h, 4h) and the default length. There, each list ends with "Other goal…" or "Other length…", which opens a minutes field inside the list for any whole number in range (1 to 1440 for the goal, Focus's 5 to 120 for a session); Enter sets it, and a value out of range is an error in place. A value that isn't a quick pick joins its list, so the list always shows what's picked.
 
 ## Do's and Don'ts
 

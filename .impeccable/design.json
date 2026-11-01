@@ -113,6 +113,14 @@
       "css": ".ds-chips { display: inline-flex; gap: 4px; } .ds-chip { border: none; border-radius: 9999px; padding: 4px 12px; background: transparent; color: #616b6b; font: 500 13px/1.4 'Bricolage Grotesque', system-ui, sans-serif; cursor: pointer; } .ds-chip:hover { color: #394460; } .ds-chip-on { background: #dfe3ec; color: #394460; } .ds-chip:focus-visible { outline: 2px solid #60729f; outline-offset: 2px; }"
     },
     {
+      "name": "Sentence Slot",
+      "kind": "control",
+      "refersTo": "headline",
+      "description": "A word of a headline sentence, underlined like a blank, that opens a short list of choices under itself (the launcher's length and task; Settings' goal and length, with an Other… row).",
+      "html": "<h1 class=\"ds-sentence\"><span class=\"ds-connect\">aim for</span> <button class=\"ds-slot\" aria-expanded=\"false\">2h</button> <span class=\"ds-connect\">a day,</span> <button class=\"ds-slot\" aria-expanded=\"false\">25m</button> <span class=\"ds-connect\">at a time</span></h1>",
+      "css": ".ds-sentence { margin: 0; font: 700 36px/1.15 'Bricolage Grotesque', system-ui, sans-serif; letter-spacing: -0.025em; color: #262d40; } .ds-connect { font: italic 400 1.08em 'Newsreader', Georgia, serif; letter-spacing: 0; color: #4d5b80; } .ds-slot { font: inherit; color: inherit; background: none; border: none; padding: 0 4px; margin: 0 -4px; border-radius: 8px; cursor: pointer; text-decoration: underline; text-decoration-color: #8b93a7; text-decoration-thickness: 0.06em; text-underline-offset: 0.16em; } .ds-slot:hover { background: #e2e4e9; text-decoration-color: #60729f; } .ds-slot:focus-visible { outline: 2px solid #60729f; outline-offset: 2px; }"
+    },
+    {
       "name": "Destructive Button",
       "kind": "button",
       "refersTo": "button-destructive",

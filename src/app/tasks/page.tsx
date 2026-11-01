@@ -486,10 +486,11 @@ export default function TasksPage() {
   }, [handleNewTask]);
 
   return (
-    // The app's full width, not the dashboard's narrower column: the
-    // subject tabs need it, or every label truncates. No desk pattern or
-    // blobs (critique, 2026-10-27).
-    <div className="pb-4">
+    // The dashboard's column, as on every page, so the headline doesn't
+    // jump when you switch pages. Tasks used the full width to give the
+    // subject tabs room; they scroll now instead (critique, 2026-10-28).
+    // No desk pattern or blobs (critique, 2026-10-27).
+    <div className="mx-auto max-w-4xl pb-4">
       <header className="mb-8">
         <TasksHeadline stats={stats.all} nextDue={nextDue} />
       </header>
@@ -804,6 +805,69 @@ function SubjectTabs({
   // touching the DOM directly from a child. WAI-ARIA tablist pattern.
   const tabRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+  // The strip scrolls rather than squeezing the tabs: squeezed, every
+  // label truncated in the page column and shrank to a bare dot on a
+  // phone (critique, 2026-10-28). A fade marks an edge with more tabs
+  // past it, and on a mouse a small arrow over the fade scrolls on.
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ start: false, end: false });
+  const updateEdges = useCallback(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const start = el.scrollLeft > 1;
+    const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+    setEdges((prev) => (prev.start === start && prev.end === end ? prev : { start, end }));
+  }, []);
+
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(updateEdges);
+    observer.observe(el);
+    el.addEventListener("scroll", updateEdges, { passive: true });
+    return () => {
+      observer.disconnect();
+      el.removeEventListener("scroll", updateEdges);
+    };
+  }, [updateEdges]);
+
+  // A tab added, renamed or recounted changes how far there is to scroll.
+  // Measured before paint, so the fade doesn't appear a frame late.
+  useLayoutEffect(() => {
+    updateEdges();
+  }, [tabs, counts, activeTabId, updateEdges]);
+
+  const scrollBehavior = (): ScrollBehavior =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+
+  // The active tab stays in view and clear of the fades, wherever it was
+  // picked from (a click on a half-hidden tab, the arrow keys, "+").
+  // Scrolls the strip only, never the page.
+  useEffect(() => {
+    const strip = stripRef.current;
+    const tab = tabRefs.current[activeTabId];
+    if (!strip || !tab) return;
+    const s = strip.getBoundingClientRect();
+    const t = tab.getBoundingClientRect();
+    const room = 80;
+    if (t.left < s.left + room) strip.scrollBy({ left: t.left - s.left - room, behavior: scrollBehavior() });
+    else if (t.right > s.right - room) strip.scrollBy({ left: t.right - s.right + room, behavior: scrollBehavior() });
+  }, [activeTabId]);
+
+  const scrollStrip = (direction: 1 | -1) => {
+    const el = stripRef.current;
+    if (el) el.scrollBy({ left: direction * el.clientWidth * 0.6, behavior: scrollBehavior() });
+  };
+
+  // The fade ends where the arrow (1.75rem) begins, so a label is gone
+  // before it reaches the arrow instead of running under it.
+  const fade =
+    edges.start || edges.end
+      ? `linear-gradient(to right, ${edges.start ? "transparent 1.75rem, #000 5rem" : "#000"}, ${
+          edges.end ? "#000 calc(100% - 5rem), transparent calc(100% - 1.75rem)" : "#000"
+        })`
+      : undefined;
+
   const handleMoveFocus = useCallback(
     (fromTabId: string, direction: TabMoveDirection) => {
       if (tabs.length === 0) return;
@@ -838,50 +902,55 @@ function SubjectTabs({
         className="absolute inset-x-0 bottom-0 h-px bg-lavender-200/70 dark:bg-lavender-800/70"
       />
       <div className="flex items-end gap-1">
-        {/* Tabs share one row; inactive labels truncate and the active one
-            is capped so a long name can't shove the + off-screen, with
-            horizontal scroll (bar hidden) as a last resort. The + sits
-            OUTSIDE this strip so its popover isn't clipped. The first tab is
+        {/* Tabs share one row at their full width (a label past 12rem
+            truncates) and the row scrolls, bar hidden. The + sits OUTSIDE
+            the strip so its popover isn't clipped. The first tab is
             flush-left so it lines up with the card's edge — no corner step. */}
-        <div
-          id={TABLIST_ID}
-          role="tablist"
-          aria-orientation="horizontal"
-          className="flex items-end gap-1 pt-1 overflow-x-auto no-scrollbar flex-1 min-w-0"
-        >
-          {tabs.map((tab) => {
-            const subject =
-              tab.subjectLabel === null
-                ? null
-                : subjects.find((s) => s.label === tab.subjectLabel) ?? null;
-            const color = subject?.color ?? "#9faac6";
-            const pending =
-              tab.subjectLabel === null
-                ? totalPending
-                : counts[tab.subjectLabel]?.pending ?? 0;
-            // The "All" tab is the home view — never closable. Subject
-            // tabs are always closable; even the last one of a kind, since
-            // the user can re-open from the + popover.
-            const closable = tab.subjectLabel !== null;
-            return (
-              <SubjectTab
-                key={tab.id}
-                tab={tab}
-                color={color}
-                pending={pending}
-                isActive={tab.id === activeTabId}
-                closable={closable}
-                tabPanelId={TABPANEL_ID}
-                tabRef={(el) => {
-                  tabRefs.current[tab.id] = el;
-                }}
-                onSelect={() => onSelect(tab.id)}
-                onClose={() => onClose(tab.id)}
-                onRename={(label) => onRename(tab.id, label)}
-                onMoveFocus={(direction) => handleMoveFocus(tab.id, direction)}
-              />
-            );
-          })}
+        <div className="relative flex-1 min-w-0">
+          <div
+            ref={stripRef}
+            id={TABLIST_ID}
+            role="tablist"
+            aria-orientation="horizontal"
+            className="flex items-end gap-1 pt-1 overflow-x-auto no-scrollbar"
+            style={{ maskImage: fade, WebkitMaskImage: fade }}
+          >
+            {tabs.map((tab) => {
+              const subject =
+                tab.subjectLabel === null
+                  ? null
+                  : subjects.find((s) => s.label === tab.subjectLabel) ?? null;
+              const color = subject?.color ?? "#9faac6";
+              const pending =
+                tab.subjectLabel === null
+                  ? totalPending
+                  : counts[tab.subjectLabel]?.pending ?? 0;
+              // The "All" tab is the home view — never closable. Subject
+              // tabs are always closable; even the last one of a kind, since
+              // the user can re-open from the + popover.
+              const closable = tab.subjectLabel !== null;
+              return (
+                <SubjectTab
+                  key={tab.id}
+                  tab={tab}
+                  color={color}
+                  pending={pending}
+                  isActive={tab.id === activeTabId}
+                  closable={closable}
+                  tabPanelId={TABPANEL_ID}
+                  tabRef={(el) => {
+                    tabRefs.current[tab.id] = el;
+                  }}
+                  onSelect={() => onSelect(tab.id)}
+                  onClose={() => onClose(tab.id)}
+                  onRename={(label) => onRename(tab.id, label)}
+                  onMoveFocus={(direction) => handleMoveFocus(tab.id, direction)}
+                />
+              );
+            })}
+          </div>
+          {edges.start && <StripArrow side="start" onClick={() => scrollStrip(-1)} />}
+          {edges.end && <StripArrow side="end" onClick={() => scrollStrip(1)} />}
         </div>
 
         <AddTabButton
@@ -992,7 +1061,7 @@ function SubjectTab({
         closable ? "pl-3.5 pr-1.5" : "px-3.5",
         isActive
           ? "flex-shrink-0 max-w-[18rem] overflow-hidden pt-3 pb-2 bg-white dark:bg-lavender-900 border-lavender-200/70 dark:border-lavender-700/70 font-semibold text-baltic-800 dark:text-baltic-100"
-          : "min-w-0 max-w-[12rem] py-2 border-lavender-200/40 dark:border-lavender-800/40 font-medium text-steel-600 dark:text-steel-400 hover:border-lavender-200/70 dark:hover:border-lavender-700/50 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-baltic-50/50 dark:hover:bg-baltic-900/25"
+          : "flex-shrink-0 max-w-[12rem] py-2 border-lavender-200/40 dark:border-lavender-800/40 font-medium text-steel-600 dark:text-steel-400 hover:border-lavender-200/70 dark:hover:border-lavender-700/50 hover:text-baltic-700 dark:hover:text-baltic-300 hover:bg-baltic-50/50 dark:hover:bg-baltic-900/25"
       )}
       style={{
         transition:
@@ -1128,6 +1197,29 @@ function SubjectTab({
 
 const POPOVER_WIDTH_PX = 240; // matches w-60 below — kept in sync for measurement
 const POPOVER_VIEWPORT_PAD_PX = 16;
+
+/* The arrow over a faded edge of the tab strip, for a mouse with no
+   sideways scroll. Hidden from touch screens, which swipe, and from the
+   keyboard and screen readers, which move through the tabs with the
+   arrow keys and hear every tab anyway. */
+function StripArrow({ side, onClick }: { side: "start" | "end"; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      tabIndex={-1}
+      aria-hidden
+      onClick={onClick}
+      className={cn(
+        "press absolute bottom-1 hidden [@media(hover:hover)]:inline-flex items-center justify-center w-7 h-7 rounded-full border border-lavender-200 bg-white text-steel-600 shadow-sm hover:text-baltic-700 dark:border-lavender-700 dark:bg-lavender-900 dark:text-steel-400",
+        side === "start" ? "left-0" : "right-0"
+      )}
+    >
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d={side === "start" ? "M7.5 2.5L4 6l3.5 3.5" : "M4.5 2.5L8 6l-3.5 3.5"} />
+      </svg>
+    </button>
+  );
+}
 
 function AddTabButton({
   subjects,
