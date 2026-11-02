@@ -87,6 +87,18 @@ export function formatTime(minutes: number) {
   return `${hrs}h ${mins}m`;
 }
 
+/**
+ * A countdown face: "25:00", "05:00", and from an hour up "1:59:59", not
+ * "119:59". Used by Focus's clock, its "of" total and the hidden-timer pill.
+ */
+export function formatClock(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const h = Math.floor(s / 3600);
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
 export function getDayProgress() {
   const now = new Date();
   const hours = now.getHours() + now.getMinutes() / 60;

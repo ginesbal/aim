@@ -135,6 +135,14 @@
       "description": "Fixed to the bottom of every page once the browser refuses to keep aim's data; dismissible.",
       "html": "<div class=\"ds-notice\" role=\"alert\"><span class=\"ds-notice-dot\"></span><p><strong>This browser isn't saving aim.</strong> Tasks and sessions from this tab will be gone when it closes. Allowing site data for this site fixes it.</p></div>",
       "css": ".ds-notice { display: flex; gap: 12px; align-items: flex-start; max-width: 576px; padding: 12px 16px; border-radius: 16px; background: #262d40; color: #ffffff; font: 400 14px/1.5 'Bricolage Grotesque', system-ui, sans-serif; box-shadow: 0 16px 36px -12px rgba(38,45,64,0.28); } .ds-notice strong { font-weight: 600; } .ds-notice-dot { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 9999px; background: #f87171; } .ds-notice p { margin: 0; }"
+    },
+    {
+      "name": "Focus Rating",
+      "kind": "control",
+      "refersTo": "rating-picked",
+      "description": "Four circles on the ending card, Scattered to Deep focus, each filled to its level. Unpicked fills are the meter's pale ghost ink, so none reads as already chosen; the pick fills in full ink with a halo.",
+      "html": "<div class=\"ds-rating\" role=\"group\" aria-label=\"Focus rating\"><button aria-pressed=\"false\" aria-label=\"Scattered\"><svg viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"8\" r=\"7\" class=\"ring\"/></svg></button><button aria-pressed=\"false\" aria-label=\"Distracted\"><svg viewBox=\"0 0 16 16\"><path d=\"M8 15 A7 7 0 0 1 1 8 L8 8 Z\" class=\"fill\"/><circle cx=\"8\" cy=\"8\" r=\"7\" class=\"ring\"/></svg></button><button aria-pressed=\"false\" aria-label=\"Focused\"><svg viewBox=\"0 0 16 16\"><path d=\"M8 1 A7 7 0 0 0 8 15 L8 8 Z\" class=\"fill\"/><circle cx=\"8\" cy=\"8\" r=\"7\" class=\"ring\"/></svg></button><button aria-pressed=\"true\" aria-label=\"Deep focus\"><svg viewBox=\"0 0 16 16\"><circle cx=\"8\" cy=\"8\" r=\"7\" class=\"fill\"/><circle cx=\"8\" cy=\"8\" r=\"7\" class=\"ring\"/></svg></button></div>",
+      "css": ".ds-rating { display: inline-flex; gap: 16px; } .ds-rating button { border: none; background: none; padding: 8px; border-radius: 9999px; cursor: pointer; } .ds-rating svg { display: block; width: 36px; height: 36px; } .ds-rating .ring { fill: none; stroke: #8b93a7; stroke-width: 1.5; } .ds-rating .fill { fill: rgba(57,68,96,0.14); transition: fill 150ms ease-out; } .ds-rating button:hover { background: #f0f1f4; } .ds-rating button:hover .fill { fill: rgba(57,68,96,0.3); } .ds-rating [aria-pressed=\"true\"] { background: #eff1f5; box-shadow: 0 0 0 1px rgba(128,142,179,0.4); } .ds-rating [aria-pressed=\"true\"] .fill { fill: #4d5b80; } .ds-rating [aria-pressed=\"true\"] .ring { stroke: #60729f; } .ds-rating button:focus-visible { outline: 2px solid #60729f; outline-offset: 2px; }"
     }
   ],
   "narrative": {

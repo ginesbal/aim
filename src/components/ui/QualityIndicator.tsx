@@ -97,9 +97,15 @@ export function QualitySelector({ value, onChange, size = 32 }: QualitySelectorP
       >
         {qualities.map((q) => {
           const selected = value === q;
-          // Unselected: lavender-400, 3:1 against the card (lavender-200 was 1.66:1).
-          const strokeColor = selected ? "#60729f" : "#8b93a7";
-          const fillColor = selected ? "#4d5b80" : "#8b93a7";
+          // Each level's fill, unpicked, is pale ink, like the ghost in
+          // the dashboard's "a": what it would be, not what it is. It deepens
+          // on hover, and the pick fills in full ink. Unpicked fills were
+          // lavender-400, so "Deep focus" sat there as a solid grey disc and
+          // read as already chosen (critique, 2026-10-28). The outline stays
+          // lavender-400, 3:1 against the card.
+          const fill = selected
+            ? "fill-baltic-600"
+            : "fill-baltic-700/[0.14] group-hover:fill-baltic-700/30";
           return (
             <button
               key={q}
@@ -110,27 +116,24 @@ export function QualitySelector({ value, onChange, size = 32 }: QualitySelectorP
               aria-keyshortcuts={String(q)}
               title={`${QUALITY_LEVELS[q].label} (${q})`}
               className={cn(
-                "relative rounded-full p-2 transition-[background-color,transform] duration-150 ease-out press",
+                "group relative rounded-full p-2 transition-[background-color,transform] duration-150 ease-out press",
                 selected
                   ? "bg-baltic-50 ring-1 ring-baltic-400/40"
                   : "hover:bg-lavender-50"
               )}
             >
-              <svg width={size} height={size} viewBox="0 0 16 16">
+              <svg aria-hidden width={size} height={size} viewBox="0 0 16 16">
+                {/* The fill first, so the outline stays crisp over it. */}
+                <g className={cn(fill, "transition-[fill] duration-150 ease-out")}>
+                  {q === 2 && <path d="M8 15 A7 7 0 0 1 1 8 L8 8 Z" />}
+                  {q === 3 && <path d="M8 1 A7 7 0 0 0 8 15 L8 8 Z" />}
+                  {q === 4 && <circle cx="8" cy="8" r="7" />}
+                </g>
                 <circle
                   cx="8" cy="8" r="7" fill="none"
-                  stroke={strokeColor}
                   strokeWidth="1.5"
+                  className={selected ? "stroke-baltic-500" : "stroke-lavender-400"}
                 />
-                {q === 2 && (
-                  <path d="M8 15 A7 7 0 0 1 1 8 L8 8 Z" fill={fillColor} />
-                )}
-                {q === 3 && (
-                  <path d="M8 1 A7 7 0 0 0 8 15 L8 8 Z" fill={fillColor} />
-                )}
-                {q === 4 && (
-                  <circle cx="8" cy="8" r="6" fill={fillColor} />
-                )}
               </svg>
             </button>
           );

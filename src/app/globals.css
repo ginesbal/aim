@@ -287,7 +287,10 @@
       );
     background-repeat: no-repeat;
     background-size: 100% 100%;
+    /* The swipe overhangs the words by 0.12em; the negative margin hands
+       that back, so the space before "first" is a normal word space. */
     padding: 0 0.12em;
+    margin: 0 -0.12em;
   }
 
   .dark .highlighter {

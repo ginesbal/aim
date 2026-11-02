@@ -616,10 +616,12 @@ function HeroBody({
   if (!nextTask) {
     const fresh = !hasAnySessions;
     return (
-      <div className="grid gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_11rem]">
-        <div>
+      <div className="grid gap-6 lg:gap-8 items-center grid-cols-1 lg:grid-cols-[minmax(0,1fr)_11rem]">
+        <div className="min-w-0">
           {loggedHeadline ?? (
-            <h1 id="launcher-headline" className="text-3xl font-bold tracking-tight text-baltic-800 dark:text-baltic-100 leading-tight">
+            // The headline size of every other state (it was a fixed
+            // 1.875rem, a step under them from 640px).
+            <h1 id="launcher-headline" className={SENTENCE}>
               {fresh ? (
                 <>
                   Set your <span className="highlighter">first aim</span>
@@ -634,17 +636,23 @@ function HeroBody({
               ? "Add a task and your first focus session is one click away."
               : "Plan the next task and it will be waiting here."}
           </p>
-          <button
-            onClick={onPlanStep}
-            ref={primaryRef}
-            aria-keyshortcuts="Enter"
-            aria-describedby="launcher-headline"
-            className="press mt-6 inline-flex items-center gap-2 rounded-full px-6 py-3 bg-baltic-700 dark:bg-baltic-500 text-white text-[15px] font-medium hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
-            style={{ transition: "transform 160ms var(--ease-out), background-color 160ms ease" }}
-          >
-            {fresh ? "Add your first task" : "Add a task"}
-          </button>
-          <div className="mt-4">{focusBlank}</div>
+          {/* The same row as Begin's, at Begin's size, so "or focus
+              without a task" sits in the same place in every state: beside
+              the button, or under it on a phone. It used to drop to a line
+              of its own under this button (critique, 2026-10-28). */}
+          <div className="mt-7 flex items-center gap-5 flex-wrap">
+            <button
+              onClick={onPlanStep}
+              ref={primaryRef}
+              aria-keyshortcuts="Enter"
+              aria-describedby="launcher-headline"
+              className="press w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 bg-baltic-700 dark:bg-baltic-500 text-white text-[15px] font-medium hover:bg-baltic-800 dark:hover:bg-baltic-400 shadow-[0_6px_16px_-8px_rgba(38,45,64,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-baltic-950"
+              style={{ transition: "transform 160ms var(--ease-out), background-color 160ms ease" }}
+            >
+              {fresh ? "Add your first task" : "Add a task"}
+            </button>
+            {focusBlank}
+          </div>
         </div>
         {meter}
       </div>

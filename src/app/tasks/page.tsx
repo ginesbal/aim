@@ -695,6 +695,12 @@ export default function TasksPage() {
   );
 }
 
+/* "Today" and "Tomorrow" are labels on their own; inside a phrase they
+   go lowercase, as on the dashboard: "Due tomorrow", not "Due Tomorrow". */
+function inPhrase(day: string) {
+  return day === "Today" || day === "Tomorrow" ? day.toLowerCase() : day;
+}
+
 /* ─────────────────────────────────────────────────────────────
    HEADLINE — one sentence, in the dashboard's voice: what's left to
    do, and when the next of it is due (or how much is overdue). It
@@ -739,7 +745,12 @@ function TasksHeadline({
         <span className="whitespace-nowrap tabular-nums text-red-700 dark:text-red-400">{stats.overdue} overdue</span>
       ) : (
         <>
-          <Connect>{stats.pending === 1 ? "due" : "the next due"}</Connect> {due}
+          {/* "due" stays with its day, so a phone breaks the line before
+              it and never leaves "today" alone on the last line. */}
+          {stats.pending > 1 && <><Connect>the next</Connect>{" "}</>}
+          <span className="whitespace-nowrap">
+            <Connect>due</Connect> {due}
+          </span>
         </>
       )}
     </h1>
@@ -1159,10 +1170,17 @@ function SubjectTab({
           onKeyDown={(e) => e.stopPropagation()}
           aria-label={`Close ${displayLabel}`}
           className={cn(
-            "press flex items-center justify-center w-[18px] h-[18px] rounded-full flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
+            // 18px to the eye, 24px to the pointer: the ::before reaches
+            // 3px past the circle, still inside the tab.
+            "press relative flex items-center justify-center w-[18px] h-[18px] rounded-full flex-shrink-0 before:absolute before:-inset-[3px] before:rounded-full before:content-[''] focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500",
             isActive
               ? "text-steel-500 dark:text-steel-500 hover:bg-baltic-100 dark:hover:bg-baltic-800/60 hover:text-baltic-700 dark:hover:text-baltic-200 opacity-100"
-              : "text-steel-500 dark:text-steel-600 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-baltic-100 dark:hover:bg-baltic-800/60 hover:text-baltic-700 dark:hover:text-baltic-200"
+              // Clickable only while it shows, and shown on hover only
+              // where there's a real hover. Invisible, it still took taps,
+              // and a touch screen fakes a hover just before the click, so
+              // a tap near an inactive tab's right edge closed the tab
+              // instead of opening it. On touch: open the tab, then its ×.
+              : "text-steel-500 dark:text-steel-600 opacity-0 pointer-events-none [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto hover:bg-baltic-100 dark:hover:bg-baltic-800/60 hover:text-baltic-700 dark:hover:text-baltic-200"
           )}
           style={{
             transition:
@@ -2718,7 +2736,7 @@ function TaskDetailModal({
 
         <div className="flex items-center gap-3 text-sm text-steel-600 dark:text-steel-400">
           <span>
-            Due {formatDate(task.dueDate)}
+            Due {inPhrase(formatDate(task.dueDate))}
             {overdue && (
               <span className="text-red-700 dark:text-red-400 ml-1.5 font-semibold">
                 · Overdue
@@ -2731,7 +2749,7 @@ function TaskDetailModal({
                 ·
               </span>
               <span>
-                Added {formatDate(task.createdAt.split("T")[0])}
+                Added {inPhrase(formatDate(task.createdAt.split("T")[0]))}
               </span>
             </>
           )}

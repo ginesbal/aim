@@ -118,6 +118,10 @@ components:
     backgroundColor: "{colors.baltic-100}"
     textColor: "{colors.baltic-700}"
     rounded: "{rounded.full}"
+  rating-picked:
+    backgroundColor: "{colors.baltic-50}"
+    textColor: "{colors.baltic-600}"
+    rounded: "{rounded.full}"
 ---
 
 # Design System: aim
@@ -175,8 +179,8 @@ Ten muted colours that students assign to their subjects: Baltic blue `#60729f`,
 **Character:** A warm, slightly irregular grotesque carries all content and controls; a reading serif, in italic, joins the words of a sentence, so the headline reads like a line of annotated notes. It replaced Caveat, whose handwriting read as a kid's notebook and sat a size down on a line of its own, so the headline read as a label over a title (critique, 2026-10-27).
 
 ### Hierarchy
-- **Countdown** (200, 3.75rem, line-height 1, tabular figures): the Focus clock only. Light weight so a large number stays calm.
-- **Headline** (700, 1.875rem on phones and 2.25rem from 640px, line-height 1.15, tracking -0.025em): the launcher sentence ("focus for 25m on Lab report"), "just logged 45m of Science" and "paused on …", each one sentence at one size. In the launcher a task title over 72 characters is shortened with an ellipsis (the full title is its tooltip); "paused on …" is clamped to three lines (four on phones).
+- **Countdown** (200, 3.75rem, line-height 1, tabular figures): the Focus clock only. Light weight so a large number stays calm. From an hour up it reads h:mm:ss, "1:59:59" over "of 2:00:00", as does the pill when the timer is hidden; it read "119:59 of 120:00" (critique, 2026-10-28).
+- **Headline** (700, 1.875rem on phones and 2.25rem from 640px, line-height 1.15, tracking -0.025em): the launcher sentence ("focus for 25m on Lab report"), "just logged 45m of Science" and "paused on …", each one sentence at one size. In the launcher a task title over 72 characters is shortened with an ellipsis (the full title is its tooltip); "paused on …" is clamped to three lines (four on phones). A short closing phrase stays on one line ("due today", "in the last 7 days"), so a phone never leaves one word on a line of its own. The empty dashboard's "Set your first aim" and "All caught up" are headlines at the same size.
 - **Connecting words** (Newsreader italic 400 at 1.08em of the sentence around them, `baltic-600`, normal tracking): "focus for", "on", "of", "just logged", "paused on", "next, focus for"; 1.125rem on the Focus card. They sit inline at the sentence's size, never on a line of their own.
 - **Title** (600, 1.125rem): the day line above the launcher ("Tuesday evening, Maya · 1 due today"), which replaced the greeting; what's due follows in `steel-600` 400, overdue in red. Also 1.125rem 500 for "How focused were you?" on the ending card, and 1.125rem 600 for the Journal's week summary.
 - **Body** (400, 0.875rem, line-height 1.5): status lines, lists, help text. Button labels are 15px 500.
@@ -191,7 +195,7 @@ Every page (Dashboard, Tasks, Journal, Settings) sits in one centred column, 896
 
 The launcher card is a two-column grid from 1024px: the sentence and its button on the left, the "a" meter (144px) in an 11rem column on the right. Below 1024px the meter drops under the sentence. "After this" is a plain list under the card, not more cards, and "Last 7 days" (the week of small "a"s, below) sits under it with the same header, its days linking to their entries in the Journal. It shows from the first finished session.
 
-Tasks and Journal open the way the dashboard does, with one sentence as the headline ("5 tasks to do, the next due today", "4 sessions for 2h 30m in the last 7 days"), and no page title, date chips or status chips. Under the Journal's headline, the week of small "a"s and a one-line summary ("mostly Science, 2 days at your goal, and felt focused") replace the bar chart and stat tiles, with no card around them; its entries are plain rows grouped by day, headed like "After this", not cards. Tasks' list sits on one paper card, the active tab merging into its top edge. Its subject tabs keep their full labels (one past 12rem truncates) and the strip scrolls sideways instead of squeezing them: squeezed, every label truncated in the column and shrank to a bare dot on a phone. A fade marks an edge with more tabs past it, ending where a small round arrow sits for a mouse (touch screens swipe; the keyboard moves through the tabs with the arrow keys, Home and End); the active tab is kept in view. Neither page has a desk pattern, blobs, tape or tilted cards.
+Tasks and Journal open the way the dashboard does, with one sentence as the headline ("5 tasks to do, the next due today", "4 sessions for 2h 30m in the last 7 days"), and no page title, date chips or status chips. Under the Journal's headline, the week of small "a"s and a one-line summary ("mostly Science, 2 days at your goal, and felt focused") replace the bar chart and stat tiles, with no card around them; its entries are plain rows grouped by day, headed like "After this", not cards. Tasks' list sits on one paper card, the active tab merging into its top edge. Its subject tabs keep their full labels (one past 12rem truncates) and the strip scrolls sideways instead of squeezing them: squeezed, every label truncated in the column and shrank to a bare dot on a phone. A fade marks an edge with more tabs past it, ending where a small round arrow sits for a mouse (touch screens swipe; the keyboard moves through the tabs with the arrow keys, Home and End); the active tab is kept in view. A tab's × shows on the active tab, and on an inactive one only while it's hovered, on screens that hover; elsewhere it isn't there to be hit, so on touch a tap opens the tab and its × then closes it. It's an 18px circle with a 24px hit area. Neither page has a desk pattern, blobs, tape or tilted cards.
 
 Settings opens the way the dashboard does: "Settings" where the day line sits (it has no tab in the navigation), then one sentence as the headline, "aim for [2h] a day, [25m] at a time", whose blanks are slots like the launcher's. Each pick saves at once, and the line under the sentence says what was saved ("Saved: 3h a day."). Below it, quiet rows between hairlines, with the label in a 10rem column beside its setting (above it on phones): Your name, saved as it's typed and optional, and Your data, with Clear all data. It replaced a card of number fields in minutes and a Save button, in a 672px column of its own.
 
@@ -221,7 +225,7 @@ Soft and tactile: fully rounded pills that press in slightly (scale 0.97 over 16
 
 ### Buttons
 - **Shape:** fully rounded, every button. The shared `Button` component (primary, secondary, ghost, danger, destructive) draws them; it used to default to 12px corners, a grey-filled secondary and a red-filled delete.
-- **Begin** (`button-begin`): filled with the subject's colour (Baltic by default), white 15px label with a play mark, primary lift shadow. The only filled button on the dashboard.
+- **Begin** (`button-begin`): filled with the subject's colour (Baltic by default), white 15px label with a play mark, primary lift shadow. The only filled button on the dashboard. With no task to start, "Add your first task" (or "Add a task") takes its place at the same size and lift, in `baltic-700`, and "or focus without a task" sits beside either one in the same row (under it on a phone, where the button is full width). It used to drop to a line of its own there (critique, 2026-10-28).
 - **Primary** (`button-primary`): `baltic-600`, white label, used on Focus (Pause / Resume, Save session) and as a dialog's one filled button (Focus on this, Create task, Add subject, Save).
 - **Secondary** (`button-secondary`): white with a 1px `lavender-200` edge and `baltic-700` label; hover `lavender-50`. Finish early, Pause & leave, the backdrop and help buttons; in dialogs Mark complete and Edit task; an inline Add subject (the dialog or card it sits in already has its filled button).
 - **Ghost:** `steel-600` text, `lavender-50` on hover: Cancel, Done.
@@ -248,6 +252,9 @@ Soft and tactile: fully rounded pills that press in slightly (scale 0.97 over 16
 - **Focus:** the shared `baltic-500` outline, plus the edge shifting to `baltic-400`.
 - **Error:** `error` edge and a short message below that says what to do, with the range when there is one ("Enter whole minutes, from 5 to 120 (2h)."). It stays until its field is edited (Settings' errors used to vanish after 3 seconds); on submit, focus moves to the first field in error. A field with a range names it in its label. Forms set `noValidate`, so these messages replace the browser's bubbles.
 - **Status:** a save is confirmed in words beside its button ("Saved."), in a live region that is always mounted, until the next edit. If the browser isn't keeping data, it says so instead.
+
+### Focus rating
+On the ending card, four circles from Scattered to Deep focus, each filled to its level: empty, a quarter, half, full. Unpicked, each fill is the meter's ghost ink (`baltic-700` at 14%, 30% on hover) inside a `lavender-400` outline, so the scale reads before anything is chosen. The pick fills in `baltic-600` with a `baltic-50` halo (`rating-picked`). The unpicked fills were `lavender-400`, so "Deep focus" sat there as a solid grey disc and read as already chosen (critique, 2026-10-28). The rating is optional: clicking the pick again clears it, and keys 1 to 4 pick a level while focus is on the scale.
 
 ### Colour swatches
 One shared row of the ten subject colours, wherever a subject gets one (New subject, Manage subjects, the task form, the Focus card's subject list). Each swatch is named for screen readers ("Colour 3" until the palette is named in `types.ts`, never a hex code); the picked one wears a 2px `baltic-500` ring, and the keyboard outline sits further out, so the two never overlap.

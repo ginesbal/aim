@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useFocus, useSubjects, usePreferences, useTasks } from "@/lib/contexts";
 import { SUBJECTS, type SubjectKey, type FocusQuality } from "@/lib/types";
-import { cn, formatTime, readableFill } from "@/lib/utils";
+import { cn, formatClock, formatTime, readableFill } from "@/lib/utils";
 import { readKey, writeKey } from "@/lib/storage";
 import { QualitySelector } from "@/components/ui/QualityIndicator";
 import DurationPicker from "@/components/ui/DurationPicker";
@@ -166,8 +166,6 @@ export default function FocusPage() {
 
   const totalSeconds = duration * 60;
   const progress = ((totalSeconds - secondsLeft) / totalSeconds) * 100;
-  const minutes = Math.floor(secondsLeft / 60);
-  const seconds = secondsLeft % 60;
 
   const subjectColor = (() => {
     if (!subject) return "#9faac6";
@@ -293,15 +291,15 @@ export default function FocusPage() {
     router.push(`/dashboard?logged=${encodeURIComponent(id)}`);
   }, [subject, elapsedMinutes, reflectionQuality, reflectionNote, task, addSession, completeLinkedIfChosen, clearTimer, router]);
 
-  // Keep secondsLeft in sync when duration changes during setup. Only on
-  // an actual change: firing on mount too (twice, in dev Strict Mode)
-  // would overwrite the countdown of a session restored after a reload.
-  const syncedDuration = useRef(duration);
-  useEffect(() => {
-    if (timerState !== "idle" || syncedDuration.current === duration) return;
-    syncedDuration.current = duration;
-    setSecondsLeft(duration * 60);
-  }, [duration, timerState]);
+  // Picking a length during setup sets the clock with it. This was an
+  // effect watching the length, and dev Strict Mode runs mount effects
+  // twice: the second run saw the first render's 25m and reset a restored
+  // session's clock to 25:00, so a paused 90m session came back with 25
+  // minutes and "Finish early" logged 65 it never ran.
+  const chooseDuration = useCallback((minutes: number) => {
+    setDuration(minutes);
+    setSecondsLeft(minutes * 60);
+  }, []);
 
   // Mirror latest values into refs so the ticking callbacks stay stable.
   useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
@@ -331,7 +329,6 @@ export default function FocusPage() {
       if (window.location.search) window.history.replaceState(null, "", "/focus");
       setDuration(live.duration);
       durationRef.current = live.duration;
-      syncedDuration.current = live.duration;
       setSubject(live.subject);
       setTask(live.task);
       setLinkedTaskId(live.taskId);
@@ -360,7 +357,7 @@ export default function FocusPage() {
       DURATION_MIN,
       Math.min(DURATION_MAX, Math.round(Number.isFinite(requested) && requested > 0 ? requested : focusBlockMin))
     );
-    setDuration(length);
+    chooseDuration(length);
     const requestedSubject = params.get("subject");
     const match = requestedSubject ? getSubject(requestedSubject) : undefined;
     if (match) {
@@ -380,7 +377,7 @@ export default function FocusPage() {
       // Starting needs a subject, exactly as the Begin button does.
       if (match) setAutoStart(true);
     }
-  }, [focusBlockMin, getSubject]);
+  }, [focusBlockMin, getSubject, chooseDuration]);
 
   // The actual start happens one render later, once the prefilled length
   // is in state. Keeping it out of the mount effect matters: React's dev
@@ -645,7 +642,7 @@ export default function FocusPage() {
             >
               <span className="sr-only">Show timer, </span>
               <span className="text-sm font-medium tabular-nums text-baltic-800">
-                {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+                {formatClock(secondsLeft)}
               </span>
               {/* The clock that would say "Paused" is hidden, so the pill does. */}
               {timerState === "paused" && (
@@ -839,7 +836,7 @@ export default function FocusPage() {
         {timerState === "idle" && (
           <SetupStage
             duration={duration}
-            onDurationChange={setDuration}
+            onDurationChange={chooseDuration}
             subject={subject}
             onSubjectChange={setSubject}
             task={task}
@@ -853,8 +850,7 @@ export default function FocusPage() {
         {(timerState === "running" || timerState === "paused" || timerState === "done") && !timerHidden && (
           <SessionStage
             timerState={timerState}
-            minutes={minutes}
-            seconds={seconds}
+            secondsLeft={secondsLeft}
             duration={duration}
             progress={progress}
             accentColor={subjectColor}
@@ -1013,8 +1009,7 @@ function SetupStage({
 
 interface SessionStageProps {
   timerState: "running" | "paused" | "done";
-  minutes: number;
-  seconds: number;
+  secondsLeft: number;
   duration: number;
   progress: number;
   accentColor: string;
@@ -1026,7 +1021,7 @@ interface SessionStageProps {
 }
 
 function SessionStage({
-  timerState, minutes, seconds, duration, progress, accentColor,
+  timerState, secondsLeft, duration, progress, accentColor,
   onPause, onResume, onAddFive, onFinish, onDiscard,
 }: SessionStageProps) {
   const size = 320;
@@ -1112,7 +1107,7 @@ function SessionStage({
         {/* Center readout */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <p className="text-6xl font-extralight tracking-tight tabular-nums leading-none text-baltic-800">
-            {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+            {formatClock(secondsLeft)}
           </p>
           <p
             className={cn(
@@ -1120,7 +1115,7 @@ function SessionStage({
               isDone && "focus-complete-label",
             )}
           >
-            {isDone ? "Complete" : timerState === "paused" ? "Paused" : `of ${String(duration).padStart(2, "0")}:00`}
+            {isDone ? "Complete" : timerState === "paused" ? "Paused" : `of ${formatClock(duration * 60)}`}
           </p>
           {isActive && (
             <button

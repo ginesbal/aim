@@ -151,9 +151,10 @@ export default function JournalPage() {
         {/* One sentence, in the dashboard's voice: the last seven days in
             numbers, the days the row of "a"s below shows. It opened "this
             week," which on a Monday counted back to last Tuesday
-            (critique, 2026-10-28). Your numbers lead and the span follows;
-            "7 days" is a number, so it's set as content, not in the
-            connecting serif. */}
+            (critique, 2026-10-28). Your numbers lead and the span follows,
+            kept on one line so a phone doesn't leave "in" behind; "7 days"
+            is a number, so it's set as content, not in the connecting
+            serif. */}
         <h1 className={SENTENCE}>
           <span className="sr-only">Journal: </span>
           {weeklyStats.count > 0 ? (
@@ -163,11 +164,16 @@ export default function JournalPage() {
               </span>{" "}
               <Connect>for</Connect>{" "}
               <span className="whitespace-nowrap tabular-nums">{formatTime(weeklyStats.totalMinutes)}</span>{" "}
-              <Connect>in the last</Connect> <span className="whitespace-nowrap tabular-nums">7 days</span>
+              <span className="whitespace-nowrap">
+                <Connect>in the last</Connect> <span className="tabular-nums">7 days</span>
+              </span>
             </>
           ) : sessions.length > 0 ? (
             <>
-              No sessions <Connect>in the last</Connect> <span className="whitespace-nowrap tabular-nums">7 days</span>
+              No sessions{" "}
+              <span className="whitespace-nowrap">
+                <Connect>in the last</Connect> <span className="tabular-nums">7 days</span>
+              </span>
             </>
           ) : (
             <>
