@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { flushSync } from "react-dom";
 import {
   usePreferences,
   useTasks,
@@ -136,8 +137,8 @@ export default function DashboardPage() {
 
   const week = useMemo(() => lastSevenDays(sessions), [sessions]);
 
-  // Today's sessions, oldest first: the meter's ink and, by subject, its
-  // legend.
+  // Today's sessions, oldest first: the meter's ink and, by subject, the
+  // list under it.
   const segments = useMemo(() => {
     const todayKey = new Date().toDateString();
     return sessions
@@ -150,7 +151,6 @@ export default function DashboardPage() {
       .map((s) => ({
         id: s.id,
         minutes: s.duration,
-        color: getSubject(s.subject)?.color ?? "#60729f",
         label: formatSubjectLabel(getSubject(s.subject)?.label ?? s.subject),
       }));
   }, [sessions, getSubject]);
@@ -183,7 +183,6 @@ export default function DashboardPage() {
     return {
       minutes: s.duration,
       label: formatSubjectLabel(sub?.label ?? s.subject),
-      color: sub?.color ?? "#60729f",
       doneTitle: done?.title,
     };
   }, [justLoggedId, sessions, getSubject, tasks]);
@@ -194,10 +193,21 @@ export default function DashboardPage() {
     [pendingTasks, nextTask]
   );
 
-  // Focus, set up for a task (the shared link the task dialog uses too).
-  // The launcher's Begin also starts the timer on arrival.
-  const focusFor = (task: Task, start: boolean) =>
-    focusHref(task, getSubject(task.subject)?.label ?? task.subject, focusBlockMin, start);
+  // The launcher's one filled button (Begin, or what stands in for it):
+  // Enter on the page presses it, and "After this" hands focus to it.
+  const primaryRef = useRef<HTMLButtonElement>(null);
+
+  // An "After this" row is the task slot's pick, made from outside it:
+  // its task moves up into the sentence, and the row goes with it. Focus
+  // moves on to Begin (the row it was on is gone), so Enter or Space
+  // starts the session, and a screen reader hears the new sentence:
+  // Begin is described by it. Rows used to open Focus set up but not
+  // started, so the same choice in two places did two different things
+  // (critique, 2026-10-28).
+  function pickFromList(task: Task) {
+    flushSync(() => setPickedTaskId(task.id));
+    primaryRef.current?.focus();
+  }
 
   function handleWelcomeSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -308,6 +318,7 @@ export default function DashboardPage() {
           getSubject={getSubject}
           onPickTask={(t) => setPickedTaskId(t.id)}
           hasAnySessions={sessions.length > 0}
+          primaryRef={primaryRef}
           enterStarts={!showWelcome}
           segments={segments}
           newSegmentId={justLogged ? justLoggedId ?? undefined : undefined}
@@ -318,24 +329,28 @@ export default function DashboardPage() {
           onFocusBlank={() => router.push("/focus")}
           onSetLength={setFocusBlockMin}
           onFocus={() =>
-            // Begin means begin: Focus opens set up for this task and
-            // starts the timer (Focus strips start=1 so a reload won't
-            // restart it).
-            router.push(nextTask ? focusFor(nextTask, true) : "/focus")
+            // Begin means begin: Focus opens set up for this task (the
+            // shared link the task dialog uses too) and starts the timer.
+            // Focus strips start=1 so a reload won't restart it.
+            router.push(
+              nextTask
+                ? focusHref(nextTask, getSubject(nextTask.subject)?.label ?? nextTask.subject, focusBlockMin, true)
+                : "/focus"
+            )
           }
           onPlanStep={() => router.push("/tasks?new=1")}
           onEditGoal={() => router.push("/settings")}
         />
       </StickyCard>
 
-      {/* ── AFTER THIS — the next two tasks, one click from focusing.
-          Hidden while a session is still open: every row would lead
-          back to that session anyway. ── */}
+      {/* ── AFTER THIS — the next two tasks; a row puts its task in the
+          sentence. Hidden while a session is still open: Begin isn't
+          there to start it. ── */}
       {nextTask && !live && (
         <AfterThis
           tasks={afterThis}
           getSubject={getSubject}
-          onFocusOn={(t) => router.push(focusFor(t, false))}
+          onPick={pickFromList}
           onOpenAll={() => router.push("/tasks")}
         />
       )}
@@ -386,6 +401,7 @@ function HeroBody({
   getSubject,
   onPickTask,
   hasAnySessions,
+  primaryRef,
   enterStarts,
   segments,
   newSegmentId,
@@ -411,13 +427,15 @@ function HeroBody({
   getSubject: (idOrLabel: string) => UserSubject | undefined;
   onPickTask: (task: Task) => void;
   hasAnySessions: boolean;
+  /** The main button: Begin, Return to focus, or Add your first task. */
+  primaryRef: React.RefObject<HTMLButtonElement>;
   /** Enter presses the main button. Off while the welcome dialog is
       open, where Enter belongs to its form. */
   enterStarts: boolean;
   segments: MeterSegment[];
   /** The session just saved on Focus, whose band grows into the "a". */
   newSegmentId?: string;
-  justLogged?: { minutes: number; label: string; color: string; doneTitle?: string };
+  justLogged?: { minutes: number; label: string; doneTitle?: string };
   /** A session still open in this tab (left mid-way on Focus). */
   live: LiveSession | null;
   liveSubject: UserSubject | undefined;
@@ -440,7 +458,6 @@ function HeroBody({
   // for mouse users too, on every load (critique, 2026-10-27). A Tab
   // still lands on it with the ring, and on any other control Enter
   // stays that control's.
-  const primaryRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!enterStarts) return;
     const onKey = (e: KeyboardEvent) => {
@@ -452,7 +469,7 @@ function HeroBody({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [enterStarts]);
+  }, [enterStarts, primaryRef]);
 
   // Begin shows what it would add to the "a" while it's pointed at: on
   // hover, and on keyboard focus.
@@ -834,20 +851,21 @@ function TaskSlot({
 
 /* ─────────────────────────────────────────────────────────────
    AFTER THIS — the next two tasks, as a quiet list under the
-   launcher (no card of its own). Each row opens Focus set up for
-   that task, not started, so switching what you work on is one
-   click. Everything else lives on /tasks.
+   launcher (no card of its own). A row does what picking its task
+   in the sentence's task slot does: the task moves up into the
+   sentence, the one it replaces comes back into this list, and
+   Begin starts it. Everything else lives on /tasks.
    ───────────────────────────────────────────────────────────── */
 
 function AfterThis({
   tasks,
   getSubject,
-  onFocusOn,
+  onPick,
   onOpenAll,
 }: {
   tasks: Task[];
   getSubject: (idOrLabel: string) => UserSubject | undefined;
-  onFocusOn: (task: Task) => void;
+  onPick: (task: Task) => void;
   onOpenAll: () => void;
 }) {
   return (
@@ -878,11 +896,11 @@ function AfterThis({
             return (
               <li key={t.id}>
                 <button
-                  onClick={() => onFocusOn(t)}
-                  // Everything the row shows, in words: the visible subject
-                  // and day (including "overdue") would otherwise be lost
-                  // behind a label naming only the title.
-                  aria-label={`Set up focus for ${t.title}, ${subjectLabel}, ${overdue ? "overdue" : `due ${day === "Today" || day === "Tomorrow" ? day.toLowerCase() : day}`}`}
+                  onClick={() => onPick(t)}
+                  // What the row does, then everything it shows: the
+                  // visible subject and day (including "overdue") would
+                  // otherwise be lost behind a label naming only the title.
+                  aria-label={`Switch to ${t.title}, ${subjectLabel}, ${overdue ? "overdue" : `due ${day === "Today" || day === "Tomorrow" ? day.toLowerCase() : day}`}`}
                   className="group w-full flex items-center gap-3 px-1 py-3.5 text-left rounded-lg hover:bg-white dark:hover:bg-baltic-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 transition-colors duration-150"
                 >
                   <span
@@ -913,9 +931,11 @@ function AfterThis({
                   >
                     {day}
                   </span>
-                  {/* A chevron, not Begin's play mark: this row opens Focus
-                      set up for the task, it doesn't start the timer. ▶
-                      means "starts now" everywhere in the app. */}
+                  {/* An arrow up and back toward the sentence, like the one
+                      on a search box's suggestions: the row fills the blank
+                      above, it doesn't go anywhere. The chevron it replaced
+                      said "opens a page", and ▶ means "starts now"
+                      everywhere in the app. */}
                   <svg
                     aria-hidden
                     width={14}
@@ -926,9 +946,9 @@ function AfterThis({
                     strokeWidth={1.75}
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="flex-shrink-0 text-steel-500 group-hover:text-baltic-600 group-hover:translate-x-0.5 dark:group-hover:text-baltic-300 transition-[color,transform] duration-150"
+                    className="flex-shrink-0 text-steel-500 group-hover:text-baltic-600 group-hover:-translate-x-0.5 group-hover:-translate-y-0.5 dark:group-hover:text-baltic-300 transition-[color,transform] duration-150"
                   >
-                    <path d="M5.5 3l4 4-4 4" />
+                    <path d="M10.5 10.5 3.5 3.5M3.5 9V3.5H9" />
                   </svg>
                 </button>
               </li>
@@ -971,22 +991,23 @@ function StickyCard({
    silhouette pulled directly from the AimLogo paths, filled from the
    bottom with one ink, the logo's own colour, up to today's share of
    the goal. The counter stays the logo's white dot. The numbers sit
-   under it once ("1h 10m of 2h"), and the legend names the subjects.
-   Above the ink, a pale ghost of the same ink is the session Begin
-   would start, so the meter answers "what will this session do to my
-   day?" instead of only reporting the past.
+   under it once ("1h 10m of 2h"), then today's subjects by time, in
+   words. Above the ink, a pale ghost of the same ink is the session
+   Begin would start, so the meter answers "what will this session do
+   to my day?" instead of only reporting the past.
 
    It used to stack a band per session in each subject's colour, with
    the percentage in a white disc over the counter. Out of the
    wordmark that read as a striped chart behind a mask, not a letter
    filling with ink, and the disc hid the middle third of the fill
-   (critique, 2026-10-27).
+   (critique, 2026-10-27). The subjects kept a dot of their colour
+   each, as a legend for bands that were gone; in a one-ink letter the
+   dots keyed nothing (critique, 2026-10-28).
    ───────────────────────────────────────────────────────────── */
 
 interface MeterSegment {
   id: string;
   minutes: number;
-  color: string;
   label: string;
 }
 
@@ -1007,7 +1028,7 @@ function FocusTarget({
   segments: MeterSegment[];
   newSegmentId?: string;
   /** The session just saved on Focus: named here, where it lands. */
-  justLogged?: { minutes: number; label: string; color: string };
+  justLogged?: { minutes: number; label: string };
   /** No session ever finished: say what the "a" is for, once. */
   firstUse?: boolean;
   /** The length Begin would start, drawn as a ghost above the ink. */
@@ -1060,19 +1081,15 @@ function FocusTarget({
       </>
     ) : null;
 
-  // Legend: minutes per subject today, largest first.
-  const legend = Array.from(
+  // Minutes per subject today, largest first.
+  const bySubject = Array.from(
     segments
-      .reduce((map, seg) => {
-        const prev = map.get(seg.label);
-        map.set(seg.label, {
-          label: seg.label,
-          color: seg.color,
-          minutes: (prev?.minutes ?? 0) + seg.minutes,
-        });
-        return map;
-      }, new Map<string, { label: string; color: string; minutes: number }>())
-      .values()
+      .reduce(
+        (map, seg) => map.set(seg.label, (map.get(seg.label) ?? 0) + seg.minutes),
+        new Map<string, number>()
+      )
+      .entries(),
+    ([label, minutes]) => ({ label, minutes })
   ).sort((a, b) => b.minutes - a.minutes);
 
   // Beside the launcher (lg+) it's a centred column. Stacked under it on
@@ -1207,23 +1224,21 @@ function FocusTarget({
           </p>
         )}
 
-        {legend.length > 0 && (
-          <ul className="mt-2 space-y-1" aria-label="Today by subject">
-            {legend.map((l) => (
+        {bySubject.length > 0 && (
+          <ul className="mt-2 space-y-1 text-xs [overflow-wrap:anywhere]" aria-label="Today by subject">
+            {bySubject.map((s) => (
               <li
-                key={l.label}
-                className={cn(
-                  "flex items-center lg:justify-center gap-1.5 text-xs",
+                key={s.label}
+                className={
                   // The subject just logged stands out for this arrival.
-                  l.label === justLogged?.label
+                  s.label === justLogged?.label
                     ? "font-semibold text-baltic-800 dark:text-baltic-100"
                     : "text-steel-600 dark:text-steel-400"
-                )}
+                }
               >
-                <span aria-hidden className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: l.color }} />
-                <span>{l.label}</span>{" "}
+                {s.label}{" "}
                 <span className="tabular-nums font-medium text-baltic-700 dark:text-baltic-300">
-                  {formatTime(l.minutes)}
+                  {formatTime(s.minutes)}
                 </span>
               </li>
             ))}

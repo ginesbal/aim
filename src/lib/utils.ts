@@ -25,8 +25,7 @@ export function generateId() {
  * Focus, set up for a task: its subject, its title, its id (so Focus can
  * offer "Mark done" at the end) and the session length. With `start` the
  * timer starts on arrival, as the dashboard's Begin does; without it,
- * Focus opens set up and waits (an "After this" row, the task dialog's
- * "Focus on this").
+ * Focus opens set up and waits (the task dialog's "Focus on this").
  */
 export function focusHref(
   task: { id: string; title: string },

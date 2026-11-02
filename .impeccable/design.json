@@ -149,7 +149,7 @@
     ],
     "rules": [
       { "name": "The Reason Rule", "body": "Every visual change states the reason it serves (a finding, a user need, a measured problem). A change that only makes something look more like a notebook does not ship.", "section": "overview" },
-      { "name": "The Subject Colour Rule", "body": "A subject's colour appears where that subject is: its dot (in lists, the launcher and the meter's legend), the Begin button for it. It is never used decoratively. The \"a\" itself fills in one ink, the logo's colour, not in subject colours.", "section": "colors" },
+      { "name": "The Subject Colour Rule", "body": "A subject's colour appears where that subject is: its dot (in task lists and the launcher), the Begin button for it. It is never used decoratively. The \"a\" itself fills in one ink, the logo's colour, not in subject colours, so the subjects listed under it have no dots: there was nothing in the letter for a dot to match (critique, 2026-10-28).", "section": "colors" },
       { "name": "The Connecting Words Rule", "body": "The italic serif only joins the words of a sentence. It never carries content, a number or a control label.", "section": "typography" },
       { "name": "The One Filled Button Rule", "body": "Each screen has exactly one filled primary button. Everything else is a secondary pill, an underlined text link or a plain row.", "section": "layout" },
       { "name": "The Rest and Float Rule", "body": "Things on the page rest; only things above the page float. A card never gets a floating shadow.", "section": "elevation" }
