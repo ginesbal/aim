@@ -114,6 +114,18 @@ export function projectedFinishTime(minutesRemaining: number): string | null {
 }
 
 /**
+ * Whole minutes left before midnight, rounded up. A session counts on the
+ * day it's saved, as it ends, so focus that would take this long or
+ * longer lands on tomorrow: n more minutes still count today only while
+ * n < minutesUntilMidnight().
+ */
+export function minutesUntilMidnight(now = new Date()): number {
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  return Math.ceil((midnight.getTime() - now.getTime()) / 60_000);
+}
+
+/**
  * "Today" / "Tomorrow" / weekday name for dates within the next 6 days,
  * "Mon, May 12" otherwise. Used to group upcoming tasks by day.
  */

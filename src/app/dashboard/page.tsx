@@ -20,6 +20,7 @@ import {
   dayLabel,
   parseLocalDate,
   projectedFinishTime,
+  minutesUntilMidnight,
   readableFill,
   focusHref,
   cn,
@@ -132,7 +133,9 @@ export default function DashboardPage() {
   const weekday = now.toLocaleDateString("en-US", { weekday: "long" });
   const dueToday = pendingTasks.filter((t) => dayLabel(t.dueDate) === "Today").length;
   const overdueCount = pendingTasks.filter((t) => isOverdue(t.dueDate)).length;
-  const focusPct = Math.min(Math.round((todayMinutes / dailyGoal) * 100), 100);
+  // Rounded down, so 239m of a 4h goal is 99%, not a "Goal hit" a minute
+  // early.
+  const focusPct = Math.min(Math.floor((todayMinutes / dailyGoal) * 100), 100);
   const minutesToGoal = Math.max(dailyGoal - todayMinutes, 0);
 
   const week = useMemo(() => lastSevenDays(sessions), [sessions]);
@@ -355,15 +358,17 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* ── THIS WEEK — the last seven days as small "a"s, headed like
-          "After this". Each day with focus opens its entries in the
-          Journal. Not shown before the first session: the meter above
-          already says what the "a" is for. ── */}
+      {/* ── LAST 7 DAYS — today and the six days before it as small
+          "a"s, headed like "After this". It said "This week", which on
+          a Monday showed last Tuesday to today (critique, 2026-10-28).
+          Each day with focus opens its entries in the Journal. Not shown
+          before the first session: the meter above already says what
+          the "a" is for. ── */}
       {sessions.length > 0 && (
-        <section aria-labelledby="this-week" className="mt-10">
+        <section aria-labelledby="last-7-days" className="mt-10">
           <div className="flex items-baseline justify-between gap-4 px-1 mb-3">
-            <h2 id="this-week" className="text-sm font-semibold text-baltic-700 dark:text-baltic-200">
-              This week
+            <h2 id="last-7-days" className="text-sm font-semibold text-baltic-700 dark:text-baltic-200">
+              Last 7 days
             </h2>
             <Link
               href="/journal"
@@ -475,7 +480,16 @@ function HeroBody({
   // hover, and on keyboard focus.
   const [hoverBegin, setHoverBegin] = useState(false);
   const [focusBegin, setFocusBegin] = useState(false);
+  // A session counts on the day it's saved, so late at night the next one,
+  // or the rest of the goal, may no longer fit before midnight. The ghost
+  // and the status line then say only what can still happen today. (The
+  // page re-renders each minute, so this follows the clock.)
+  const leftToday = minutesUntilMidnight();
+  const sessionCountsToday = focusBlockMin < leftToday;
   const launching = Boolean(nextTask) && !live;
+  // The ghost is what Begin adds to today's "a": nothing, for a session
+  // that would end after midnight.
+  const ghostMinutes = launching && sessionCountsToday ? focusBlockMin : undefined;
 
   const meter = (
     <FocusTarget
@@ -486,8 +500,8 @@ function HeroBody({
       newSegmentId={newSegmentId}
       justLogged={justLogged}
       firstUse={!hasAnySessions}
-      nextMinutes={launching ? focusBlockMin : undefined}
-      previewNext={launching && (hoverBegin || focusBegin)}
+      nextMinutes={ghostMinutes}
+      previewNext={ghostMinutes !== undefined && (hoverBegin || focusBegin)}
     />
   );
 
@@ -656,8 +670,21 @@ function HeroBody({
         <span className="font-semibold text-baltic-700 dark:text-baltic-200">Goal hit</span> · {formatTime(todayMinutes)} of focus today, anything more is bonus
       </>
     );
+  } else if (minutesToGoal >= leftToday) {
+    // The rest of the goal no longer fits before midnight, so no finishing
+    // time: it would be on tomorrow's clock ("hit your goal by 12:20 AM"),
+    // where those minutes count. What's left of the day instead
+    // (critique, 2026-10-28).
+    status = (
+      <>
+        <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-200">{formatTime(minutesToGoal)} to go</span>
+        {" "}·{" "}
+        <span className="whitespace-nowrap font-semibold tabular-nums text-baltic-700 dark:text-baltic-300">{formatTime(leftToday)}</span>{" "}
+        until midnight
+      </>
+    );
   } else if (todayMinutes === 0) {
-    const finish = projectedFinishTime(focusBlockMin);
+    const finish = sessionCountsToday ? projectedFinishTime(focusBlockMin) : null;
     status = (
       <>
         Aim for <span className="font-semibold tabular-nums text-baltic-700 dark:text-baltic-200">{formatTime(dailyGoal)}</span> today
@@ -768,9 +795,11 @@ function HeroBody({
           </button>
           {/* What the meter's preview shows, in words. */}
           <span id="launcher-projection" className="sr-only">
-            {todayMinutes >= dailyGoal
-              ? `Adds ${formatTime(focusBlockMin)} past today's goal.`
-              : `Brings today to ${formatTime(todayMinutes + focusBlockMin)} of ${formatTime(dailyGoal)}.`}
+            {!sessionCountsToday
+              ? "Ends after midnight, so it counts toward tomorrow."
+              : todayMinutes >= dailyGoal
+                ? `Adds ${formatTime(focusBlockMin)} past today's goal.`
+                : `Brings today to ${formatTime(todayMinutes + focusBlockMin)} of ${formatTime(dailyGoal)}.`}
           </span>
           {focusBlank}
         </div>
@@ -994,7 +1023,9 @@ function StickyCard({
    under it once ("1h 10m of 2h"), then today's subjects by time, in
    words. Above the ink, a pale ghost of the same ink is the session
    Begin would start, so the meter answers "what will this session do
-   to my day?" instead of only reporting the past.
+   to my day?" instead of only reporting the past; a key under the
+   numbers names it ("Begin adds 25m"). A session that would end after
+   midnight counts toward tomorrow, so it draws no ghost.
 
    It used to stack a band per session in each subject's colour, with
    the percentage in a white disc over the counter. Out of the
@@ -1039,7 +1070,7 @@ function FocusTarget({
   // The session that took the day past its goal gets a settle once its
   // ink has landed.
   const fromPct = justLogged
-    ? Math.min(Math.round(((todayMinutes - justLogged.minutes) / Math.max(dailyGoal, 1)) * 100), 100)
+    ? Math.min(Math.floor(((todayMinutes - justLogged.minutes) / Math.max(dailyGoal, 1)) * 100), 100)
     : undefined;
   const crossedGoal = fromPct !== undefined && fromPct < 100 && focusPct >= 100;
 
@@ -1074,7 +1105,7 @@ function FocusTarget({
               <path d="M2 6h8M7 3l3 3-3 3" />
             </svg>
             <span className="font-semibold tabular-nums text-baltic-800 dark:text-baltic-100">
-              {projected >= dailyGoal ? "goal" : `${Math.round((projected / Math.max(dailyGoal, 1)) * 100)}%`}
+              {projected >= dailyGoal ? "goal" : `${Math.floor((projected / Math.max(dailyGoal, 1)) * 100)}%`}
             </span>
           </>
         )}
@@ -1221,6 +1252,25 @@ function FocusTarget({
         {firstUse && (
           <p className="mt-1 text-xs text-balance text-steel-600 dark:text-steel-400">
             Every session you finish fills in the &ldquo;a&rdquo;.
+          </p>
+        )}
+        {/* The ghost's key, at rest too: a slice of the band and what it
+            is. Until Begin was pointed at, the pale band had no words at
+            all (critique, 2026-10-28). A bar, not a square, so it doesn't
+            pass for a checkbox; it deepens with the band while Begin is
+            pointed at. */}
+        {ghost > 0 && nextMinutes !== undefined && (
+          <p className="mt-1 text-xs text-steel-600 dark:text-steel-400">
+            <span
+              aria-hidden
+              className={cn(
+                "meter-ghost mr-1.5 inline-block h-[7px] w-3.5 rounded-[2px] bg-baltic-700 align-[1px] dark:bg-baltic-200",
+                newSeg && "meter-ghost-in"
+              )}
+              style={{ opacity: previewNext ? 0.3 : 0.14 }}
+            />
+            Begin adds{" "}
+            <span className="tabular-nums font-medium text-baltic-700 dark:text-baltic-300">{formatTime(nextMinutes)}</span>
           </p>
         )}
 

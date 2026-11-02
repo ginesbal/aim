@@ -148,21 +148,26 @@ export default function JournalPage() {
     // pattern, blobs, tape or tilt (critique, 2026-10-27).
     <div className="mx-auto max-w-4xl pb-4">
       <header className="mb-12">
-        {/* One sentence, in the dashboard's voice: the week in numbers. */}
+        {/* One sentence, in the dashboard's voice: the last seven days in
+            numbers, the days the row of "a"s below shows. It opened "this
+            week," which on a Monday counted back to last Tuesday
+            (critique, 2026-10-28). Your numbers lead and the span follows;
+            "7 days" is a number, so it's set as content, not in the
+            connecting serif. */}
         <h1 className={SENTENCE}>
           <span className="sr-only">Journal: </span>
           {weeklyStats.count > 0 ? (
             <>
-              <Connect>this week,</Connect>{" "}
               <span className="whitespace-nowrap tabular-nums">
                 {weeklyStats.count} {weeklyStats.count === 1 ? "session" : "sessions"}
               </span>{" "}
               <Connect>for</Connect>{" "}
-              <span className="whitespace-nowrap tabular-nums">{formatTime(weeklyStats.totalMinutes)}</span>
+              <span className="whitespace-nowrap tabular-nums">{formatTime(weeklyStats.totalMinutes)}</span>{" "}
+              <Connect>in the last</Connect> <span className="whitespace-nowrap tabular-nums">7 days</span>
             </>
           ) : sessions.length > 0 ? (
             <>
-              No sessions <Connect>yet this week</Connect>
+              No sessions <Connect>in the last</Connect> <span className="whitespace-nowrap tabular-nums">7 days</span>
             </>
           ) : (
             <>

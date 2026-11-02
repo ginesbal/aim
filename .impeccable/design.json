@@ -23,7 +23,7 @@
     },
     "typographyMeta": {
       "countdown": { "displayName": "Countdown", "purpose": "The Focus clock only; light weight keeps a large number calm." },
-      "headline": { "displayName": "Headline", "purpose": "Each page's one-sentence headline: the launcher sentence, 'just logged ...', '5 tasks to do, ...', 'this week, ...'; 1.875rem on phones, 2.25rem from 640px." },
+      "headline": { "displayName": "Headline", "purpose": "Each page's one-sentence headline: the launcher sentence, 'just logged ...', '5 tasks to do, ...', '... in the last 7 days'; 1.875rem on phones, 2.25rem from 640px." },
       "connector": { "displayName": "Connecting words", "purpose": "Newsreader italic, the words that join a sentence only: 'focus for', 'on', 'of', 'just logged', 'paused on'." },
       "title": { "displayName": "Title", "purpose": "The day line above the launcher ('Tuesday evening, Maya · 1 due today'), and the Journal's week summary." },
       "body": { "displayName": "Body", "purpose": "Status lines, lists and help text." },
