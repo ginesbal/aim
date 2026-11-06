@@ -431,7 +431,7 @@ export default function DashboardPage() {
               Open journal
             </Link>
           </div>
-          <WeekOfAs days={week} dailyGoal={dailyGoal} dayHref={(key) => `/journal#day-${key}`} className="-ml-0.5" />
+          <WeekOfAs days={week} dailyGoal={dailyGoal} dayHref={(key) => `/journal#day-${key}`} hideTodayMinutes className="-ml-0.5" />
         </section>
       )}
     </div>
@@ -1130,8 +1130,9 @@ function StickyCard({
    words. Above the ink, a pale ghost of the same ink is the session
    Begin would start, so the meter answers "what will this session do
    to my day?" instead of only reporting the past; a key under the
-   numbers names it ("Begin adds 25m"). A session that would end after
-   midnight counts toward tomorrow, so it draws no ghost.
+   numbers names it ("Begin adds 25m") until the first session is
+   saved. A session that would end after midnight counts toward
+   tomorrow, so it draws no ghost.
 
    It used to stack a band per session in each subject's colour, with
    the percentage in a white disc over the counter. Out of the
@@ -1364,8 +1365,11 @@ function FocusTarget({
             is. Until Begin was pointed at, the pale band had no words at
             all (critique, 2026-10-28). A bar, not a square, so it doesn't
             pass for a checkbox; it deepens with the band while Begin is
-            pointed at. */}
-        {ghost > 0 && nextMinutes !== undefined && (
+            pointed at. Like the line above it, it teaches the "a" once:
+            until the first session is saved. After that the band speaks
+            for itself, and pointing at Begin still says what it adds
+            (critique, 2026-11-02). */}
+        {firstUse && ghost > 0 && nextMinutes !== undefined && (
           <p className="mt-1 text-xs text-steel-600 dark:text-steel-400">
             <span
               aria-hidden

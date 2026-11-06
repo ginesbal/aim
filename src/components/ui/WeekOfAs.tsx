@@ -119,12 +119,17 @@ export default function WeekOfAs({
   days,
   dailyGoal,
   dayHref,
+  hideTodayMinutes = false,
   className,
 }: {
   days: DayTotal[];
   dailyGoal: number;
   /** Where a day with focus links to (its entries in the Journal). */
   dayHref?: (key: string) => string;
+  /** Leave today's minutes out of the visible row: on the dashboard the
+      meter above already says them (today was drawn twice; critique,
+      2026-11-02). Screen readers still hear each day whole. */
+  hideTodayMinutes?: boolean;
   className?: string;
 }) {
   return (
@@ -156,7 +161,7 @@ export default function WeekOfAs({
               {day.isToday ? "Today" : weekday}
             </span>
             <span aria-hidden className="mt-0.5 h-4 text-xs tabular-nums text-steel-600 dark:text-steel-400">
-              {day.minutes > 0 ? formatTime(day.minutes) : ""}
+              {day.minutes > 0 && !(day.isToday && hideTodayMinutes) ? formatTime(day.minutes) : ""}
             </span>
           </>
         );
