@@ -5,6 +5,7 @@ import {
   useMemo,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   type CSSProperties,
@@ -1065,6 +1066,13 @@ function SubjectTab({
           onSelect();
           return;
         }
+        // F2 renames the open tab, as in a file list: rename was
+        // double-click only, out of a keyboard's reach.
+        if (e.key === "F2" && isActive) {
+          e.preventDefault();
+          startEdit();
+          return;
+        }
         // WAI-ARIA tablist navigation. Left/Right cycle, Home/End jump.
         // Selecting also moves focus (auto-activate, the common pattern).
         if (e.key === "ArrowLeft") {
@@ -1158,7 +1166,7 @@ function SubjectTab({
             "text-xs truncate min-w-0",
             isActive ? "font-semibold" : "font-medium"
           )}
-          title={isActive ? "Double-click to rename" : displayLabel}
+          title={isActive ? "Double-click or press F2 to rename" : displayLabel}
         >
           {displayLabel}
         </span>
@@ -2484,6 +2492,14 @@ function AddTaskModal({
     setSubjectError("");
   }, []);
 
+  // What the form still needs before it can be submitted, said in full:
+  // "Add a title to create the task".
+  const formId = useId();
+  const needs = [!title.trim() && "add a title", !subject && "pick a subject"].filter(Boolean).join(" and ");
+  const missing = needs
+    ? `${needs.charAt(0).toUpperCase()}${needs.slice(1)} to ${isEditing ? "save your changes" : "create the task"}`
+    : null;
+
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
@@ -2707,13 +2723,27 @@ function AddTaskModal({
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-1">
-          <Button variant="ghost" type="button" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={!title.trim() || !subject}>
-            {isEditing ? "Save changes" : "Create task"}
-          </Button>
+        <div className="pt-1">
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" type="button" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!!missing}
+              aria-describedby={missing ? `${formId}-missing` : undefined}
+            >
+              {isEditing ? "Save changes" : "Create task"}
+            </Button>
+          </div>
+          {/* Why the button can't be pressed yet, under it, as Focus says
+              "Pick a subject to begin" under Begin. It used to be greyed
+              out without a word (critique, 2026-11-02). */}
+          {missing && (
+            <p id={`${formId}-missing`} className="mt-2 text-right text-xs text-steel-600 dark:text-steel-400">
+              {missing}
+            </p>
+          )}
         </div>
       </form>
     </Modal>

@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 // The one place the app explains itself: the keys, the three ways a
-// session can end, and two facts worth knowing. A disclosure popover like
+// session can end, and two facts worth knowing. On Tasks it explains
+// that page instead: what a tab is and its keys, since the session keys
+// don't apply there (it was the same panel on every page, with nothing
+// on tabs; critique, 2026-11-02). A disclosure popover like
 // the profile and backdrop menus, not a dialog: it answers a glance
 // without taking over the screen, even mid-session. It opens from its
 // button only; a bare "?" key working anywhere on the page couldn't be
@@ -20,6 +24,13 @@ const KEYS: [string, string][] = [
   ["Enter", "On the ending card or in the note, saves the session"],
 ];
 
+// Tasks' own keys: the tab row is a tablist, and a task row a button.
+const TASK_KEYS: [string, string][] = [
+  ["← →", "Move between tabs"],
+  ["F2", "Renames the open tab (or double-click its name)"],
+  ["Enter", "On a task, opens it"],
+];
+
 const ENDINGS: [string, string][] = [
   ["Pause & leave", "Stops the clock and keeps the session to come back to."],
   ["Finish early", "Stops the timer now. You save it, or discard it, on the next screen."],
@@ -29,6 +40,7 @@ const ENDINGS: [string, string][] = [
 const HEADING = "text-[11px] uppercase tracking-[0.18em] text-steel-600";
 
 export default function HelpButton({ className }: { className?: string }) {
+  const onTasks = usePathname() === "/tasks";
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -88,27 +100,31 @@ export default function HelpButton({ className }: { className?: string }) {
           className="absolute right-0 top-full mt-2 max-sm:fixed max-sm:inset-x-4 max-sm:top-[4.5rem] max-sm:w-auto z-50 w-72 rounded-2xl bg-white border border-lavender-200 shadow-[0_16px_36px_-12px_rgba(38,45,64,0.28)] p-4 text-left dropdown-enter focus:outline-none"
           style={{ transformOrigin: "top right" }}
         >
-          <p className={HEADING}>Keys</p>
-          <dl className="mt-2 space-y-1.5 text-sm">
-            {KEYS.map(([key, what]) => (
-              <div key={key + what} className="flex items-baseline gap-3">
-                <dt className="w-14 flex-shrink-0">
-                  <kbd className="rounded-md border border-lavender-400 bg-lavender-50 px-1.5 py-0.5 font-sans text-xs text-baltic-700">{key}</kbd>
-                </dt>
-                <dd className="text-baltic-700">{what}</dd>
-              </div>
-            ))}
-          </dl>
+          {onTasks ? (
+            <>
+              <p className={HEADING}>Tabs</p>
+              <p className="mt-2 text-sm text-baltic-700">
+                Each tab is a saved view of your tasks: one subject, or All. Closing a tab deletes nothing, and Undo brings it back for five seconds. + opens another.
+              </p>
+              <p className={cn(HEADING, "mt-4")}>Keys</p>
+              <KeyList keys={TASK_KEYS} />
+            </>
+          ) : (
+            <>
+              <p className={HEADING}>Keys</p>
+              <KeyList keys={KEYS} />
 
-          <p className={cn(HEADING, "mt-4")}>Ending a session</p>
-          <dl className="mt-2 space-y-1.5 text-sm">
-            {ENDINGS.map(([name, what]) => (
-              <div key={name}>
-                <dt className="inline font-semibold text-baltic-800">{name}</dt>{" "}
-                <dd className="inline text-baltic-700">{what}</dd>
-              </div>
-            ))}
-          </dl>
+              <p className={cn(HEADING, "mt-4")}>Ending a session</p>
+              <dl className="mt-2 space-y-1.5 text-sm">
+                {ENDINGS.map(([name, what]) => (
+                  <div key={name}>
+                    <dt className="inline font-semibold text-baltic-800">{name}</dt>{" "}
+                    <dd className="inline text-baltic-700">{what}</dd>
+                  </div>
+                ))}
+              </dl>
+            </>
+          )}
 
           <p className={cn(HEADING, "mt-4")}>Good to know</p>
           <p className="mt-2 text-sm text-baltic-700">
@@ -117,5 +133,20 @@ export default function HelpButton({ className }: { className?: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+function KeyList({ keys }: { keys: [string, string][] }) {
+  return (
+    <dl className="mt-2 space-y-1.5 text-sm">
+      {keys.map(([key, what]) => (
+        <div key={key + what} className="flex items-baseline gap-3">
+          <dt className="w-14 flex-shrink-0">
+            <kbd className="rounded-md border border-lavender-400 bg-lavender-50 px-1.5 py-0.5 font-sans text-xs text-baltic-700">{key}</kbd>
+          </dt>
+          <dd className="text-baltic-700">{what}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
