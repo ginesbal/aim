@@ -53,8 +53,15 @@ import {
 } from "@/lib/aimLetter";
 import { useRouter } from "next/navigation";
 import type { Task, UserSubject } from "@/lib/types";
-import { loadLiveSession, type LiveSession } from "@/lib/liveSession";
+import {
+  loadLiveSession,
+  saveLiveSession,
+  takeSavedSession,
+  type LiveSession,
+  type SavedSession,
+} from "@/lib/liveSession";
 import { readKey, writeKey, WELCOME_SKIPPED_KEY } from "@/lib/storage";
+import { useVisibleTimeout, UNDO_TIMEOUT_MS } from "@/lib/useVisibleTimeout";
 
 
 /* Tick the dashboard once a minute so the header date / weekday and any
@@ -83,8 +90,8 @@ function formatSubjectLabel(s: string | undefined | null) {
 export default function DashboardPage() {
   const { name, isFirstVisit, dailyGoal, focusBlockMin, setName, setFocusBlockMin } =
     usePreferences();
-  const { tasks } = useTasks();
-  const { todayMinutes, sessions } = useFocus();
+  const { tasks, toggleComplete } = useTasks();
+  const { todayMinutes, sessions, removeSession } = useFocus();
   const { getSubject } = useSubjects();
   const router = useRouter();
 
@@ -165,10 +172,26 @@ export default function DashboardPage() {
   // launcher offers to return to it instead of starting another.
   const [justLoggedId, setJustLoggedId] = useState<string | null>(null);
   const [live, setLive] = useState<LiveSession | null>(null);
+  // What that save did, for the five seconds Undo is offered (counted in
+  // time the tab is visible, and held while Undo is pointed at or
+  // focused, as Tasks' banners are). undoShown keeps the button's place
+  // once it has faded, so the headline doesn't reflow.
+  const [savedForUndo, setSavedForUndo] = useState<SavedSession | null>(null);
+  const [undoShown, setUndoShown] = useState(false);
+  const [undoHeld, setUndoHeld] = useState(false);
+  useVisibleTimeout(savedForUndo, UNDO_TIMEOUT_MS, () => setSavedForUndo(null), undoHeld);
+  const [announcement, setAnnouncement] = useState("");
   useEffect(() => {
     const logged = new URLSearchParams(window.location.search).get("logged");
     if (logged) {
       setJustLoggedId(logged);
+      // Only a save Focus could record is offered back: no snapshot (a
+      // reload, storage that failed), no Undo.
+      const saved = takeSavedSession(logged);
+      if (saved) {
+        setSavedForUndo(saved);
+        setUndoShown(true);
+      }
       window.history.replaceState(null, "", "/dashboard");
     }
     setLive(loadLiveSession());
@@ -189,6 +212,31 @@ export default function DashboardPage() {
       doneTitle: done?.title,
     };
   }, [justLoggedId, sessions, getSubject, tasks]);
+
+  // Undo takes the session back out of the record, reopens the task its
+  // "Mark done" completed (unless that was undone meanwhile) and leaves
+  // the session as it was on the ending card: the launcher offers
+  // "Finish saving", where it can be saved again, changed or discarded.
+  // Nothing is thrown away.
+  function undoSave() {
+    const saved = savedForUndo;
+    if (!saved) return;
+    removeSession(saved.sessionId);
+    const done = saved.doneTaskId ? tasks.find((t) => t.id === saved.doneTaskId) : undefined;
+    if (done?.completed) toggleComplete(done.id);
+    saveLiveSession(saved.live);
+    flushSync(() => {
+      setLive(saved.live);
+      setJustLoggedId(null);
+      setSavedForUndo(null);
+      setUndoShown(false);
+      setUndoHeld(false);
+    });
+    // The Undo button is gone: focus moves to the one that replaced
+    // Begin, so the keyboard isn't dropped at the top of the page.
+    primaryRef.current?.focus();
+    setAnnouncement("Save undone. The session is waiting to be saved.");
+  }
 
   // The two tasks after the one the launcher offers, soonest due first.
   const afterThis = useMemo(
@@ -326,6 +374,11 @@ export default function DashboardPage() {
           segments={segments}
           newSegmentId={justLogged ? justLoggedId ?? undefined : undefined}
           justLogged={justLogged}
+          undo={
+            justLogged && undoShown
+              ? { offered: savedForUndo !== null, onUndo: undoSave, onHold: setUndoHeld }
+              : undefined
+          }
           live={live}
           liveSubject={live ? getSubject(live.subject) : undefined}
           onReturnToFocus={() => router.push("/focus")}
@@ -345,6 +398,7 @@ export default function DashboardPage() {
           onEditGoal={() => router.push("/settings")}
         />
       </StickyCard>
+      <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
 
       {/* ── AFTER THIS — the next two tasks; a row puts its task in the
           sentence. Hidden while a session is still open: Begin isn't
@@ -411,6 +465,7 @@ function HeroBody({
   segments,
   newSegmentId,
   justLogged,
+  undo,
   live,
   liveSubject,
   onReturnToFocus,
@@ -441,6 +496,9 @@ function HeroBody({
   /** The session just saved on Focus, whose band grows into the "a". */
   newSegmentId?: string;
   justLogged?: { minutes: number; label: string; doneTitle?: string };
+  /** The just-logged session's Undo. offered turns false after its five
+      seconds, and the button fades but keeps its place. */
+  undo?: { offered: boolean; onUndo: () => void; onHold: (held: boolean) => void };
   /** A session still open in this tab (left mid-way on Focus). */
   live: LiveSession | null;
   liveSubject: UserSubject | undefined;
@@ -518,13 +576,45 @@ function HeroBody({
   // Arriving from "Save session": for this one visit the headline is what
   // was just done (same shape as the other headlines), and the next task
   // steps back to a quiet line under it. "Done" first, "next" second.
+  //
+  // Undo sits beside the headline for five seconds, in a column of its
+  // own: when it fades, its place stays, so the sentence never reflows
+  // and nothing under it moves while a hand is on its way to Begin.
   const loggedHeadline = justLogged && (
     <>
-      <h1 id="launcher-headline" className={SENTENCE}>
-        <Connect>just logged</Connect>{" "}
-        <span className="whitespace-nowrap tabular-nums">{formatTime(justLogged.minutes)}</span>{" "}
-        <Connect>of</Connect> {justLogged.label}
-      </h1>
+      <div className={cn(undo && "grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4")}>
+        <h1 id="launcher-headline" className={SENTENCE}>
+          <Connect>just logged</Connect>{" "}
+          <span className="whitespace-nowrap tabular-nums">{formatTime(justLogged.minutes)}</span>{" "}
+          <Connect>of</Connect> {justLogged.label}
+        </h1>
+        {undo && (
+          <span
+            className={cn(
+              "mt-1 sm:mt-1.5 transition-[opacity,visibility] duration-300",
+              !undo.offered && "invisible opacity-0"
+            )}
+          >
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={undo.onUndo}
+              onPointerEnter={() => undo.onHold(true)}
+              onPointerLeave={() => undo.onHold(false)}
+              onFocus={() => undo.onHold(true)}
+              onBlur={() => undo.onHold(false)}
+              aria-describedby="launcher-headline"
+              className="focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-2"
+            >
+              <svg aria-hidden width={13} height={13} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5.5 3 2.5 6l3 3" />
+                <path d="M2.5 6h7a4 4 0 0 1 0 8H7" />
+              </svg>
+              Undo
+            </Button>
+          </span>
+        )}
+      </div>
       {/* The session that reached the day's goal is the day's biggest
           moment; it gets a line of its own here, not just the small
           status line further down. */}
@@ -553,10 +643,19 @@ function HeroBody({
     const finished =
       live.state === "done" || live.state === "reflecting" ||
       (live.state === "running" && live.endTime <= Date.now());
-    const lead = finished ? "just finished" : live.state === "paused" ? "paused on" : "still focusing on";
+    // Stopped under a minute in: Focus won't log it (it offers Keep going
+    // and Discard), so this doesn't promise a save either.
+    const nothingToLog = live.state === "reflecting" && live.duration * 60 - live.secondsLeft < 60;
+    const lead = nothingToLog
+      ? "just stopped"
+      : finished
+        ? "just finished"
+        : live.state === "paused" ? "paused on" : "still focusing on";
     // The headline already names the state; this line adds only what's new.
     let detail: ReactNode;
-    if (finished) {
+    if (nothingToLog) {
+      detail = "Under a minute in, so nothing to log yet";
+    } else if (finished) {
       detail = "Waiting to be saved";
     } else if (live.state === "paused") {
       detail = (
@@ -603,7 +702,7 @@ function HeroBody({
             >
               {/* No ▶ here: returning doesn't start anything, and ▶ means
                   "starts now" everywhere else. */}
-              {finished ? "Finish saving" : "Return to focus"}
+              {finished && !nothingToLog ? "Finish saving" : "Return to focus"}
             </button>
           </div>
         </div>

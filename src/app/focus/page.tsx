@@ -18,6 +18,7 @@ import {
   saveLiveSession,
   loadLiveSession,
   clearLiveSession,
+  rememberSavedSession,
 } from "@/lib/liveSession";
 
 const VantaBg = dynamic(() => import("@/components/ui/VantaBg"), { ssr: false });
@@ -166,6 +167,10 @@ export default function FocusPage() {
 
   const totalSeconds = duration * 60;
   const progress = ((totalSeconds - secondsLeft) / totalSeconds) * 100;
+  // A session ended under a minute in is nothing to log: "Finish early"
+  // a few seconds in used to save it as 1m. The ending card says so and
+  // offers Keep going and Discard instead of Save.
+  const tooShort = timerState === "reflecting" && totalSeconds - secondsLeft < 60;
 
   const subjectColor = (() => {
     if (!subject) return "#9faac6";
@@ -273,9 +278,14 @@ export default function FocusPage() {
   // honour "Mark done", and go back to the dashboard, where the new band
   // grows into the "a". ?logged= names the session so the dashboard can
   // show that moment once.
+  //
+  // The ending card as it stood goes with it (rememberSavedSession), so
+  // the dashboard's five-second Undo can take the session back out and
+  // leave it exactly as it was here, waiting to be saved. A session
+  // under a minute isn't saved at all (tooShort, above).
   const leavingRef = useRef(false);
   const saveSession = useCallback(() => {
-    if (!subject || leavingRef.current) return;
+    if (!subject || leavingRef.current || tooShort) return;
     leavingRef.current = true;
     const id = addSession(
       subject,
@@ -285,11 +295,28 @@ export default function FocusPage() {
         : undefined,
       task
     );
+    rememberSavedSession({
+      sessionId: id,
+      live: {
+        state: "reflecting",
+        endTime: endTimeRef.current,
+        secondsLeft: secondsLeftRef.current,
+        duration,
+        subject,
+        task,
+        taskId: linkedTaskId,
+        elapsedMinutes,
+        quality: reflectionQuality,
+        note: reflectionNote,
+        markDone,
+      },
+      doneTaskId: markDone && doneCandidate ? doneCandidate.id : null,
+    });
     completeLinkedIfChosen();
     clearTimer();
     clearLiveSession();
     router.push(`/dashboard?logged=${encodeURIComponent(id)}`);
-  }, [subject, elapsedMinutes, reflectionQuality, reflectionNote, task, addSession, completeLinkedIfChosen, clearTimer, router]);
+  }, [subject, tooShort, elapsedMinutes, reflectionQuality, reflectionNote, task, duration, linkedTaskId, markDone, doneCandidate, addSession, completeLinkedIfChosen, clearTimer, router]);
 
   // Picking a length during setup sets the clock with it. This was an
   // effect watching the length, and dev Strict Mode runs mount effects
@@ -335,6 +362,7 @@ export default function FocusPage() {
       setElapsedMinutes(live.elapsedMinutes);
       setReflectionQuality(live.quality);
       setReflectionNote(live.note);
+      setMarkDone(Boolean(live.markDone));
       if (live.state === "running") {
         // Counted against the saved end time: if it passed while the
         // page was gone, the first tick lands on "done".
@@ -425,8 +453,9 @@ export default function FocusPage() {
       elapsedMinutes,
       quality: reflectionQuality,
       note: reflectionNote,
+      markDone,
     });
-  }, [timerState, duration, subject, task, linkedTaskId, elapsedMinutes, reflectionQuality, reflectionNote]);
+  }, [timerState, duration, subject, task, linkedTaskId, elapsedMinutes, reflectionQuality, reflectionNote, markDone]);
 
   // Closing the tab is the one exit a saved session can't survive, so
   // ask first while there's work in flight.
@@ -492,7 +521,8 @@ export default function FocusPage() {
           startTimer();
         } else if (timerState === "reflecting") {
           e.preventDefault();
-          saveSession();
+          if (tooShort) startTimer();
+          else saveSession();
         }
         return;
       }
@@ -509,7 +539,7 @@ export default function FocusPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [timerState, musicOpen, backdropOpen, pauseTimer, startTimer, handleExit, subject, saveSession]);
+  }, [timerState, musicOpen, backdropOpen, pauseTimer, startTimer, handleExit, subject, saveSession, tooShort]);
 
   // Top-bar popovers (music, backdrop) — close on outside click + Esc
   useEffect(() => {
@@ -589,8 +619,10 @@ export default function FocusPage() {
         ? `${formatTime(minutesLeft)} left · ${pillSubtitle}`
         : timerState === "paused"
         ? `Paused · ${pillSubtitle}`
+        : tooShort
+        ? `Stopped · ${pillSubtitle}`
         : `Done · ${pillSubtitle}`;
-  }, [timerState, minutesLeft, pillSubtitle]);
+  }, [timerState, minutesLeft, pillSubtitle, tooShort]);
   useEffect(
     () => () => {
       if (pageTitle.current) document.title = pageTitle.current;
@@ -624,7 +656,9 @@ export default function FocusPage() {
           : timerState === "done"
           ? "Session complete"
           : timerState === "reflecting"
-          ? "Reflecting on your session"
+          ? tooShort
+            ? "Stopped under a minute in, so there's nothing to log"
+            : "Reflecting on your session"
           : ""}
       </p>
 
@@ -669,7 +703,7 @@ export default function FocusPage() {
                   <span key={timerState} className="focus-label-swap inline-block">
                     {timerState === "running" && "Focusing on"}
                     {timerState === "done" && "Session complete"}
-                    {timerState === "reflecting" && "Reflecting"}
+                    {timerState === "reflecting" && (tooShort ? "Stopped" : "Reflecting")}
                   </span>
                 </span>
               )}
@@ -872,6 +906,7 @@ export default function FocusPage() {
             note={reflectionNote}
             onNoteChange={setReflectionNote}
             onSave={saveSession}
+            tooShort={tooShort}
             onKeepGoing={secondsLeft > 0 ? startTimer : undefined}
             onDiscard={resetToIdle}
             doneTaskTitle={doneCandidate?.title}
@@ -1239,6 +1274,8 @@ interface ReflectionStageProps {
   note: string;
   onNoteChange: (s: string) => void;
   onSave: () => void;
+  /** Under a minute in: nothing to log, so no Save (Keep going leads). */
+  tooShort: boolean;
   /** Present when the session was finished early: back to the timer. */
   onKeepGoing?: () => void;
   onDiscard: () => void;
@@ -1254,8 +1291,38 @@ interface ReflectionStageProps {
 function ReflectionStage({
   elapsedMinutes, subjectLabel, subjectColor,
   quality, onQualityChange, note, onNoteChange,
-  onSave, onKeepGoing, onDiscard, doneTaskTitle, markDone, onMarkDoneChange,
+  onSave, tooShort, onKeepGoing, onDiscard, doneTaskTitle, markDone, onMarkDoneChange,
 }: ReflectionStageProps) {
+  // Stopped under a minute in: there's nothing to log, and the card says
+  // so rather than saving it as "1m". No rating, note or Mark done, since
+  // none of them would be kept; Keep going is the one filled button.
+  if (tooShort) {
+    return (
+      <div className="focus-stage-enter rounded-3xl bg-white border border-lavender-200 shadow-[0_18px_44px_-14px_rgba(38,45,64,0.22)] p-8 w-full max-w-sm flex flex-col items-center text-center">
+        <div className="flex items-center gap-2 mb-6">
+          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: subjectColor }} />
+          <span className="text-xs text-steel-600">
+            Under a minute{subjectLabel ? ` · ${subjectLabel}` : ""}
+          </span>
+        </div>
+        <h2 className="text-lg font-medium text-baltic-800 tracking-tight">
+          Nothing to log yet
+        </h2>
+        <p className="text-xs text-steel-600 mt-1">
+          Sessions under a minute aren&apos;t logged.
+        </p>
+        {onKeepGoing && (
+          <button onClick={onKeepGoing} aria-keyshortcuts="Enter" className="focus-btn focus-btn-primary tap-target !px-6 mt-6">
+            Keep going
+          </button>
+        )}
+        <div className="mt-1">
+          <DiscardButton onConfirm={onDiscard} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="focus-stage-enter rounded-3xl bg-white border border-lavender-200 shadow-[0_18px_44px_-14px_rgba(38,45,64,0.22)] p-8 w-full max-w-sm flex flex-col items-center">
       {/* Session summary. The task isn't repeated here: the pill at the

@@ -33,6 +33,7 @@ import Modal from "@/components/ui/Modal";
 import ColorSwatches from "@/components/ui/ColorSwatches";
 import { loadLiveSession } from "@/lib/liveSession";
 import { readKey, writeKey } from "@/lib/storage";
+import { useVisibleTimeout, UNDO_TIMEOUT_MS } from "@/lib/useVisibleTimeout";
 import { SENTENCE, Connect } from "@/components/ui/Sentence";
 
 type StatusFilter = "pending" | "completed" | "all";
@@ -55,63 +56,6 @@ interface SubjectTab {
 
 const TABS_STORAGE_KEY = "aim_tabs";
 const ALL_TAB_LABEL = "All";
-const UNDO_TIMEOUT_MS = 5000;
-
-/**
- * Run `onFire` after `ms` of *visible* time, not wall time. When the tab is
- * hidden mid-countdown we freeze the timer; on return we resume with whatever
- * time was left. The principle: a 5-second undo should mean five seconds the
- * user could actually see — Sonner does the same for toasts. The count
- * runs while `item` isn't null, and a new item starts it over: a second
- * Mark done or Delete within the five seconds used to get only what was
- * left of the first one's.
- */
-function useVisibilityAwareTimeout(
-  item: object | null,
-  ms: number,
-  onFire: () => void
-) {
-  // Stash onFire in a ref so the effect doesn't restart every render
-  // (a fresh inline callback would otherwise reset the timer each tick).
-  const onFireRef = useRef(onFire);
-  onFireRef.current = onFire;
-
-  useEffect(() => {
-    if (item === null) return;
-    let remaining = ms;
-    let startedAt = performance.now();
-    let id: ReturnType<typeof setTimeout> | null = null;
-
-    const schedule = () => {
-      id = setTimeout(() => {
-        id = null;
-        onFireRef.current();
-      }, remaining);
-    };
-
-    const handleVisibility = () => {
-      if (document.hidden) {
-        if (id !== null) {
-          clearTimeout(id);
-          remaining = Math.max(0, remaining - (performance.now() - startedAt));
-          id = null;
-        }
-      } else if (id === null) {
-        startedAt = performance.now();
-        schedule();
-      }
-    };
-
-    schedule();
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      if (id !== null) clearTimeout(id);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [item, ms]);
-}
-
 function loadStoredTabs(): SubjectTab[] | null {
   try {
     const raw = readKey(TABS_STORAGE_KEY);
@@ -225,10 +169,16 @@ export default function TasksPage() {
   // to be immediate and final, one click from Mark complete (critique,
   // 2026-10-28); a deleted task now comes back whole, at its old place in
   // the list and with its id, so its logged sessions still point at it.
+  //
+  // The same row says where a new task went when it lands outside the
+  // open tab ("Added to Science", with Show). Either banner holds its
+  // count while it's pointed at or focused.
   const [lastUndo, setLastUndo] = useState<UndoItem | null>(null);
-  useVisibilityAwareTimeout(lastUndo, UNDO_TIMEOUT_MS, () =>
-    setLastUndo(null)
-  );
+  const [undoHeld, setUndoHeld] = useState(false);
+  useVisibleTimeout(lastUndo, UNDO_TIMEOUT_MS, () => setLastUndo(null), undoHeld);
+  useEffect(() => {
+    if (lastUndo === null) setUndoHeld(false);
+  }, [lastUndo]);
 
   // Inline undo for closing a tab. Captures the position too so undo
   // restores the tab in its original spot, not at the end.
@@ -236,9 +186,11 @@ export default function TasksPage() {
     tab: SubjectTab;
     position: number;
   } | null>(null);
-  useVisibilityAwareTimeout(lastClosedTab, UNDO_TIMEOUT_MS, () =>
-    setLastClosedTab(null)
-  );
+  const [tabUndoHeld, setTabUndoHeld] = useState(false);
+  useVisibleTimeout(lastClosedTab, UNDO_TIMEOUT_MS, () => setLastClosedTab(null), tabUndoHeld);
+  useEffect(() => {
+    if (lastClosedTab === null) setTabUndoHeld(false);
+  }, [lastClosedTab]);
 
   // ── Tab operations ────────────────────────────────────────
 
@@ -476,6 +428,67 @@ export default function TasksPage() {
     setShowAddModal(true);
   }, [activeSubjectLabel]);
 
+  // A new task can land outside the open tab: it's for another subject,
+  // or the tab shows only Done. It was added all the same, and silently
+  // vanishing read as lost (critique, 2026-11-02): the banner row says
+  // where it went, and Show brings it into view.
+  const handleAddTask = useCallback(
+    (task: Omit<Task, "id" | "createdAt" | "completed">) => {
+      const id = addTask(task);
+      const inView =
+        (activeSubjectLabel === null || activeSubjectLabel === task.subject) &&
+        activeFilter !== "completed";
+      if (!inView) setLastUndo({ kind: "added", id, title: task.title, subject: task.subject });
+    },
+    [addTask, activeSubjectLabel, activeFilter]
+  );
+
+  // Show: the nearest view that holds the task. This tab if it's the
+  // right one (it only needs its To do back), else the subject's own
+  // tab, else All, else a new tab for the subject.
+  const [revealTaskId, setRevealTaskId] = useState<string | null>(null);
+  const handleShowTask = useCallback(
+    (id: string, subject: string) => {
+      const covers = (t: SubjectTab) => t.subjectLabel === null || t.subjectLabel === subject;
+      const current = tabs.find((t) => t.id === activeTabId);
+      const target =
+        (current && covers(current) ? current : undefined) ??
+        tabs.find((t) => t.subjectLabel === subject && t.statusFilter !== "completed") ??
+        tabs.find((t) => t.subjectLabel === subject) ??
+        tabs.find((t) => t.subjectLabel === null && t.statusFilter !== "completed") ??
+        tabs.find((t) => t.subjectLabel === null);
+      if (target) {
+        if (target.statusFilter === "completed") {
+          setTabs((prev) =>
+            prev.map((t) => (t.id === target.id ? { ...t, statusFilter: "pending" } : t))
+          );
+        }
+        setActiveTabId(target.id);
+      } else {
+        handleAddTabForSubject(subject);
+      }
+      setLastUndo(null);
+      setRevealTaskId(id);
+    },
+    [tabs, activeTabId, handleAddTabForSubject]
+  );
+
+  // Once the view holds it, the task is scrolled to, focused and briefly
+  // tinted, so the eye lands on it.
+  useEffect(() => {
+    if (!revealTaskId) return;
+    setRevealTaskId(null);
+    const row = document.querySelector<HTMLElement>(`[data-task-id="${CSS.escape(revealTaskId)}"]`);
+    if (!row) return;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    row.scrollIntoView({ block: "center", behavior: still ? "auto" : "smooth" });
+    row.focus({ preventScroll: true });
+    row.animate?.(
+      [{ backgroundColor: "#e2e4e9" }, { backgroundColor: "rgba(226, 228, 233, 0)" }],
+      { duration: 1600, easing: "ease-out" }
+    );
+  }, [revealTaskId]);
+
   // The dashboard's "Add your first task" arrives with ?new=1: open the
   // form straight away instead of leaving the student to find "New task".
   // The flag is dropped so a reload doesn't reopen it.
@@ -605,13 +618,18 @@ export default function TasksPage() {
       {/* Undo banner — slot reserved so the layout stays still */}
       <UndoSlot
         item={lastUndo}
-        onUndo={() => {
+        onAction={() => {
           if (!lastUndo) return;
+          if (lastUndo.kind === "added") {
+            handleShowTask(lastUndo.id, lastUndo.subject);
+            return;
+          }
           if (lastUndo.kind === "done") toggleComplete(lastUndo.id);
           else restoreTask(lastUndo.task, lastUndo.index);
           setLastUndo(null);
         }}
         onDismiss={() => setLastUndo(null)}
+        onHold={setUndoHeld}
       />
 
       {/* Tab-close undo — restores the closed tab at its original
@@ -621,6 +639,7 @@ export default function TasksPage() {
         getSubject={getSubject}
         onUndo={handleUndoCloseTab}
         onDismiss={() => setLastClosedTab(null)}
+        onHold={setTabUndoHeld}
       />
 
       {/* Modals */}
@@ -648,7 +667,7 @@ export default function TasksPage() {
           setAddModalSubject(null);
           setEditingTask(null);
         }}
-        onAdd={addTask}
+        onAdd={handleAddTask}
         onUpdate={updateTask}
         initialSubject={addModalSubject}
       />
@@ -1583,6 +1602,7 @@ function TaskRow({
       onClick={onSelect}
       role="button"
       tabIndex={0}
+      data-task-id={task.id}
       onKeyDown={(e) => {
         // Space + Enter both activate, matching native button semantics.
         if (e.key === "Enter" || e.key === " ") {
@@ -1803,31 +1823,58 @@ function Empty({
 }
 
 /* ─────────────────────────────────────────────────────────────
-   UNDO SLOT — same behavior as the dashboard. A reserved row
-   between the list and the page bottom keeps the layout still
-   whether or not an undo is pending. It undoes the last Mark done
-   or Delete, whichever came last.
+   UNDO SLOT — a reserved row between the list and the page bottom
+   keeps the layout still whether or not a banner is showing. It
+   undoes the last Mark done or Delete, whichever came last, or says
+   where a new task went when the open tab doesn't show it ("Added to
+   Science", Show). Pointed at or focused, it holds its five seconds.
    ───────────────────────────────────────────────────────────── */
 
 type UndoItem =
   | { kind: "done"; id: string; title: string }
-  | { kind: "deleted"; task: Task; index: number };
+  | { kind: "deleted"; task: Task; index: number }
+  | { kind: "added"; id: string; title: string; subject: string };
+
+/* Hover or keyboard focus anywhere in a banner holds its count; moving
+   between its two buttons doesn't let go. */
+function holdHandlers(onHold: (held: boolean) => void) {
+  return {
+    onPointerEnter: () => onHold(true),
+    onPointerLeave: () => onHold(false),
+    onFocus: () => onHold(true),
+    onBlur: (e: React.FocusEvent<HTMLElement>) => {
+      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onHold(false);
+    },
+  };
+}
 
 function UndoSlot({
   item,
-  onUndo,
+  onAction,
   onDismiss,
+  onHold,
 }: {
   item: UndoItem | null;
-  onUndo: () => void;
+  /** Undo, or Show for a task added out of view. */
+  onAction: () => void;
   onDismiss: () => void;
+  onHold: (held: boolean) => void;
 }) {
-  const title = item === null ? "" : item.kind === "done" ? item.title : item.task.title;
+  const title = item === null ? "" : item.kind === "deleted" ? item.task.title : item.title;
+  const lead =
+    item === null
+      ? ""
+      : item.kind === "done"
+      ? "Marked done."
+      : item.kind === "deleted"
+      ? "Deleted."
+      : `Added to ${item.subject}.`;
   return (
     <div className="min-h-[2.75rem] mt-3 flex items-center" aria-live="polite">
       {item && (
         <div
           role="status"
+          {...holdHandlers(onHold)}
           className="sticky-enter w-full inline-flex items-center justify-between gap-3 px-4 py-2 rounded-full bg-baltic-700 dark:bg-baltic-800 text-white text-xs shadow-sm"
           style={{ "--delay": "0ms" } as CSSProperties}
         >
@@ -1846,24 +1893,27 @@ function UndoSlot({
             >
               {item.kind === "done" ? (
                 <path d="M2.5 6.5l2.5 2.5L9.5 4" />
-              ) : (
+              ) : item.kind === "deleted" ? (
                 <path d="M2.5 3.5h7M5 3.5V2.25h2V3.5M3.5 3.5l.5 6.25h4l.5-6.25" />
+              ) : (
+                <path d="M6 2.5v7M2.5 6h7" />
               )}
             </svg>
-            <span className="font-semibold flex-shrink-0">
-              {item.kind === "done" ? "Marked done." : "Deleted."}
+            {/* A long subject name gives way before the title does. */}
+            <span className={cn("font-semibold", item.kind === "added" ? "truncate max-w-[60%]" : "flex-shrink-0")}>
+              {lead}
             </span>
             <span className="truncate text-white/70">{title}</span>
           </span>
           <span className="inline-flex items-center gap-1 flex-shrink-0">
             <button
-              onClick={onUndo}
+              onClick={onAction}
               className="press rounded-md py-1 px-2 -my-1 text-xs font-bold text-cream-300 hover:text-cream-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cream-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-baltic-700"
               style={{
                 transition: "color 160ms ease, transform 160ms var(--ease-out)",
               }}
             >
-              Undo
+              {item.kind === "added" ? "Show" : "Undo"}
             </button>
             <button
               onClick={onDismiss}
@@ -1906,11 +1956,13 @@ function CloseTabUndoSlot({
   getSubject,
   onUndo,
   onDismiss,
+  onHold,
 }: {
   item: { tab: SubjectTab; position: number } | null;
   getSubject: (idOrLabel: string) => UserSubject | undefined;
   onUndo: () => void;
   onDismiss: () => void;
+  onHold: (held: boolean) => void;
 }) {
   const dot =
     item === null
@@ -1925,6 +1977,7 @@ function CloseTabUndoSlot({
       {item && (
         <div
           role="status"
+          {...holdHandlers(onHold)}
           className="sticky-enter w-full inline-flex items-center justify-between gap-3 px-4 py-2 rounded-full bg-baltic-700 dark:bg-baltic-800 text-white text-xs shadow-sm"
           style={{ "--delay": "0ms" } as CSSProperties}
         >

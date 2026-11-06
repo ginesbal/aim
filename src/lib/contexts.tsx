@@ -117,7 +117,8 @@ export function usePreferences() {
 // ─── Tasks Context ───
 interface TasksState {
   tasks: Task[];
-  addTask: (task: Omit<Task, "id" | "createdAt" | "completed">) => void;
+  /** Adds a task and returns its id. */
+  addTask: (task: Omit<Task, "id" | "createdAt" | "completed">) => string;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   /** Put a deleted task back exactly as it was (same id, so links to it
@@ -218,10 +219,14 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
   const addTask = useCallback(
     (task: Omit<Task, "id" | "createdAt" | "completed">) => {
+      // The id comes back so Tasks can point at the new task when it
+      // lands outside the open tab ("Added to Science", Show).
+      const id = generateId();
       setTasks((prev) => [
         ...prev,
-        { ...task, id: generateId(), createdAt: new Date().toISOString(), completed: false },
+        { ...task, id, createdAt: new Date().toISOString(), completed: false },
       ]);
+      return id;
     },
     []
   );
@@ -278,6 +283,8 @@ interface FocusState {
   sessions: FocusSession[];
   /** Logs a finished session and returns its id. */
   addSession: (subject: string, duration: number, reflection?: Reflection, task?: string) => string;
+  /** Takes a saved session back out of the record (the dashboard's Undo). */
+  removeSession: (id: string) => void;
   todayMinutes: number;
   weekMinutes: number;
   streak: number;
@@ -319,6 +326,10 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     return id;
   }, []);
 
+  const removeSession = useCallback((id: string) => {
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+  }, []);
+
   const today = new Date().toDateString();
   const todayMinutes = sessions
     .filter((s) => new Date(s.completedAt).toDateString() === today)
@@ -347,7 +358,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   if (!mounted) return null;
 
   return (
-    <FocusContext.Provider value={{ sessions, addSession, todayMinutes, weekMinutes, streak }}>
+    <FocusContext.Provider value={{ sessions, addSession, removeSession, todayMinutes, weekMinutes, streak }}>
       {children}
     </FocusContext.Provider>
   );

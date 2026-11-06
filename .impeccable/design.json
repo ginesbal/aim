@@ -137,6 +137,14 @@
       "css": ".ds-notice { display: flex; gap: 12px; align-items: flex-start; max-width: 576px; padding: 12px 16px; border-radius: 16px; background: #262d40; color: #ffffff; font: 400 14px/1.5 'Bricolage Grotesque', system-ui, sans-serif; box-shadow: 0 16px 36px -12px rgba(38,45,64,0.28); } .ds-notice strong { font-weight: 600; } .ds-notice-dot { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 9999px; background: #f87171; } .ds-notice p { margin: 0; }"
     },
     {
+      "name": "Undo Banner",
+      "kind": "notice",
+      "refersTo": "notice",
+      "description": "A Baltic pill in a reserved row under the Tasks list: what just happened and one action. Undo for Marked done or Deleted; Show for a new task the open tab doesn't hold (\"Added to Science.\"). Five seconds of visible time, held while pointed at or focused.",
+      "html": "<div class=\"ds-banner\" role=\"status\"><span class=\"ds-banner-what\"><svg viewBox=\"0 0 12 12\" aria-hidden=\"true\"><path d=\"M6 2.5v7M2.5 6h7\"/></svg><strong>Added to Science.</strong><span class=\"ds-banner-title\">Titration write-up</span></span><button class=\"ds-banner-action\">Show</button></div>",
+      "css": ".ds-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 420px; padding: 8px 16px; border-radius: 9999px; background: #394460; color: #ffffff; font: 400 12px/1.4 'Bricolage Grotesque', system-ui, sans-serif; box-shadow: 0 1px 2px rgba(38,45,64,0.12); } .ds-banner-what { display: inline-flex; align-items: center; gap: 8px; min-width: 0; } .ds-banner svg { width: 12px; height: 12px; flex: none; fill: none; stroke: #c7ce64; stroke-width: 2.2; stroke-linecap: round; } .ds-banner strong { font-weight: 600; white-space: nowrap; } .ds-banner-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(255,255,255,0.7); } .ds-banner-action { border: none; background: none; padding: 4px 8px; border-radius: 6px; color: #d5da8b; font: 700 12px/1.4 'Bricolage Grotesque', system-ui, sans-serif; cursor: pointer; } .ds-banner-action:hover { color: #e3e7b1; } .ds-banner-action:focus-visible { outline: 2px solid rgba(199,206,100,0.7); outline-offset: 2px; }"
+    },
+    {
       "name": "Focus Rating",
       "kind": "control",
       "refersTo": "rating-picked",
