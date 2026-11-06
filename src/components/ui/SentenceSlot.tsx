@@ -259,7 +259,7 @@ export function LengthSlot({
       listClassName={other ? "w-52" : "w-36"}
       choices={minuteChoices(DURATION_PRESETS, minutes, onChange)}
       label={formatTime(minutes)}
-      labelClassName="tabular-nums"
+      labelClassName="tabular-nums whitespace-nowrap"
       footer={
         other
           ? (close) => (
@@ -442,7 +442,7 @@ export function GoalSlot({
       listClassName="w-52"
       choices={minuteChoices(GOAL_PRESETS, minutes, onChange)}
       label={formatTime(minutes)}
-      labelClassName="tabular-nums"
+      labelClassName="tabular-nums whitespace-nowrap"
       footer={(close) => (
         <OtherMinutes
           label="Other goal"

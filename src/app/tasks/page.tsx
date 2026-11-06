@@ -1886,7 +1886,10 @@ function UndoSlot({
           className="sticky-enter w-full inline-flex items-center justify-between gap-3 px-4 py-2 rounded-full bg-baltic-700 dark:bg-baltic-800 text-white text-xs shadow-sm"
           style={{ "--delay": "0ms" } as CSSProperties}
         >
-          <span className="inline-flex items-center gap-2 min-w-0">
+          {/* A grid, not flex: the lead column takes its full width
+              before the title gets any, so "Added to Science." is never
+              cut for the sake of the title. */}
+          <span className="grid min-w-0 grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-2">
             <svg
               width="12"
               height="12"
@@ -1907,10 +1910,7 @@ function UndoSlot({
                 <path d="M6 2.5v7M2.5 6h7" />
               )}
             </svg>
-            {/* A long subject name gives way before the title does. */}
-            <span className={cn("font-semibold", item.kind === "added" ? "truncate max-w-[60%]" : "flex-shrink-0")}>
-              {lead}
-            </span>
+            <span className="truncate font-semibold">{lead}</span>
             <span className="truncate text-white/70">{title}</span>
           </span>
           <span className="inline-flex items-center gap-1 flex-shrink-0">

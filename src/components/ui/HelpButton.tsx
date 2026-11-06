@@ -104,7 +104,7 @@ export default function HelpButton({ className }: { className?: string }) {
             <>
               <p className={HEADING}>Tabs</p>
               <p className="mt-2 text-sm text-baltic-700">
-                Each tab is a saved view of your tasks: one subject, or All. Closing a tab deletes nothing, and Undo brings it back for five seconds. + opens another.
+                Each tab is a saved view of your tasks: one subject, or All. Closing a tab deletes nothing, and Undo brings it back for five seconds. Add a tab with the + at the end of the row.
               </p>
               <p className={cn(HEADING, "mt-4")}>Keys</p>
               <KeyList keys={TASK_KEYS} />

@@ -604,7 +604,6 @@ function HeroBody({
               onFocus={() => undo.onHold(true)}
               onBlur={() => undo.onHold(false)}
               aria-describedby="launcher-headline"
-              className="focus:outline-none focus-visible:ring-2 focus-visible:ring-baltic-500 focus-visible:ring-offset-2"
             >
               <svg aria-hidden width={13} height={13} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5.5 3 2.5 6l3 3" />
