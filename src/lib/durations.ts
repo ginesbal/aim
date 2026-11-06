@@ -6,9 +6,8 @@ import { formatTime } from "./utils";
    2h 30m" and Begin then ran a 2-hour timer (critique, 2026-10-28). */
 export const DURATION_MIN = 5;
 export const DURATION_MAX = 120;
-export const DURATION_STEP = 5;
 
-/** The quick lengths offered on Focus and in the dashboard launcher. */
+/** The quick lengths in every length list (dashboard, Focus, Settings). */
 export const DURATION_PRESETS = [25, 45, 60, 90];
 
 /** A whole number of minutes inside the session range. */

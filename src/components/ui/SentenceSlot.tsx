@@ -13,20 +13,24 @@ import {
   parseMinutes,
   rangeError,
 } from "@/lib/durations";
+import { useSubjects } from "@/lib/contexts";
+import { SUBJECT_COLORS } from "@/lib/types";
 import Button from "./Button";
+import ColorSwatches from "./ColorSwatches";
 import { FIELD, FIELD_EDGE } from "./Input";
 
 /* ─────────────────────────────────────────────────────────────
    SENTENCE SLOTS — the "25m" and the task in the launcher
    sentence, as real controls. Each is a word of the sentence,
    underlined like a blank you can fill in, that opens a short list
-   under itself. A small disclosure like the subject picker:
+   under itself. A small disclosure:
    opening moves focus to the current choice, Esc closes and hands
    focus back, a click outside or tabbing away closes. The list
    renders in listParent, outside the heading, so the heading still
    reads as one sentence; a slot that wraps across two lines opens
-   its list under the last one. Shared by the dashboard's launcher
-   and Settings ("aim for [2h] a day, [25m] at a time").
+   its list under the last one. Shared by the dashboard's launcher,
+   the Focus card ("focus for [25m] on [Science]") and Settings ("aim
+   for [2h] a day, [25m] at a time").
    ───────────────────────────────────────────────────────────── */
 
 export interface SlotChoice {
@@ -37,15 +41,19 @@ export interface SlotChoice {
 }
 
 export function SentenceSlot({
-  children,
+  label,
+  labelClassName,
   title,
   listLabel,
   choices,
   listParent,
   listClassName,
+  choicesClassName,
   footer,
 }: {
-  children: ReactNode;
+  /** The words in the blank: a length, a task, a subject. */
+  label: string;
+  labelClassName?: string;
   /** Tooltip on the slot, also its hint for what clicking does. */
   title: string;
   listLabel: string;
@@ -53,6 +61,9 @@ export function SentenceSlot({
   /** Where the open list renders: outside the heading the slot sits in. */
   listParent: React.RefObject<HTMLElement>;
   listClassName?: string;
+  /** Set to let a long list of choices scroll on its own (a max height),
+   *  while the footer row stays in view under them. */
+  choicesClassName?: string;
   /** A last row under the choices (Settings' "Other…"), given the
    *  function that closes the list and hands focus back. */
   footer?: (close: () => void) => ReactNode;
@@ -67,7 +78,13 @@ export function SentenceSlot({
 
   useEffect(() => {
     if (!open) return;
-    listRef.current?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus();
+    // Onto the current choice, or the first when nothing is picked yet
+    // (Focus's subject), so a keyboard lands inside the list.
+    const list = listRef.current;
+    (
+      list?.querySelector<HTMLButtonElement>('[data-slot-choice][aria-pressed="true"]') ??
+      list?.querySelector<HTMLButtonElement>("[data-slot-choice]")
+    )?.focus();
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node;
       if (!triggerRef.current?.contains(t) && !listRef.current?.contains(t)) setOpen(false);
@@ -98,6 +115,10 @@ export function SentenceSlot({
     setOpen(false);
     triggerRef.current?.focus();
   }
+
+  const cut = label.lastIndexOf(" ");
+  const head = label.slice(0, cut + 1);
+  const tail = label.slice(cut + 1);
 
   return (
     // Keys and focus events from the portalled list still bubble here
@@ -130,21 +151,30 @@ export function SentenceSlot({
           open && "bg-lavender-100 decoration-baltic-500 dark:bg-lavender-800/60"
         )}
       >
-        {children}
-        <svg
-          aria-hidden
-          viewBox="0 0 12 12"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          className={cn(
-            "inline-block ml-1 w-[0.42em] h-[0.42em] align-[0.12em] text-steel-500 transition-transform duration-150",
-            open && "rotate-180"
-          )}
-        >
-          <path d="M3 4.5L6 7.5L9 4.5" />
-        </svg>
+        {/* The last word and the chevron never part, so a name that
+            fills the line can't leave the chevron alone on the next one
+            (a long single word, a pasted link, still breaks where it
+            must). */}
+        <span className={labelClassName}>
+          {head}
+          <span className={tail.length <= 24 ? "whitespace-nowrap" : undefined}>
+            {tail}
+            <svg
+              aria-hidden
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              className={cn(
+                "inline-block ml-1 w-[0.42em] h-[0.42em] align-[0.12em] text-steel-500 transition-transform duration-150",
+                open && "rotate-180"
+              )}
+            >
+              <path d="M3 4.5L6 7.5L9 4.5" />
+            </svg>
+          </span>
+        </span>
       </button>
       {open &&
         listParent.current &&
@@ -160,24 +190,27 @@ export function SentenceSlot({
             )}
             style={{ left: pos.left, top: pos.top, transformOrigin: "top left" }}
           >
-            {choices.map((c) => (
-              <button
-                key={c.key}
-                type="button"
-                aria-pressed={c.current}
-                onClick={() => {
-                  c.onPick();
-                  close();
-                }}
-                className="flex items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium text-baltic-700 dark:text-baltic-200 hover:bg-lavender-50 dark:hover:bg-lavender-800/60 focus:outline-none focus-visible:bg-lavender-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-baltic-500"
-              >
-                <span className="min-w-0 flex-1">{c.content}</span>
-                {/* Every row keeps the check's room, so the days line up. */}
-                <svg aria-hidden width={14} height={14} viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className={cn("flex-shrink-0 text-baltic-600", !c.current && "invisible")}>
-                  <path d="M2.5 7.5L6 11l5.5-7" />
-                </svg>
-              </button>
-            ))}
+            <span className={cn("flex flex-col", choicesClassName)}>
+              {choices.map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  data-slot-choice
+                  aria-pressed={c.current}
+                  onClick={() => {
+                    c.onPick();
+                    close();
+                  }}
+                  className="flex items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium text-baltic-700 dark:text-baltic-200 hover:bg-lavender-50 dark:hover:bg-lavender-800/60 focus:outline-none focus-visible:bg-lavender-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-baltic-500"
+                >
+                  <span className="min-w-0 flex-1">{c.content}</span>
+                  {/* Every row keeps the check's room, so the days line up. */}
+                  <svg aria-hidden width={14} height={14} viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className={cn("flex-shrink-0 text-baltic-600", !c.current && "invisible")}>
+                    <path d="M2.5 7.5L6 11l5.5-7" />
+                  </svg>
+                </button>
+              ))}
+            </span>
             {footer?.(close)}
           </span>,
           listParent.current
@@ -202,9 +235,10 @@ function minuteChoices(presets: number[], minutes: number, onChange: (minutes: n
   }));
 }
 
-/* The length slot offers the same quick lengths as Focus, and a pick
-   becomes the default session length, so the launcher keeps offering it.
-   In Settings it also takes any other length in Focus's range. */
+/* The length slot: the quick lengths, and with `other` any whole length
+   in Focus's range. The same list on the dashboard, the Focus card and
+   in Settings. On the dashboard and in Settings a pick becomes the
+   default session length; on Focus it sets this session's. */
 export function LengthSlot({
   minutes,
   onChange,
@@ -224,6 +258,8 @@ export function LengthSlot({
       listParent={listParent}
       listClassName={other ? "w-52" : "w-36"}
       choices={minuteChoices(DURATION_PRESETS, minutes, onChange)}
+      label={formatTime(minutes)}
+      labelClassName="tabular-nums"
       footer={
         other
           ? (close) => (
@@ -239,9 +275,151 @@ export function LengthSlot({
             )
           : undefined
       }
-    >
-      <span className="tabular-nums">{formatTime(minutes)}</span>
-    </SentenceSlot>
+    />
+  );
+}
+
+/* The subject a Focus session is for: "on [Science]". Until one is
+   picked the blank reads "a subject". The list is every subject with
+   its dot, and "New subject…" at the end makes one and picks it. It
+   replaced a form-style dropdown (critique, 2026-11-02); subjects are
+   renamed and deleted in Tasks' Manage subjects, not from here. */
+export function SubjectSlot({
+  value,
+  onChange,
+  listParent,
+}: {
+  value: string | null;
+  onChange: (label: string) => void;
+  listParent: React.RefObject<HTMLElement>;
+}) {
+  const { subjects, addSubject } = useSubjects();
+  const current = subjects.find((s) => s.label === value);
+  return (
+    <SentenceSlot
+      title={current ? "Change subject" : "Pick a subject"}
+      listLabel="Subject"
+      listParent={listParent}
+      listClassName="w-64"
+      choicesClassName="max-h-[min(20rem,45vh)] overflow-y-auto"
+      choices={subjects.map((sub) => ({
+        key: sub.id,
+        current: sub.label === value,
+        onPick: () => onChange(sub.label),
+        content: (
+          <span className="flex items-center gap-2.5 min-w-0">
+            <span aria-hidden className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: sub.color }} />
+            <span className="truncate">{sub.label}</span>
+          </span>
+        ),
+      }))}
+      footer={(close) => (
+        <NewSubject
+          existing={subjects.map((s) => s.label)}
+          onAdd={(label, color) => {
+            addSubject(label, color);
+            onChange(label);
+            close();
+          }}
+        />
+      )}
+      label={value ?? "a subject"}
+      labelClassName={value ? undefined : "text-steel-600 dark:text-steel-400"}
+    />
+  );
+}
+
+/* "New subject…", the subject list's last row: a name and a colour.
+   Like "Other…", the row stays mounted while its form is open. A name
+   already in the list says so and points back at it. */
+function NewSubject({
+  existing,
+  onAdd,
+}: {
+  existing: string[];
+  onAdd: (label: string, color: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [label, setLabel] = useState("");
+  const [color, setColor] = useState<string>(SUBJECT_COLORS[0]);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const id = useId();
+
+  // Focus the name, and bring the whole form (down to Add) into view
+  // where the page can scroll; again when an error lengthens it.
+  useEffect(() => {
+    if (!open) return;
+    inputRef.current?.focus();
+    formRef.current?.scrollIntoView({ block: "nearest" });
+  }, [open]);
+  useEffect(() => {
+    if (error) formRef.current?.scrollIntoView({ block: "nearest" });
+  }, [error]);
+
+  return (
+    <span className="block border-t border-lavender-200/70 dark:border-lavender-700/70">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={open ? `${id}-form` : undefined}
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-steel-600 dark:text-steel-400 hover:bg-lavender-50 hover:text-baltic-700 dark:hover:bg-lavender-800/60 focus:outline-none focus-visible:bg-lavender-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-baltic-500"
+      >
+        New subject…
+      </button>
+      {open && (
+        <form
+          ref={formRef}
+          id={`${id}-form`}
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            const name = label.trim();
+            if (!name) {
+              setError("Give it a name.");
+              inputRef.current?.focus();
+              return;
+            }
+            const taken = existing.find((l) => l.toLowerCase() === name.toLowerCase());
+            if (taken) {
+              setError(`${taken} is already in your list. Pick it above.`);
+              inputRef.current?.focus();
+              return;
+            }
+            onAdd(name, color);
+          }}
+          className="block space-y-3 px-4 pb-3"
+        >
+          <input
+            ref={inputRef}
+            type="text"
+            value={label}
+            maxLength={30}
+            placeholder="Subject name"
+            aria-label="New subject name"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? `${id}-error` : undefined}
+            onChange={(e) => {
+              setLabel(e.target.value);
+              setError(null);
+            }}
+            className={cn(FIELD, error ? "border-red-600" : FIELD_EDGE, "w-full")}
+          />
+          {error && (
+            <span id={`${id}-error`} role="alert" className="-mt-1.5 block text-xs text-red-600 dark:text-red-400">
+              {error}
+            </span>
+          )}
+          <ColorSwatches value={color} onChange={setColor} size="sm" />
+          {/* Secondary: the card's Begin is its one filled button. */}
+          <Button type="submit" variant="secondary" size="sm">
+            Add subject
+          </Button>
+        </form>
+      )}
+    </span>
   );
 }
 
@@ -263,6 +441,8 @@ export function GoalSlot({
       listParent={listParent}
       listClassName="w-52"
       choices={minuteChoices(GOAL_PRESETS, minutes, onChange)}
+      label={formatTime(minutes)}
+      labelClassName="tabular-nums"
       footer={(close) => (
         <OtherMinutes
           label="Other goal"
@@ -274,9 +454,7 @@ export function GoalSlot({
           }}
         />
       )}
-    >
-      <span className="tabular-nums">{formatTime(minutes)}</span>
-    </SentenceSlot>
+    />
   );
 }
 

@@ -10,11 +10,39 @@ interface QualityIndicatorProps {
   className?: string;
 }
 
+/* One rating's circle: the fill to its level (none, a quarter, half,
+   full), then the outline over it so the edge stays crisp. Drawn the
+   same on the ending card and in the Journal. */
+function RatingGlyph({
+  quality,
+  size,
+  fillClassName,
+  strokeClassName,
+}: {
+  quality: FocusQuality;
+  size: number;
+  fillClassName: string;
+  strokeClassName: string;
+}) {
+  return (
+    <svg aria-hidden width={size} height={size} viewBox="0 0 16 16" className="flex-shrink-0">
+      <g className={fillClassName}>
+        {quality === 2 && <path d="M8 15 A7 7 0 0 1 1 8 L8 8 Z" />}
+        {quality === 3 && <path d="M8 1 A7 7 0 0 0 8 15 L8 8 Z" />}
+        {quality === 4 && <circle cx="8" cy="8" r="7" />}
+      </g>
+      <circle cx="8" cy="8" r="7" fill="none" strokeWidth="1.5" className={strokeClassName} />
+    </svg>
+  );
+}
+
 /**
- * Displays a single focus quality circle.
- * 4 visual states using fill amount — abstract, non-verbal.
- * Design rationale: Reduces cognitive load of self-assessment.
- * Users intuitively read "more fill = more focus" without needing a scale explanation.
+ * A saved rating, as the Journal lists it: the circle exactly as it was
+ * picked on the ending card, in one ink (baltic-600 fill, baltic-500
+ * edge) whatever the level. Its three shades, darker for more focus,
+ * made a deep-focus day look like a different thing from a distracted
+ * one rather than the same mark filled further (critique, 2026-11-02).
+ * More fill = more focus, read without a key.
  */
 export default function QualityIndicator({
   quality,
@@ -26,40 +54,16 @@ export default function QualityIndicator({
 
   return (
     <div className={cn("inline-flex items-center gap-1.5", className)}>
-      <svg width={size} height={size} viewBox="0 0 16 16">
-        {/* Track circle */}
-        <circle cx="8" cy="8" r="7" fill="none" stroke="#bfc6d9" strokeWidth="1.5" className="dark:stroke-lavender-600" />
-        {/* Fill based on quality level */}
-        {quality === 1 && (
-          /* Scattered — just the outline, no fill */
-          null
-        )}
-        {quality === 2 && (
-          /* Distracted — quarter fill from bottom */
-          <path
-            d="M8 15 A7 7 0 0 1 1 8 L8 8 Z"
-            fill="#808eb3"
-            className="dark:fill-baltic-400"
-          />
-        )}
-        {quality === 3 && (
-          /* Focused — half fill */
-          <path
-            d="M8 1 A7 7 0 0 0 8 15 L8 8 Z"
-            fill="#60729f"
-            className="dark:fill-baltic-400"
-          />
-        )}
-        {quality === 4 && (
-          /* Deep focus — full fill */
-          <circle cx="8" cy="8" r="6" fill="#4d5b80" className="dark:fill-baltic-400" />
-        )}
-      </svg>
-      {showLabel && (
-        // Sized by the line it sits in; steel-600 is the lightest text colour
-        // that holds 4.5:1 on white.
-        <span className="text-steel-600 dark:text-steel-400">{level.label}</span>
-      )}
+      <RatingGlyph
+        quality={quality}
+        size={size}
+        fillClassName="fill-baltic-600 dark:fill-baltic-400"
+        strokeClassName="stroke-baltic-500 dark:stroke-baltic-400"
+      />
+      {/* Sized by the line it sits in; steel-600 is the lightest text
+          colour that holds 4.5:1 on white. Without the visible label the
+          name is still there for screen readers. */}
+      <span className={showLabel ? "text-steel-600 dark:text-steel-400" : "sr-only"}>{level.label}</span>
     </div>
   );
 }
@@ -122,19 +126,12 @@ export function QualitySelector({ value, onChange, size = 32 }: QualitySelectorP
                   : "hover:bg-lavender-50"
               )}
             >
-              <svg aria-hidden width={size} height={size} viewBox="0 0 16 16">
-                {/* The fill first, so the outline stays crisp over it. */}
-                <g className={cn(fill, "transition-[fill] duration-150 ease-out")}>
-                  {q === 2 && <path d="M8 15 A7 7 0 0 1 1 8 L8 8 Z" />}
-                  {q === 3 && <path d="M8 1 A7 7 0 0 0 8 15 L8 8 Z" />}
-                  {q === 4 && <circle cx="8" cy="8" r="7" />}
-                </g>
-                <circle
-                  cx="8" cy="8" r="7" fill="none"
-                  strokeWidth="1.5"
-                  className={selected ? "stroke-baltic-500" : "stroke-lavender-400"}
-                />
-              </svg>
+              <RatingGlyph
+                quality={q}
+                size={size}
+                fillClassName={cn(fill, "transition-[fill] duration-150 ease-out")}
+                strokeClassName={selected ? "stroke-baltic-500" : "stroke-lavender-400"}
+              />
             </button>
           );
         })}

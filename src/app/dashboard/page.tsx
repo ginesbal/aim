@@ -821,7 +821,7 @@ function HeroBody({
   // The sentence's two slots. A long title is shortened here rather than
   // clamped with overflow, which would also clip the slot's focus ring;
   // the full title is the slot's tooltip.
-  const lengthSlot = <LengthSlot minutes={focusBlockMin} onChange={onSetLength} listParent={columnRef} />;
+  const lengthSlot = <LengthSlot minutes={focusBlockMin} onChange={onSetLength} listParent={columnRef} other />;
   const taskSlot = (
     <TaskSlot
       task={nextTask}
@@ -979,9 +979,8 @@ function TaskSlot({
           ),
         };
       })}
-    >
-      {label}
-    </SentenceSlot>
+      label={label}
+    />
   );
 }
 

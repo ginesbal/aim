@@ -8,9 +8,9 @@ import { SUBJECTS, type SubjectKey, type FocusQuality } from "@/lib/types";
 import { cn, formatClock, formatTime, readableFill } from "@/lib/utils";
 import { readKey, writeKey } from "@/lib/storage";
 import { QualitySelector } from "@/components/ui/QualityIndicator";
-import DurationPicker from "@/components/ui/DurationPicker";
 import { DURATION_MAX, DURATION_MIN } from "@/lib/durations";
-import SubjectSelector from "@/components/ui/SubjectSelector";
+import { LengthSlot, SubjectSlot } from "@/components/ui/SentenceSlot";
+import { SENTENCE, Connect } from "@/components/ui/Sentence";
 import HelpButton from "@/components/ui/HelpButton";
 import type { VantaEffectName } from "@/components/ui/VantaBg";
 import {
@@ -573,7 +573,7 @@ export default function FocusPage() {
   }, [musicOpen, backdropOpen]);
 
   // Opening the backdrop list puts focus on the current pattern, so a
-  // keyboard user lands inside it (same as the subject picker).
+  // keyboard user lands inside it (same as the sentence's lists).
   useEffect(() => {
     if (!backdropOpen) return;
     backdropMenuRef.current
@@ -920,7 +920,7 @@ export default function FocusPage() {
 }
 
 // ───────────────────────────────────────────────────────────────
-// Setup stage — duration ring, subject, task, backdrop, begin
+// Setup stage — the launcher's sentence, the task, Begin
 // ───────────────────────────────────────────────────────────────
 
 interface SetupStageProps {
@@ -943,12 +943,17 @@ function SetupStage({
 }: SetupStageProps) {
   const [showTask, setShowTask] = useState(false);
   const showTaskInput = showTask || task.length > 0;
+  // The slots' lists open in the card, under the sentence.
+  const columnRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="focus-stage-enter w-full max-w-sm">
-      {/* Intention card — reads as a line of a sentence ("focus for 25
-          minutes on …"), its joining words in the dashboard's italic serif,
-          and quietly takes on the colour of the subject you choose. */}
+      {/* The dashboard's launcher sentence, "focus for [25m] on
+          [Science]", with the same blanks: the length list (quick lengths
+          and Other length…) and the subject list. It replaced a −/+
+          stepper over "25 MINUTES", preset chips and a form dropdown, a
+          third way to set a length (critique, 2026-11-02). The card
+          quietly takes on the colour of the subject you choose. */}
       <div className="relative rounded-[28px] bg-white border border-lavender-200 shadow-[0_2px_4px_-1px_rgba(38,45,64,0.04),0_14px_30px_-10px_rgba(38,45,64,0.16),0_40px_64px_-32px_rgba(38,45,64,0.12)]">
         {/* Subject wash — barely-there tint at the head of the card. */}
         <div
@@ -962,24 +967,17 @@ function SetupStage({
           }}
         />
 
-        <div className="relative px-8 pt-8 pb-8">
-          {/* Duration */}
-          <p className="text-center font-connect text-lg leading-none text-baltic-600 mb-3 select-none">
-            focus for
-          </p>
-          <DurationPicker value={duration} onChange={onDurationChange} />
+        <div ref={columnRef} className="relative px-8 pt-8 pb-8">
+          <h2 className={SENTENCE}>
+            <Connect>focus for</Connect>{" "}
+            <LengthSlot minutes={duration} onChange={onDurationChange} listParent={columnRef} other />{" "}
+            <Connect>on</Connect>{" "}
+            <SubjectSlot value={subject} onChange={onSubjectChange} listParent={columnRef} />
+          </h2>
 
-          {/* Torn-paper rule — a quiet nod to the journal. */}
-          <div className="border-t border-dashed border-lavender-200 my-6" />
-
-          {/* Subject */}
-          <p className="text-center font-connect text-lg leading-none text-baltic-600 mb-3 select-none">
-            on
-          </p>
-          <SubjectSelector value={subject} onChange={onSubjectChange} />
-
-          {/* Optional note — disclosed on demand to keep the default view calm */}
-          <div className="mt-3">
+          {/* What you're working on, optional — disclosed on demand to keep
+              the default view calm. */}
+          <div className="mt-5">
             {showTaskInput ? (
               <input
                 type="text"
@@ -995,9 +993,9 @@ function SetupStage({
               <button
                 type="button"
                 onClick={() => setShowTask(true)}
-                className="tap-target w-full flex items-center justify-center gap-1.5 py-1.5 text-xs text-steel-600 hover:text-baltic-600 transition-colors duration-150"
+                className="tap-target inline-flex items-center gap-1.5 rounded-md py-1.5 text-sm font-medium text-steel-600 hover:text-baltic-700 transition-colors duration-150"
               >
-                <svg width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+                <svg aria-hidden width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
                   <path d="M6 2v8M2 6h8" />
                 </svg>
                 Add what you&apos;re working on
