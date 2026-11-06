@@ -48,48 +48,57 @@ export default function TopNav() {
 
   return (
     <>
-    <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 dark:bg-baltic-950/80 backdrop-blur-md border-b border-lavender-200/60 dark:border-lavender-800/40 z-40 flex items-center px-4 sm:px-6">
+    {/* The bar is the desk itself: the page's colour, solid, with a
+        hairline under it. It was frosted white with a pill switcher, the
+        last template tells on the page (critique, 2026-11-02). */}
+    <header className="fixed top-0 left-0 right-0 h-16 bg-baltic-50 dark:bg-baltic-950 border-b border-lavender-200/80 dark:border-lavender-800/50 z-40 flex items-center px-4 sm:px-6">
       {/* Logo. Pages are real links (not buttons), so they can be opened
           in a new tab or copied. */}
       <Link href="/dashboard" className="tap-target flex-shrink-0 mr-8" aria-label="Go to dashboard">
         <AnimatedAimLogo />
       </Link>
 
-      {/* Nav links — center. On phones they move to the bottom bar. */}
+      {/* Page names, centred. Plain words; the current one in dark ink
+          with the 2px underline the phone bar uses. On phones they move
+          to the bottom bar. */}
       <nav aria-label="Pages" className="hidden sm:flex flex-1 items-center justify-center">
-        <div className="flex items-center gap-1 bg-baltic-50 dark:bg-baltic-900/50 rounded-full p-1">
+        <ul className="flex items-center gap-2">
           {NAV_ITEMS.map((item) => {
             const active = pathname === item.href;
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "tap-target px-4 py-1.5 rounded-full text-sm font-medium transition-[background-color,color,box-shadow] duration-200",
-                  active
-                    ? "bg-baltic-600 text-white dark:bg-baltic-500 shadow-sm"
-                    : "text-steel-600 hover:text-baltic-700 dark:text-steel-400 dark:hover:text-baltic-200"
-                )}
-              >
-                {item.label}
-              </Link>
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "tap-target block rounded-md px-3 py-2 text-sm transition-colors duration-200",
+                    active
+                      ? "font-semibold text-baltic-800 dark:text-baltic-100"
+                      : "font-medium text-steel-600 hover:text-baltic-700 dark:text-steel-400 dark:hover:text-baltic-200"
+                  )}
+                >
+                  <NavLabel label={item.label} active={active} />
+                </Link>
+              </li>
             );
           })}
-        </div>
+        </ul>
       </nav>
 
       {/* Help, then the profile dropdown — right */}
       <div className="ml-auto mr-2 flex-shrink-0">
-        <HelpButton className="tap-target w-9 h-9 rounded-full flex items-center justify-center text-steel-600 hover:bg-baltic-50 hover:text-baltic-700 transition-colors duration-150" />
+        <HelpButton className="tap-target w-9 h-9 rounded-full flex items-center justify-center text-steel-600 hover:bg-white hover:text-baltic-700 dark:hover:bg-baltic-900 transition-colors duration-150" />
       </div>
       <div className="flex-shrink-0 relative" ref={menuRef}>
         <button
           ref={menuButtonRef}
           onClick={() => setMenuOpen((v) => !v)}
+          // A secondary circle, not a filled one: the page's one filled
+          // button (Begin) shouldn't have a darker disc competing with it
+          // in the corner.
           className={cn(
-            "tap-target w-9 h-9 rounded-full bg-baltic-600 dark:bg-baltic-500 flex items-center justify-center text-sm font-semibold text-white transition-[transform,box-shadow] duration-150 [@media(hover:hover)]:hover:scale-105 hover:shadow-md",
-            menuOpen && "ring-2 ring-baltic-300 dark:ring-baltic-400 ring-offset-2 ring-offset-white dark:ring-offset-baltic-950"
+            "tap-target w-9 h-9 rounded-full bg-white dark:bg-lavender-900 border border-lavender-200 dark:border-lavender-700 flex items-center justify-center text-sm font-semibold text-baltic-700 dark:text-baltic-200 hover:border-lavender-300 hover:bg-lavender-50 dark:hover:bg-lavender-800 transition-colors duration-150",
+            menuOpen && "border-baltic-400 dark:border-baltic-400"
           )}
           aria-label="Open profile menu"
           aria-expanded={menuOpen}
@@ -145,7 +154,7 @@ export default function TopNav() {
         Focus mode's full-screen canvas (z-50) covers it. */}
     <nav
       aria-label="Pages"
-      className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 dark:bg-baltic-950/90 backdrop-blur-md border-t border-lavender-200/60 dark:border-lavender-800/40"
+      className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-baltic-50 dark:bg-baltic-950 border-t border-lavender-200/80 dark:border-lavender-800/50"
     >
       <ul className="grid grid-cols-4">
         {NAV_ITEMS.map((item) => {
@@ -166,12 +175,7 @@ export default function TopNav() {
                   )}
                 >
                   {item.label}
-                  {active && (
-                    <span
-                      aria-hidden
-                      className="absolute inset-x-0 -bottom-2 h-[3px] rounded-full bg-baltic-600 dark:bg-baltic-400"
-                    />
-                  )}
+                  {active && <NavMarker />}
                 </span>
               </Link>
             </li>
@@ -180,5 +184,31 @@ export default function TopNav() {
       </ul>
     </nav>
     </>
+  );
+}
+
+/* The current page's mark: a 2px rule under its name, on both bars (and
+   the same weight as the selected Tasks tab's edge). */
+function NavMarker() {
+  return (
+    <span
+      aria-hidden
+      className="absolute inset-x-0 -bottom-2 h-[2px] rounded-full bg-baltic-600 dark:bg-baltic-400"
+    />
+  );
+}
+
+/* A page name that keeps its width when it turns semibold: an invisible
+   semibold copy holds the space, so the names beside it don't shift as
+   you move between pages. */
+function NavLabel({ label, active }: { label: string; active: boolean }) {
+  return (
+    <span className="relative inline-grid text-center">
+      <span aria-hidden className="invisible col-start-1 row-start-1 font-semibold">
+        {label}
+      </span>
+      <span className="col-start-1 row-start-1">{label}</span>
+      {active && <NavMarker />}
+    </span>
   );
 }

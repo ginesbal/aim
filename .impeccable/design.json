@@ -100,9 +100,9 @@
       "name": "Page Navigation",
       "kind": "nav",
       "refersTo": "nav-item-active",
-      "description": "Page pills in a Baltic Desk track; the active page fills Deep Baltic.",
-      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item ds-nav-active\" href=\"#\">Dashboard</a><a class=\"ds-nav-item\" href=\"#\">Tasks</a><a class=\"ds-nav-item\" href=\"#\">Focus</a><a class=\"ds-nav-item\" href=\"#\">Journal</a></nav>",
-      "css": ".ds-nav { display: inline-flex; gap: 4px; padding: 4px; border-radius: 9999px; background: #eff1f5; } .ds-nav-item { padding: 6px 16px; border-radius: 9999px; color: #616b6b; font: 500 14px/1.4 'Bricolage Grotesque', system-ui, sans-serif; text-decoration: none; transition: background-color 200ms, color 200ms; } .ds-nav-item:hover { color: #394460; } .ds-nav-active { background: #4d5b80; color: #ffffff; } .ds-nav-active:hover { color: #ffffff; } .ds-nav-item:focus-visible { outline: 2px solid #60729f; outline-offset: 2px; }"
+      "description": "Plain page names in the top bar, which is the desk colour with a hairline; the current page in dark ink with a 2px rule under its name.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item ds-nav-active\" href=\"#\" aria-current=\"page\">Dashboard</a><a class=\"ds-nav-item\" href=\"#\">Tasks</a><a class=\"ds-nav-item\" href=\"#\">Focus</a><a class=\"ds-nav-item\" href=\"#\">Journal</a></nav>",
+      "css": ".ds-nav { display: inline-flex; gap: 8px; padding: 14px 24px 13px; background: #eff1f5; border-bottom: 1px solid rgba(197,201,211,0.8); } .ds-nav-item { position: relative; padding: 8px 12px; border-radius: 6px; color: #616b6b; font: 500 14px/1.4 'Bricolage Grotesque', system-ui, sans-serif; text-decoration: none; transition: color 200ms; } .ds-nav-item:hover { color: #394460; } .ds-nav-active { color: #262d40; font-weight: 600; } .ds-nav-active::after { content: \"\"; position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; border-radius: 9999px; background: #4d5b80; } .ds-nav-active:hover { color: #262d40; } .ds-nav-item:focus-visible { outline: 2px solid #60729f; outline-offset: 2px; }"
     },
     {
       "name": "Duration Chip",

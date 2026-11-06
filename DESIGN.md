@@ -109,11 +109,10 @@ components:
     padding: "{spacing.focus-card}"
   nav-item:
     textColor: "{colors.steel-600}"
-    rounded: "{rounded.full}"
-    padding: "6px 16px"
+    rounded: "{rounded.md}"
+    padding: "8px 12px"
   nav-item-active:
-    backgroundColor: "{colors.baltic-600}"
-    textColor: "{colors.paper}"
+    textColor: "{colors.baltic-800}"
   chip-selected:
     backgroundColor: "{colors.baltic-100}"
     textColor: "{colors.baltic-700}"
@@ -191,7 +190,7 @@ Ten muted colours that students assign to their subjects: Baltic blue `#60729f`,
 
 ## Layout
 
-Every page (Dashboard, Tasks, Journal, Settings) sits in one centred column, 896px wide at most, inside a page frame of 1152px with 16px gutters on phones and 32px from 640px, so each page's first line starts at the same point and switching pages doesn't move it. The headline used to start at x=272 on the Dashboard and Journal, 176 on Tasks and 384 on Settings (critique, 2026-10-28). A fixed 64px top bar holds the logo, the page navigation, help and profile; on phones the navigation moves to a bottom tab bar.
+Every page (Dashboard, Tasks, Journal, Settings) sits in one centred column, 896px wide at most, inside a page frame of 1152px with 16px gutters on phones and 32px from 640px, so each page's first line starts at the same point and switching pages doesn't move it. The headline used to start at x=272 on the Dashboard and Journal, 176 on Tasks and 384 on Settings (critique, 2026-10-28). A fixed 64px top bar holds the logo, the page navigation, help and profile; on phones the navigation moves to a bottom tab bar. Both bars are the desk itself: solid `baltic-50` with a hairline (`lavender-200` at 80%) toward the page, no blur.
 
 The launcher card is a two-column grid from 1024px: the sentence and its button on the left, the "a" meter (144px) in an 11rem column on the right. Below 1024px the meter drops under the sentence. "After this" is a plain list under the card, not more cards, and "Last 7 days" (the week of small "a"s, below) sits under it with the same header, its days linking to their entries in the Journal. It shows from the first finished session.
 
@@ -271,8 +270,9 @@ One shared row of the ten subject colours, wherever a subject gets one (New subj
 - **Storage notice** (`notice`): when the browser won't keep aim's data (site data blocked, storage full, some private windows), a `baltic-800` card with a red dot fixed to the bottom of every page, Focus included, says so once: "This browser isn't saving aim. Tasks and sessions from this tab will be gone when it closes. Allowing site data for this site fixes it." It can be dismissed. Until then aim carried on as if it had saved, and pages that read storage directly crashed when it was blocked (critique, 2026-10-28).
 
 ### Navigation
-- **Desktop:** page names as pills inside a `baltic-50` track; the active page fills `baltic-600` with a white label; inactive pages are `steel-600`.
-- **Phone:** a four-item bottom tab bar with an underline marker on the active page.
+- **Desktop:** the page names as plain words (14px 500, `steel-600`, `baltic-700` on hover), centred in the top bar. The current page is semibold `baltic-800` with a 2px `baltic-600` rule under its name, its width held so the names beside it don't shift between pages. They were pills in a `baltic-50` track with the current one filled `baltic-600`, under a frosted white bar: the remaining template tells, and a second filled shape competing with Begin (critique, 2026-11-02).
+- **Phone:** a four-item bottom tab bar, the same words and the same 2px rule (it was 3px).
+- **Profile:** the initial in a white circle with a `lavender-200` edge, a secondary button, not a filled disc; it opens a small menu with the name and Settings. Help (?) beside it is a plain icon button.
 
 ### The "a" meter
 The logo's "a" drawn as an outline (counter included, so the empty letter still reads as an "a"; the tail's base starts at the bowl's lowest point, so the outline has no notch where the logo's bowl overshoots its baseline) and filled from the bottom with one ink, `baltic-700`, the logo's colour, up to today's share of the goal. The ink is sized by area, not height, so half the goal inks half the letter. The counter stays the logo's white dot; there is no percentage inside it. A newly saved session's ink grows in on top; reaching the goal gives the letter a small settle, and a full day looks exactly like the logo. The numbers appear once, under it ("1h 10m of 2h"), then today's subjects by time, largest first ("Science 45m"), in words only. They used to carry a dot of their colour each, a legend left over from the striped fill; in a one-ink letter the dots keyed nothing (critique, 2026-10-28). With the week of small "a"s, it is the dashboard's only data display.
